@@ -2,7 +2,7 @@ backend:
   name: github
   repo: FaisalZTN/abanggfaisal-website
   branch: main
-  base_url: https://abangfaisal-cms-auth.abanggfaisal.workers.dev
+  base_url: https://auth.abanggfaisal.my.id
   auth_endpoint: auth
 media_folder: public/uploads
 public_folder: /uploads
