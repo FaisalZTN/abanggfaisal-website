@@ -1,9 +1,10 @@
 # Replace both values after the repository and OAuth provider are approved.
+
 backend:
   name: github
-  repo: CONFIGURE_OWNER/CONFIGURE_REPOSITORY
+  repo: FaisalZTN/abanggfaisal-website
   branch: main
-  base_url: https://CONFIGURE-OAUTH-HOST.example.com
+  base_url: https://abangfaisal-cms-auth.abanggfaisal.workers.dev
   auth_endpoint: auth
 media_folder: public/uploads
 public_folder: /uploads
