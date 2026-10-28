@@ -1,0 +1,1 @@
+{"name":"abangfaisal-personal","private":true,"scripts":{"build":"python3 build.py","preview:content":"PREVIEW_CONTENT=1 python3 build.py"}}

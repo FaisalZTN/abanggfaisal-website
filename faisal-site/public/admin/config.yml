@@ -1,0 +1,50 @@
+# Replace both values after the repository and OAuth provider are approved.
+backend:
+  name: github
+  repo: CONFIGURE_OWNER/CONFIGURE_REPOSITORY
+  branch: main
+  base_url: https://CONFIGURE-OAUTH-HOST.example.com
+  auth_endpoint: auth
+media_folder: public/uploads
+public_folder: /uploads
+site_url: https://abanggfaisal.my.id
+locale: id
+collections:
+  - name: journal
+    label: Journal
+    folder: content/journal
+    create: true
+    extension: json
+    format: json
+    identifier_field: id
+    slug: '{{id}}'
+    fields:
+      - {label: Slug URL, name: id, widget: string, pattern: ['^[a-z0-9-]+$', 'Gunakan huruf kecil, angka, dan tanda hubung']}
+      - {label: Judul, name: title, widget: string}
+      - {label: Kategori, name: category, widget: select, options: [Reflections, Opinion, Life, Learning]}
+      - {label: Tanggal, name: date, widget: datetime, format: YYYY-MM-DD, time_format: false}
+      - {label: Menit baca, name: minutes, widget: number, value_type: int, min: 1, default: 3}
+      - {label: Ringkasan, name: short, widget: text}
+      - {label: Paragraf tulisan, name: body, widget: list, field: {label: Paragraf, name: paragraph, widget: text}}
+      - {label: Palet visual, name: art, widget: number, value_type: int, default: 1, min: 0, max: 6}
+      - {label: Status, name: status, widget: select, options: [draft, published], default: draft}
+  - name: products
+    label: Produk
+    folder: content/products
+    create: true
+    extension: json
+    format: json
+    identifier_field: id
+    slug: '{{id}}'
+    fields:
+      - {label: Slug URL, name: id, widget: string, pattern: ['^[a-z0-9-]+$', 'Gunakan huruf kecil, angka, dan tanda hubung']}
+      - {label: Nama produk, name: title, widget: string}
+      - {label: Kategori, name: category, widget: select, options: [E-book, Templates, Design, Learning]}
+      - {label: Ringkasan, name: short, widget: text}
+      - {label: Deskripsi, name: description, widget: text}
+      - {label: Harga rupiah, name: price, widget: number, value_type: int, min: 0, default: 0}
+      - {label: Format file, name: format, widget: string}
+      - {label: Lisensi, name: license, widget: text}
+      - {label: Tautan checkout HTTPS, name: checkout, widget: string, required: false, pattern: ['^https://.+$', 'Gunakan URL HTTPS']}
+      - {label: Palet visual, name: art, widget: number, value_type: int, default: 2, min: 0, max: 6}
+      - {label: Status, name: status, widget: select, options: [draft, published], default: draft}

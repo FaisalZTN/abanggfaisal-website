@@ -1,0 +1,13 @@
+{
+  "id": "creative-kit",
+  "title": "Creative Design Kit",
+  "category": "Design",
+  "price": 0,
+  "art": 5,
+  "short": "Koleksi aset dan template desain untuk karya berikutnya.",
+  "description": "Contoh paket desain digital. Tambahkan preview, lisensi, dan tautan checkout ketika sudah siap.",
+  "status": "draft",
+  "checkout": "",
+  "format": "PDF / template",
+  "license": "Lisensi penggunaan personal; detail menyusul."
+}
