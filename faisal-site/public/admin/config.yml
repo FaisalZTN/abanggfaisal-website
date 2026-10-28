@@ -1,5 +1,3 @@
-# Replace both values after the repository and OAuth provider are approved.
-
 backend:
   name: github
   repo: FaisalZTN/abanggfaisal-website
