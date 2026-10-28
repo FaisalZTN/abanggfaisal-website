@@ -4,14 +4,14 @@ backend:
   branch: main
   base_url: https://auth.abanggfaisal.my.id
   auth_endpoint: auth
-media_folder: public/uploads
+media_folder: faisal-site/public/uploads
 public_folder: /uploads
 site_url: https://abanggfaisal.my.id
 locale: id
 collections:
   - name: journal
     label: Journal
-    folder: content/journal
+    folder: faisal-site/content/journal
     create: true
     extension: json
     format: json
@@ -29,7 +29,7 @@ collections:
       - {label: Status, name: status, widget: select, options: [draft, published], default: draft}
   - name: products
     label: Produk
-    folder: content/products
+    folder: faisal-site/content/products
     create: true
     extension: json
     format: json
