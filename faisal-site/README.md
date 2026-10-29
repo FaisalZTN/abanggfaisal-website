@@ -1,46 +1,35 @@
-# abangfaisal. — Website personal
+# abangfaisal.my.id
 
-Implementasi statis Hybrid Editorial × Modern untuk Cloudflare Pages. Python 3, tanpa dependensi build eksternal, font sistem, tanpa database. Kode dan konten awal berasal dari aset publik situs pada 28 Oktober 2026; ini bukan salinan repositori atau konfigurasi Cloudflare yang terpasang.
+Website statis Python 3 untuk Cloudflare Pages, GitHub dan Decap CMS. Build dari direktori `faisal-site`: `python3 build.py`; output `dist/`. Tidak ada dependency build baru. OAuth GitHub melalui Worker yang sudah aktif tetap dipertahankan.
 
-## Menjalankan
+## Mengelola tulisan
 
-- Produksi: `python3 build.py` → `dist/`. Draft tidak ikut terbit.
-- Review contoh: `PREVIEW_CONTENT=1 python3 build.py`. Seluruh halaman diberi noindex dan banner pratinjau. Jangan gunakan variabel ini pada produksi.
-- Serve `dist/` memakai static server pilihan Anda.
-- `python3 check.py` memeriksa build produksi dan contoh, tautan internal, escaping, metadata dan isolasi draft.
+1. Buka `/admin/`, login seperti biasa, pilih Journal.
+2. Isi judul, slug, tanggal, kategori, ringkasan. Jangan mengganti slug artikel terbit karena slug menentukan URL.
+3. Artikel lama tetap memakai Paragraf lama. Untuk memakai editor baru, salin isi ke Isi tulisan lalu format sesuai toolbar. Jika editor baru terisi, ia menjadi sumber tampilan; data paragraf lama tetap tersimpan. Kosongkan editor baru untuk kembali ke paragraf lama.
+4. Gunakan baris kosong antarparagraf, heading, quote dan bullet list. Heading 2/3, bold, italic, HTTPS link dan list sederhana didukung. HTML/embed/tabel/nested list tidak didukung.
+5. Pilih cover opsional dan isi deskripsi gambar. Gunakan nama file tanpa spasi, JPG/PNG/WebP/AVIF/GIF lokal. Usahakan 1200×800 dan <300 KB. Gambar diunggah ke folder publik, bukan penyimpanan produk berbayar.
+6. SEO opsional: kosong memakai judul dan ringkasan. Waktu baca dihitung otomatis.
+7. Pilih draft atau published lalu simpan. Simpan CMS membuat commit ke main dan dapat langsung memicu deployment. Draft tidak muncul di website; repository publik membuat isi draft tetap bisa dibaca lewat GitHub. Tidak ada penjadwalan terbit otomatis.
 
-## CMS tanpa mengedit kode
+## Mengelola produk
 
-Konfigurasi Decap CMS tersedia di `/admin/`, tetapi LOGIN BELUM AKTIF. Isi `repo`, `base_url` dan penyedia OAuth setelah repositori serta akses akun disetujui. Decap GitHub memerlukan layanan autentikasi OAuth eksternal; hosting statis saja tidak menyelesaikan login. Pilih implementasi yang ditinjau keamanannya dari dokumentasi resmi Decap, atau layanan autentikasi terkelola dengan biaya yang diperiksa saat setup. Jangan menaruh client secret atau token di public/, JSON, Git, atau browser.
+Pilih Produk → isi nama, kategori, deskripsi, format, lisensi dan harga rupiah. Nol berarti Gratis. Thumbnail dan daftar preview opsional. Pilih Produk unggulan agar prioritas tampil lebih tinggi di Home.
 
-Alur setelah setup: buka `/admin/` → login → Journal / Produk → New → isi form → simpan sebagai draft atau published. Commit CMS memicu rebuild Pages bila Git integration diaktifkan. Berkas JSON adalah data, bukan kode. Draft belum terbit ke situs, tetapi BUKAN penyimpanan rahasia: gunakan repo private dan jangan simpan catatan sensitif. Mengubah published menjadi draft menghapus halaman dari build berikutnya. Slug harus unik dan stabil; buat redirect jika menggantinya. Paragraf artikel mendukung teks biasa untuk tahap awal; formatting kaya dan upload gambar sampul belum diimplementasikan.
+Status publikasi dan ketersediaan berbeda: draft menyembunyikan halaman; published menampilkannya. Ketersediaan coming-soon/unavailable tidak menampilkan checkout. available wajib memiliki URL HTTPS checkout lengkap. Bila field belum ada (data lama), status mengikuti ada/tidaknya checkout. Memasukkan tautan tidak membuktikan pembayaran atau pengiriman file sudah bekerja. Periksa sandbox penyedia sebelum menjual. Jangan upload berkas berbayar ke folder public/uploads.
 
-## Shop
+## Mengelola profil
 
-Halaman detail memuat deskripsi, format, lisensi, harga, dan URL checkout HTTPS. Tanpa URL checkout, halaman menampilkan Segera hadir. Masukkan URL produk dari penyedia checkout yang Anda pilih setelah akun dan ketentuannya siap. Penyedia tersebut harus menangani pembayaran, verifikasi transaksi, dan pengiriman berkas; ketiganya tidak diimplementasikan dalam situs ini. Jangan menaruh e-book berbayar di public/uploads karena folder tersebut bisa diakses semua orang. Biaya transaksi mengikuti penyedia; belum ada integrasi pembayaran atau transaksi yang diuji.
+Pilih Profil personal → About & kontak. Sunting pengantar, cerita dan bidang minat. Tautan kontak harus URL HTTPS milik Anda dan baru tampil setelah Anda mengaktifkan persetujuan publikasi. Tidak ada alamat kontak rekaan pada versi awal.
 
-## Cloudflare Pages: langkah setelah persetujuan
+## Pengembangan dan review
 
-1. Identifikasi proyek Pages saat ini: nama proyek, mode upload/Git, repo dan branch, build settings, custom domain, environment variables, serta deployment terakhir yang sehat. Jangan membuat proyek pengganti sebelum memeriksa ini.
-2. Simpan sumber asli dan catat deployment untuk rollback. Paket ini bukan backup penuh proyek saat ini.
-3. Tambahkan implementasi ke branch review dari repo yang benar. JANGAN push ke branch produksi yang memiliki auto-deploy sebelum persetujuan deployment.
-4. Git integration: build command `python3 build.py`; output `dist`; branch produksi sesuai proyek yang ada, lazimnya `main`. Periksa Python 3 tersedia pada build image. Jangan set PREVIEW_CONTENT pada produksi.
-5. Uji deployment branch melalui URL pratinjau Pages; tautan dan canonical tetap menuju domain utama, noindex preview sebaiknya ditambahkan berdasarkan environment sebelum branch preview dipublikasikan. Tidak ada branch preview Cloudflare yang sudah dibuat pada tahap ini.
-6. Setelah persetujuan terpisah, deploy commit yang telah ditinjau. Untuk proyek Direct Upload, build produksi dan upload ISI dist ke proyek yang telah diverifikasi; jangan menganggap proyek Direct Upload bisa langsung dialihkan ke Git integration.
-7. Jika custom domain sudah terhubung ke proyek yang benar, pertahankan. Verifikasi statusnya tanpa mengubah DNS. Jika perlu pemindahan domain atau record DNS, minta persetujuan baru dengan record dan dampak yang spesifik.
-8. Uji HTTPS, Home/Journal/Shop/About, deep link, 404 asli, hash lama, mobile/tablet, tema, login CMS, satu publish/unpublish percobaan dan checkout sandbox. Rollback ke deployment sehat bila gagal. Jangan menghapus proyek lama.
+- Produksi: `python3 build.py`.
+- Draft preview lokal: `PREVIEW_CONTENT=1 python3 build.py`; jangan set di produksi.
+- `python3 check.py` dan `python3 -m unittest discover -p 'test_*.py' -v`.
+- `node --check public/app.js` bila Node tersedia.
+- Branch Pages selain main diberi noindex melalui CF_PAGES_BRANCH, tetapi ini bukan kontrol akses.
+- Admin preview tetap menunjuk main: jangan menyimpan konten saat mereview PR.
+- Lihat REVIEW-2026-10-29.md untuk audit, batas pengujian, dan langkah persetujuan deployment. Dokumen audit 28 Oktober adalah catatan historis.
 
-## Sebelum go-live
-
-Setujui teks About dan desain. Isi artikel asli serta produk nyata; semua konten contoh berstatus draft. Konfigurasi OAuth/CMS dan ujikan login/publish; pilih checkout dan ujikan pembayaran sandbox/pengiriman; periksa ketentuan lisensi, dukungan dan pengembalian dana produk. Homepage produksi akan menampilkan keadaan kosong Journal/Shop sampai konten diterbitkan. Tidak ada email kontak rekaan.
-
-## Referensi
-
-- https://developers.cloudflare.com/pages/framework-guides/deploy-anything/
-- https://developers.cloudflare.com/pages/configuration/git-integration/
-- https://decapcms.org/docs/github-backend/
-- https://decapcms.org/docs/external-oauth-clients/
-
-## Hasil QA lanjutan
-
-Lihat MOBILE-PERFORMANCE.md untuk cakupan, hasil pengujian responsive viewport, perbaikan header 320 px dan area tekan navigasi, serta batas pengukuran performa lokal.
+Merge/deployment produksi hanya sesudah persetujuan pemilik; tidak ada langkah DNS atau penggantian OAuth dalam perubahan ini.

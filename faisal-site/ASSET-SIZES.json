@@ -1,11 +1,11 @@
 {
   "index.html": {
-    "raw_bytes": 3086,
-    "gzip_estimate_bytes": 1271
+    "raw_bytes": 3920,
+    "gzip_estimate_bytes": 1498
   },
   "style.css": {
-    "raw_bytes": 6433,
-    "gzip_estimate_bytes": 2177
+    "raw_bytes": 8929,
+    "gzip_estimate_bytes": 2838
   },
   "app.js": {
     "raw_bytes": 1863,
