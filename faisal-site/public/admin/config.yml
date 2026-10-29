@@ -30,10 +30,10 @@ collections:
         name: article
         widget: markdown
         required: false
-        buttons: [bold, italic, link, heading-two, heading-three, quote, bulleted-list]
-        editor_components: []
-        hint: "Isi editor ini menggantikan tampilan paragraf lama. Biarkan kosong untuk memakai tulisan lama. Gunakan baris kosong antarblok; HTML, tabel, dan embed tidak didukung."
-      - {label: Cover tulisan, name: cover, widget: image, required: false, choose_url: false, hint: "JPG/PNG/WebP/AVIF/GIF; nama file tanpa spasi. Disarankan 1200 × 800, maksimal 300 KB."}
+        buttons: [bold, italic, strikethrough, code, link, heading-two, heading-three, quote, bulleted-list, numbered-list]
+        editor_components: [image, code-block, table]
+        hint: "Isi editor ini menggantikan tampilan paragraf lama. Biarkan kosong untuk memakai tulisan lama. Mendukung tabel, gambar lokal, kode dan daftar bertingkat. Mode Markdown tersedia untuk penyuntingan struktur. HTML mentah dan embed pihak ketiga tidak dijalankan."
+      - {label: Cover tulisan, name: cover, widget: image, required: false, choose_url: false, hint: "JPG/PNG/WebP/AVIF/GIF; nama file tanpa spasi. Kompresi WebP otomatis saat build; gunakan nama tanpa spasi dan unggahan di bawah 10 MB. Disarankan rasio 3:2."}
       - {label: Deskripsi cover, name: cover_alt, widget: string, required: false}
       - {label: Paragraf lama (dipakai jika editor baru kosong), name: body, widget: list, required: false, field: {label: Paragraf, name: paragraph, widget: text}}
       - {label: Palet visual, name: art, widget: number, value_type: int, default: 1, min: 0, max: 6}

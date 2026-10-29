@@ -23,6 +23,7 @@ jobs:
       - name: Build and compatibility tests
         working-directory: faisal-site
         run: |
+          python3 -m pip install -r requirements.txt
           python3 check.py
           python3 -m unittest discover -p 'test_*.py' -v
           node --check public/app.js

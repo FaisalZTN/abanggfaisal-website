@@ -1,4 +1,8 @@
 """Content normalization and deliberately small, escaped editorial markup."""
+from build_deps import ensure
+ensure()
+import mistune
+from images import tag
 import datetime as dt
 import html
 import math
@@ -59,34 +63,31 @@ def normalize(x,kind):
             if not isinstance(p,dict) or not image_url(p.get('image','')) or not p.get('alt'):raise ValueError('Preview memerlukan gambar lokal dan alt')
     return x
 
-def inline(text):
-    # Tokenize before rendering: user input can never become HTML attributes.
-    pattern=r'\[([^\]\n]+)\]\((https://[^\s)]+)\)|\*\*([^*\n]+)\*\*|\*([^*\n]+)\*'
-    out=[]; last=0
-    for m in re.finditer(pattern,text):
-        out.append(esc(text[last:m.start()]))
-        if m[1]:out.append(f'<a href="{esc(m[2])}" rel="noopener noreferrer">{esc(m[1])}</a>' if https_url(m[2]) else esc(m[0]))
-        elif m[3]:out.append('<strong>'+esc(m[3])+'</strong>')
-        else:out.append('<em>'+esc(m[4])+'</em>')
-        last=m.end()
-    return ''.join(out)+esc(text[last:])
+class ArticleRenderer(mistune.HTMLRenderer):
+    def link(self, text, url, title=None):
+        if not https_url(url):return text
+        return '<a href="'+esc(url)+'" rel="noopener noreferrer">'+text+'</a>'
+    def image(self, text, url, title=None):
+        if not image_url(url):raise ValueError('Gambar artikel harus lokal /uploads/: '+url)
+        return tag(url,html.unescape(re.sub('<[^>]*>','',text)),css='inline-media')
+    def heading(self, text, level, **attrs):
+        level=max(2,min(level,4))
+        return f'<h{level}>'+text+f'</h{level}>\n'
+
+renderer=ArticleRenderer(escape=True)
+markdown=mistune.create_markdown(renderer=renderer,plugins=['table','strikethrough'])
+def table(renderer,text):
+    return '<div class="table-scroll" role="region" aria-label="Tabel artikel" tabindex="0"><table>'+text+'</table></div>\n'
+renderer.register('table',table)
 
 def render_article(x):
     if not x.get('article','').strip():return ''.join('<p>'+esc(p)+'</p>' for p in x['body'])
-    out=[]
-    for block in re.split(r'\n\s*\n',x['article'].strip()):
-        lines=block.splitlines()
-        if all(l.startswith('- ') for l in lines):out.append('<ul>'+''.join('<li>'+inline(l[2:])+'</li>' for l in lines)+'</ul>')
-        elif block.startswith('### '):out.append('<h3>'+inline(block[4:])+'</h3>')
-        elif block.startswith('## '):out.append('<h2>'+inline(block[3:])+'</h2>')
-        elif block.startswith('> '):out.append('<blockquote>'+inline(block[2:])+'</blockquote>')
-        else:out.append('<p>'+inline(block)+'</p>')
-    return ''.join(out)
+    return markdown(x['article'])
 
 def media(x, fallback, eager=False):
     src=x.get('cover') or x.get('thumbnail')
     if not src:return fallback
-    return f'<img class="cover" src="{esc(src)}" alt="{esc(x.get("cover_alt") or x.get("thumbnail_alt") or x["title"])}" width="1200" height="800" loading="{"eager" if eager else "lazy"}" decoding="async">'
+    return tag(src,x.get('cover_alt') or x.get('thumbnail_alt') or x['title'],eager)
 
 def available(x):return x.get('availability')=='available' and bool(x.get('checkout'))
 
