@@ -1,18 +1,16 @@
 {
-  "id": "bertahan-dan-berhenti",
-  "title": "Tentang Bertahan dan Mengetahui Kapan Berhenti",
-  "category": "Reflections",
-  "date": "28 Oktober 2026",
-  "minutes": 6,
+  "license": "Lisensi penggunaan personal; detail menyusul.",
+  "body": [],
   "art": 1,
-  "short": "Tidak semua hal harus dipertahankan dengan mengorbankan diri sendiri.",
-  "body": [
-    "Ada masa ketika bertahan terasa seperti satu-satunya bentuk keberanian. Kita belajar untuk menyelesaikan sesuatu, menjaga komitmen, dan memenuhi harapan orang lain.",
-    "Namun, bagaimana jika keberanian juga berarti mengetahui kapan kita perlu berhenti? Bukan karena menyerah, melainkan karena memahami bahwa waktu dan tenaga manusia tidak tanpa batas.",
-    "Barangkali yang perlu kita pelajari bukan sekadar cara bertahan, tetapi juga cara memilih hal-hal yang memang layak diperjuangkan."
-  ],
-  "status": "draft",
   "checkout": "",
+  "date": "2026-10-29",
+  "status": "published",
+  "article": "Ada masa ketika bertahan terasa seperti satu-satunya bentuk keberanian. Kita belajar untuk menyelesaikan sesuatu, menjaga komitmen, dan memenuhi harapan orang lain.\n\nNamun, bagaimana jika keberanian juga berarti mengetahui kapan kita perlu berhenti? Bukan karena menyerah, melainkan karena memahami bahwa waktu dan tenaga manusia tidak tanpa batas.\n\nBarangkali yang perlu kita pelajari bukan sekadar cara bertahan, tetapi juga cara memilih hal-hal yang memang layak diperjuangkan.",
+  "cover": "/uploads/b4719332-244f-445d-9f56-ddece2253cc8-.png",
   "format": "PDF / template",
-  "license": "Lisensi penggunaan personal; detail menyusul."
+  "title": "Tentang Bertahan dan Mengetahui Kapan Berhenti",
+  "id": "bertahan-dan-berhenti",
+  "short": "Tidak semua hal harus dipertahankan dengan mengorbankan diri sendiri.",
+  "category": "Reflections",
+  "minutes": 6
 }
