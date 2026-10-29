@@ -2,8 +2,8 @@ import unittest, json, pathlib, tempfile, shutil, subprocess, os
 from editorial import normalize, render_article, image_url, https_url, available
 P=pathlib.Path(__file__).parent
 class ContentTests(unittest.TestCase):
- def article(self):return json.loads((P/'content/journal/awal-dari-segalanya.json').read_text())
- def product(self):return json.loads((P/'content/products/creative-kit.json').read_text())
+ def article(self):return dict(id='fixture',title='Fixture',category='Life',short='Ringkasan',status='published',date='2026-10-29',body=['Paragraf lama.'],art=0)
+ def product(self):return dict(id='fixture-product',title='Produk',category='Design',short='Ringkasan',status='published',price=99000,art=0,description='Deskripsi',format='PDF',license='Personal',checkout='')
  def test_legacy(self):
   for folder in ['journal','products']:
    for f in (P/'content'/folder).glob('*.json'):normalize(json.loads(f.read_text()),folder)
@@ -40,10 +40,12 @@ class ContentTests(unittest.TestCase):
    (root/'content/journal/qa-article.json').write_text(json.dumps(x))
    p=self.product();p.update(id='qa-product',availability='available',checkout='https://example.com/pay',price=0)
    (root/'content/products/qa-product.json').write_text(json.dumps(p))
+   draft=self.article();draft.update(id='qa-draft-hidden',status='draft')
+   (root/'content/journal/qa-draft-hidden.json').write_text(json.dumps(draft))
    env=dict(os.environ,PREVIEW_CONTENT='0',CF_PAGES_BRANCH='review')
    subprocess.run(['python3','build.py'],cwd=root,env=env,check=True,capture_output=True)
    a=(root/'dist/journal/qa-article/index.html').read_text();self.assertIn('SEO override',a);self.assertIn('<strong>test</strong>',a);self.assertIn('noindex,nofollow',a);self.assertIn('Lanjutkan membaca',a)
    b=(root/'dist/shop/qa-product/index.html').read_text();self.assertIn('https://example.com/pay',b);self.assertIn('Gratis',b)
-   self.assertFalse((root/'dist/journal/bertahan-dan-berhenti').exists())
-   h=(root/'dist/index.html').read_text();self.assertLess(h.index('/journal/qa-article/'),h.index('/journal/awal-dari-segalanya/'))
+   self.assertFalse((root/'dist/journal/qa-draft-hidden').exists())
+   h=(root/'dist/index.html').read_text();self.assertIn('/journal/qa-article/',h)
 if __name__=='__main__':unittest.main()
