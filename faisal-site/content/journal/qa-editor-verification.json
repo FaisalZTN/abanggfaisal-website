@@ -1,0 +1,13 @@
+{
+  "cover_alt": "Gambar yang sudah tersedia untuk pengujian editor",
+  "art": 1,
+  "date": "2026-10-29",
+  "status": "draft",
+  "article": "## Verifikasi editor\n\n**Tebal**, *miring*, ~~dicoret~~, dan `kode inline`.\n\n| Fitur | Hasil |\n| --- | --- |\n| Tabel | Dapat ditampilkan |\n| Gambar | Dikompres otomatis |\n\n1. Langkah pertama\n   - Sub-langkah A\n   - Sub-langkah B\n2. Langkah kedua\n\n```python\nprint(\"Uji editor\")\n```\n\n![Gambar uji](/uploads/b4719332-244f-445d-9f56-ddece2253cc8-.png)\n\n> Artikel sementara untuk pengujian, bukan tulisan editorial.",
+  "cover": "/uploads/b4719332-244f-445d-9f56-ddece2253cc8-.png",
+  "title": "Uji editor — sementara",
+  "id": "qa-editor-verification",
+  "short": "Artikel sementara untuk memverifikasi tabel, gambar, kode, dan daftar bertingkat.",
+  "category": "Learning",
+  "minutes": 3
+}
