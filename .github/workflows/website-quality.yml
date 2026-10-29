@@ -1,0 +1,52 @@
+name: Website quality
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build and compatibility tests
+        working-directory: faisal-site
+        run: |
+          python3 check.py
+          python3 -m unittest discover -p 'test_*.py' -v
+          node --check public/app.js
+      - name: Start local production build
+        run: |
+          python3 -m http.server 8080 --directory faisal-site/dist > /tmp/site-server.log 2>&1 &
+          for attempt in {1..20}; do
+            if curl --fail --silent http://localhost:8080/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Lighthouse reports
+        run: |
+          mkdir -p quality-reports
+          for page in home journal shop about; do
+            route="/$page/"
+            if [ "$page" = home ]; then route="/"; fi
+            npx --yes lighthouse@12.8.2 "http://localhost:8080$route" --chrome-flags="--headless --no-sandbox" --only-categories=performance,accessibility,best-practices,seo --output=html --output=json --output-path="quality-reports/$page-mobile" --quiet
+          done
+          npx --yes lighthouse@12.8.2 http://localhost:8080/ --preset=desktop --chrome-flags="--headless --no-sandbox" --only-categories=performance,accessibility,best-practices,seo --output=html --output=json --output-path=quality-reports/home-desktop --quiet
+      - name: Save reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-quality-reports
+          path: quality-reports/
+          retention-days: 14
