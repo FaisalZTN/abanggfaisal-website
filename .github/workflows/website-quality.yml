@@ -43,6 +43,20 @@ jobs:
             npx --yes lighthouse@12.8.2 "http://localhost:8080$route" --chrome-flags="--headless --no-sandbox" --only-categories=performance,accessibility,best-practices,seo --output=html --output=json --output-path="quality-reports/$page-mobile" --quiet
           done
           npx --yes lighthouse@12.8.2 http://localhost:8080/ --preset=desktop --chrome-flags="--headless --no-sandbox" --only-categories=performance,accessibility,best-practices,seo --output=html --output=json --output-path=quality-reports/home-desktop --quiet
+          npx --yes lighthouse@12.8.2 https://abanggfaisal.my.id/ --chrome-flags="--headless --no-sandbox" --only-categories=performance,accessibility,best-practices,seo --output=html --output=json --output-path=quality-reports/production-home-mobile --quiet
+      - name: Summarize reports
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, os
+          rows=['| Report | Performance | Accessibility | SEO | LCP ms | CLS |','|---|---|---|---|---|---|']
+          for p in sorted(pathlib.Path('quality-reports').glob('*.json')):
+              x=json.loads(p.read_text())
+              if x.get('runtimeError'): raise RuntimeError(str(x['runtimeError']))
+              c=x['categories']; a=x['audits']
+              rows.append(f"| {p.stem} | {c['performance']['score']} | {c['accessibility']['score']} | {c['seo']['score']} | {a['largest-contentful-paint']['numericValue']:.0f} | {a['cumulative-layout-shift']['numericValue']:.3f} |")
+          print('\n'.join(rows))
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f: f.write('\n'.join(rows))
+          PY
       - name: Save reports
         if: always()
         uses: actions/upload-artifact@v4
