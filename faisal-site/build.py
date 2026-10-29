@@ -37,11 +37,11 @@ def load(folder):
     return [x for x in items if preview or x['status']=='published']
 articles=load('journal');products=load('products'); paths=[]
 def art(n,label): return f'<div class="art tone-{int(n)%3}" aria-hidden="true"><span>{e(label)}</span><i></i></div>'
-def card(x,kind):
+def card(x,kind,heading=3):
     url=f'/{kind}/{x["id"]}/'
     meta=x['category']+(' · '+x['iso_date']+' · '+str(x['minutes'])+' menit baca' if kind=='journal' else ' · Digital')
-    return f'<a class="card" data-category="{e(x["category"])}" data-search="{e(x["title"]+" "+x["short"])}" href="{url}">{media(x,art(x["art"],"a thought to keep" if kind=="journal" else x["title"]))}<div class="meta">{e(meta)}</div><h3>{e(x["title"])}</h3><p>{e(x["short"])}</p><span class="text-link">'+('Baca tulisan ↗' if kind=='journal' else label(x))+'</span></a>'
-def grid(items,kind):return '<div class="grid">'+''.join(card(x,kind) for x in items)+'</div>' if items else '<p class="notice">'+('Tulisan sedang dipersiapkan.' if kind=='journal' else 'Karya digital sedang dipersiapkan. Nantikan pembaruannya di sini.')+'</p>'
+    return f'<a class="card" data-category="{e(x["category"])}" data-search="{e(x["title"]+" "+x["short"])}" href="{url}">{media(x,art(x["art"],"a thought to keep" if kind=="journal" else x["title"]))}<div class="meta">{e(meta)}</div><h{heading}>{e(x["title"])}</h{heading}><p>{e(x["short"])}</p><span class="text-link">'+('Baca tulisan ↗' if kind=='journal' else label(x))+'</span></a>'
+def grid(items,kind,heading=3):return '<div class="grid">'+''.join(card(x,kind,heading) for x in items)+'</div>' if items else '<p class="notice">'+('Tulisan sedang dipersiapkan.' if kind=='journal' else 'Karya digital sedang dipersiapkan. Nantikan pembaruannya di sini.')+'</p>'
 def head(eyebrow,title,desc):return f'<section class="page-hero"><div class="eyebrow">{eyebrow}</div><h1>{title}</h1><p class="intro">{desc}</p></section>'
 def write(path,title,desc,body,section='home',item=None):
     item=item or {}
@@ -64,7 +64,7 @@ write('/','Ruang untuk berpikir, menulis, dan berkarya','Journal personal dan ka
 for kind,items,title,desc in [('journal',articles,'A collection of thoughts.','Refleksi, opini, dan catatan personal. Satu tulisan, satu cara baru melihat pengalaman.'),('shop',products,'Useful things, thoughtfully made.','E-book, template, desain, dan materi pembelajaran untuk menemani proses Anda.')]:
     cats=sorted({x['category'] for x in items})
     toolbar='<div class="toolbar"><label for="search">Cari '+('tulisan' if kind=='journal' else 'produk')+'</label><input id="search" type="search" placeholder="Ketik kata kunci…"><label for="category">Kategori</label><select id="category"><option value="">Semua kategori</option>'+''.join(f'<option>{e(c)}</option>' for c in cats)+'</select></div><p id="count" role="status"></p>' if items else ''
-    write('/'+kind+'/',kind.title(),desc,head('THE '+kind.upper(),title,desc)+toolbar+'<div id="results">'+grid(items,kind)+'</div>'+'<p id="empty" hidden>Tidak ditemukan. Coba kata kunci atau kategori lain.</p>',kind)
+    write('/'+kind+'/',kind.title(),desc,head('THE '+kind.upper(),title,desc)+toolbar+'<div id="results">'+grid(items,kind,2)+'</div>'+'<p id="empty" hidden>Tidak ditemukan. Coba kata kunci atau kategori lain.</p>',kind)
 for a in articles:
     body='<article class="reading"><a href="/journal/">← Kembali ke Journal</a>'+head(e(a['category'])+' · '+e(a['iso_date']),e(a['title']),e(a['short']))+f'<p class="meta">{a["minutes"]} menit baca · Faisal</p>'+media(a,'',True)+'<div class="prose">'+render_article(a)+'</div>'+'<hr><a href="/journal/">Jelajahi tulisan lainnya ↗</a></article>'
     related=sorted([x for x in articles if x['id']!=a['id']],key=lambda x:x['category']!=a['category'])[:3]
