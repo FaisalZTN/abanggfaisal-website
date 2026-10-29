@@ -13,7 +13,7 @@ class ContentTests(unittest.TestCase):
   x=self.article();x['article']='## Judul\n\n**Tebal** dan *miring*\n\n- Satu\n- Dua\n\n<script>alert(1)</script>\n\n[x](javascript:alert(1))'
   result=render_article(x);self.assertIn('<h2>Judul</h2>',result);self.assertIn('<strong>Tebal</strong>',result);self.assertIn('<ul>',result);self.assertNotIn('<script>',result);self.assertNotIn('href="javascript:',result)
  def test_new_article_precedence(self):
-  x=self.article();x['article']='Teks baru';self.assertEqual(render_article(x),'<p>Teks baru</p>')
+  x=self.article();x['article']='Teks baru';self.assertEqual(render_article(x).strip(),'<p>Teks baru</p>')
  def test_legacy_date(self):
   x=self.article();x['date']='28 Oktober 2026';self.assertEqual(normalize(x,'journal')['iso_date'],'2026-10-28')
  def test_unsafe_urls(self):
@@ -35,7 +35,7 @@ class ContentTests(unittest.TestCase):
    with self.assertRaises(ValueError):normalize(x,'products')
  def test_build_fixtures(self):
   with tempfile.TemporaryDirectory() as tmp:
-   root=pathlib.Path(tmp)/'site';shutil.copytree(P,root,ignore=shutil.ignore_patterns('dist','__pycache__','.openai'))
+   root=pathlib.Path(tmp)/'site';shutil.copytree(P,root,ignore=shutil.ignore_patterns('dist','__pycache__','.openai','.build-deps'))
    x=self.article();x.update(id='qa-article',article='## Section\n\nA **test**.',seo_title='SEO override',seo_description='SEO description',date='2026-10-30')
    (root/'content/journal/qa-article.json').write_text(json.dumps(x))
    p=self.product();p.update(id='qa-product',availability='available',checkout='https://example.com/pay',price=0)

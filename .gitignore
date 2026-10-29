@@ -2,3 +2,5 @@ faisal-site/dist/
 **/__pycache__/
 .openai/
 faisal-site/.openai/
+
+**/.build-deps/
