@@ -17,15 +17,28 @@ collections:
     format: json
     identifier_field: id
     slug: '{{id}}'
+    summary: "{{title}} · {{status}}"
+    sortable_fields: [title, status]
     fields:
       - {label: Slug URL, name: id, widget: string, pattern: ['^[a-z0-9-]+$', 'Gunakan huruf kecil, angka, dan tanda hubung']}
       - {label: Judul, name: title, widget: string}
       - {label: Kategori, name: category, widget: select, options: [Reflections, Opinion, Life, Learning]}
       - {label: Tanggal, name: date, widget: datetime, format: YYYY-MM-DD, time_format: false}
-      - {label: Menit baca, name: minutes, widget: number, value_type: int, min: 1, default: 3}
+      - {label: Menit baca lama (sekarang dihitung otomatis), name: minutes, widget: hidden, default: 3}
       - {label: Ringkasan, name: short, widget: text}
-      - {label: Paragraf tulisan, name: body, widget: list, field: {label: Paragraf, name: paragraph, widget: text}}
+      - label: Isi tulisan
+        name: article
+        widget: markdown
+        required: false
+        buttons: [bold, italic, link, heading-two, heading-three, quote, bulleted-list]
+        editor_components: []
+        hint: "Isi editor ini menggantikan tampilan paragraf lama. Biarkan kosong untuk memakai tulisan lama. Gunakan baris kosong antarblok; HTML, tabel, dan embed tidak didukung."
+      - {label: Cover tulisan, name: cover, widget: image, required: false, choose_url: false, hint: "JPG/PNG/WebP/AVIF/GIF; nama file tanpa spasi. Disarankan 1200 × 800, maksimal 300 KB."}
+      - {label: Deskripsi cover, name: cover_alt, widget: string, required: false}
+      - {label: Paragraf lama (dipakai jika editor baru kosong), name: body, widget: list, required: false, field: {label: Paragraf, name: paragraph, widget: text}}
       - {label: Palet visual, name: art, widget: number, value_type: int, default: 1, min: 0, max: 6}
+      - {label: Judul SEO, name: seo_title, widget: string, required: false, hint: "Kosong = judul konten; usahakan sekitar 60 karakter."}
+      - {label: Deskripsi SEO, name: seo_description, widget: text, required: false, hint: "Kosong = ringkasan; usahakan sekitar 150–160 karakter."}
       - {label: Status, name: status, widget: select, options: [draft, published], default: draft}
   - name: products
     label: Produk
@@ -35,8 +48,22 @@ collections:
     format: json
     identifier_field: id
     slug: '{{id}}'
+    summary: "{{title}} · {{status}}"
+    sortable_fields: [title, status]
     fields:
       - {label: Slug URL, name: id, widget: string, pattern: ['^[a-z0-9-]+$', 'Gunakan huruf kecil, angka, dan tanda hubung']}
+      - {label: Produk unggulan, name: featured, widget: boolean, default: false, required: false}
+      - {label: Ketersediaan, name: availability, widget: select, options: [coming-soon, available, unavailable], required: false, hint: "available memerlukan checkout HTTPS. Kosong mengikuti tautan checkout untuk data lama."}
+      - {label: Thumbnail, name: thumbnail, widget: image, required: false, choose_url: false}
+      - {label: Deskripsi thumbnail, name: thumbnail_alt, widget: string, required: false}
+      - label: Preview produk
+        name: previews
+        widget: list
+        required: false
+        fields:
+          - {label: Gambar, name: image, widget: image, choose_url: false}
+          - {label: Deskripsi gambar, name: alt, widget: string}
+          - {label: Keterangan, name: caption, widget: string, required: false}
       - {label: Nama produk, name: title, widget: string}
       - {label: Kategori, name: category, widget: select, options: [E-book, Templates, Design, Learning]}
       - {label: Ringkasan, name: short, widget: text}
@@ -46,4 +73,18 @@ collections:
       - {label: Lisensi, name: license, widget: text}
       - {label: Tautan checkout HTTPS, name: checkout, widget: string, required: false, pattern: ['^https://.+$', 'Gunakan URL HTTPS']}
       - {label: Palet visual, name: art, widget: number, value_type: int, default: 2, min: 0, max: 6}
+      - {label: Judul SEO, name: seo_title, widget: string, required: false, hint: "Kosong = judul konten; usahakan sekitar 60 karakter."}
+      - {label: Deskripsi SEO, name: seo_description, widget: text, required: false, hint: "Kosong = ringkasan; usahakan sekitar 150–160 karakter."}
       - {label: Status, name: status, widget: select, options: [draft, published], default: draft}
+  - name: settings
+    label: Profil personal
+    files:
+      - name: profile
+        label: About & kontak
+        file: faisal-site/content/profile.json
+        fields:
+          - {label: Pengantar, name: intro, widget: text}
+          - {label: Cerita personal, name: story, widget: list, field: {label: Paragraf, name: paragraph, widget: text}}
+          - {label: Bidang minat, name: interests, widget: list, field: {label: Bidang, name: interest, widget: string}}
+          - {label: URL kontak publik HTTPS, name: contact_url, widget: string, required: false}
+          - {label: Saya menyetujui publikasi tautan kontak ini, name: contact_approved, widget: boolean, default: false}
