@@ -47,3 +47,11 @@ Setiap build memproses raster pada public/uploads menjadi varian WebP 480, 960 d
 - Gambar inline: pilih gambar lokal dari Media. Format Markdown: ![Deskripsi](/uploads/nama.webp). Gambar jarak jauh ditolak build untuk mencegah permintaan tracking dan menjaga pipeline; unduh/unggah hanya gambar yang Anda berhak gunakan.
 - Link mendukung HTTPS. Video/iframe pihak ketiga tidak disisipkan otomatis; gunakan tautan HTTPS biasa.
 - Artikel JSON lama (body berupa daftar paragraf, atau article berupa teks Markdown) tetap didukung; tidak ada migrasi konten.
+
+## Uji integrasi Mayar — aktivasi manual
+
+Produk chatgpt-plus-1-bulan memakai published + coming-soon untuk menampilkan halaman tanpa tombol beli aktif. Harga Rp100.000 mengikuti katalog pada pemeriksaan 29 Oktober 2026; cek ulang sebelum membuka penjualan. Checkout saat pemeriksaan menampilkan akun belum terverifikasi.
+
+Field CMS Halaman informasi Mayar menampilkan tautan katalog meskipun belum tersedia. Instruksi pembayaran dan aktivasi menggantikan keterangan pengiriman file; produk lama tetap kompatibel. Redirect Telegram @Faysaruu memerlukan pembeli mengirim pesan sendiri. Aktivasi manual. Tidak ada bot, webhook, API aktivasi atau pengiriman file otomatis.
+
+Setelah KYC disetujui: periksa checkout, harga dan biaya, metode dan estimasi aktivasi serta ketentuan layanan. Transaksi uji memerlukan persetujuan pemilik. Periksa invoice/email, status lunas di dashboard dan redirect Telegram; baru ubah ketersediaan ke available. Simpan CMS menulis ke main dan memicu deployment. Katalog terbuka bukan bukti pembayaran aktif. Merge PR ini memerlukan persetujuan pemilik tersendiri.
