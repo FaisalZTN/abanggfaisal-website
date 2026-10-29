@@ -5,7 +5,7 @@
   "short": "Aktivasi manual melalui Telegram. Pembayaran belum aktif.",
   "description": "Layanan aktivasi langganan selama satu bulan, diproses manual oleh penjual melalui Telegram @Faysaruu. Uji integrasi Mayar; checkout masih menunggu verifikasi akun penjual.",
   "price": 100000,
-  "status": "published",
+  "status": "draft",
   "availability": "coming-soon",
   "featured": false,
   "format": "Layanan aktivasi manual · 1 bulan",
