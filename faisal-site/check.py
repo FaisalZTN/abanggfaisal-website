@@ -1,4 +1,4 @@
-import subprocess,os,pathlib
+import subprocess,os,pathlib,json
 from html.parser import HTMLParser
 P=pathlib.Path(__file__).parent
 class Parser(HTMLParser):
@@ -17,7 +17,10 @@ for preview in [False,True]:
         for u in p.links:
             if not u.startswith('/') or u.startswith('//'):continue
             path=P/'dist'/u.lstrip('/');assert path.is_file() or (path/'index.html').is_file(),(f,u)
-    assert (P/'dist/journal/belajar-memahami/index.html').exists()==preview
+    for folder,route in [('journal','journal'),('products','shop')]:
+        for file in (P/'content'/folder).glob('*.json'):
+            item=json.loads(file.read_text())
+            assert (P/'dist'/route/item['id']/'index.html').exists()==(preview or item['status']=='published')
     assert ('noindex,nofollow' in (P/'dist/index.html').read_text())==preview
 subprocess.run(['python3','build.py'],cwd=P,env=dict(os.environ,PREVIEW_CONTENT='0'),check=True)
 print('PASS: production/preview builds, internal links, one H1, metadata, draft isolation')

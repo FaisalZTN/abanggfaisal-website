@@ -48,4 +48,6 @@ class ContentTests(unittest.TestCase):
    b=(root/'dist/shop/qa-product/index.html').read_text();self.assertIn('https://example.com/pay',b);self.assertIn('Gratis',b)
    self.assertFalse((root/'dist/journal/qa-draft-hidden').exists())
    h=(root/'dist/index.html').read_text();self.assertIn('/journal/qa-article/',h)
+   self.assertIn('<h2>Fixture</h2>',(root/'dist/journal/index.html').read_text())
+   self.assertIn('<h3>Fixture</h3>',h)
 if __name__=='__main__':unittest.main()
