@@ -1,0 +1,17 @@
+{
+  "id": "chatgpt-plus-1-bulan",
+  "title": "ChatGPT Plus 1 Bulan",
+  "category": "Layanan",
+  "short": "Aktivasi manual melalui Telegram. Pembayaran belum aktif.",
+  "description": "Layanan aktivasi langganan selama satu bulan, diproses manual oleh penjual melalui Telegram @Faysaruu. Uji integrasi Mayar; checkout masih menunggu verifikasi akun penjual.",
+  "price": 100000,
+  "status": "published",
+  "availability": "coming-soon",
+  "featured": false,
+  "format": "Layanan aktivasi manual · 1 bulan",
+  "license": "Ketentuan, metode aktivasi dan ketersediaan diperiksa bersama penjual sebelum pembelian.",
+  "checkout": "https://abanggfaisal.myr.id/pl/chatgpt-plus-1-bulan/",
+  "catalog_url": "https://abanggfaisal.myr.id/catalog/chatgpt-plus-1-bulan/",
+  "fulfillment_note": "Pembayaran belum aktif: akun Mayar penjual masih memerlukan verifikasi. Setelah layanan dibuka dan pembayaran dikonfirmasi, hubungi @Faysaruu di Telegram dengan nomor invoice dan nama produk. Pembeli perlu mengirim pesan sendiri. Aktivasi manual; redirect tidak mengaktifkan langganan. Jangan mengirim kata sandi atau OTP.",
+  "art": 2
+}

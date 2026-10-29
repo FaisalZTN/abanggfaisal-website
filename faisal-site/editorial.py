@@ -59,6 +59,8 @@ def normalize(x,kind):
         if x['availability']=='available' and not x['checkout']:raise ValueError('Produk tersedia memerlukan checkout')
         for key in ['description','format','license']:
             if not isinstance(x.get(key),str):raise ValueError(f'{key} wajib teks')
+        if x.get('catalog_url') and not https_url(x['catalog_url']):raise ValueError('Halaman Mayar harus URL HTTPS lengkap')
+        if not isinstance(x.get('fulfillment_note',''),str):raise ValueError('Instruksi harus teks')
         for p in x.get('previews') or []:
             if not isinstance(p,dict) or not image_url(p.get('image','')) or not p.get('alt'):raise ValueError('Preview memerlukan gambar lokal dan alt')
     return x

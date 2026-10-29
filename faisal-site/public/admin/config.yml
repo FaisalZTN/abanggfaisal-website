@@ -65,12 +65,14 @@ collections:
           - {label: Deskripsi gambar, name: alt, widget: string}
           - {label: Keterangan, name: caption, widget: string, required: false}
       - {label: Nama produk, name: title, widget: string}
-      - {label: Kategori, name: category, widget: select, options: [E-book, Templates, Design, Learning]}
+      - {label: Kategori, name: category, widget: select, options: [E-book, Templates, Design, Learning, Layanan]}
       - {label: Ringkasan, name: short, widget: text}
       - {label: Deskripsi, name: description, widget: text}
       - {label: Harga rupiah, name: price, widget: number, value_type: int, min: 0, default: 0}
-      - {label: Format file, name: format, widget: string}
+      - {label: Format file atau layanan, name: format, widget: string}
       - {label: Lisensi, name: license, widget: text}
+      - {label: Halaman informasi Mayar HTTPS, name: catalog_url, widget: string, required: false, pattern: ['^https://.+$', 'Gunakan URL HTTPS']}
+      - {label: Instruksi pembayaran dan aktivasi, name: fulfillment_note, widget: text, required: false, hint: "Jelaskan status pembayaran, pengiriman file atau aktivasi manual dan kontak layanan."}
       - {label: Tautan checkout HTTPS, name: checkout, widget: string, required: false, pattern: ['^https://.+$', 'Gunakan URL HTTPS']}
       - {label: Palet visual, name: art, widget: number, value_type: int, default: 2, min: 0, max: 6}
       - {label: Judul SEO, name: seo_title, widget: string, required: false, hint: "Kosong = judul konten; usahakan sekitar 60 karakter."}

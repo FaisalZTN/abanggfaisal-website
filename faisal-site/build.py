@@ -73,7 +73,9 @@ for a in articles:
 for p in products:
     checkout=p.get('checkout','');price='Rp'+format(p['price'],',').replace(',','.') if p['price'] else 'Gratis'
     cta=f'<a class="btn" href="{e(checkout)}" rel="noopener noreferrer">Beli melalui penyedia checkout ↗</a>' if available(p) else '<p class="notice">'+label(p)+'. Produk ini belum dapat dibeli.</p>'
-    body=f'<section class="product-layout">{media(p,art(p["art"],p["title"]),True)}<div><a href="/shop/">← Kembali ke Shop</a>'+head(e(p['category']),e(p['title']),e(p['description']))+f'<p>{price}</p><p>Format: {e(p["format"])}</p><p>{e(p["license"])}</p>'+cta+'<p class="meta">Jika tersedia, pembayaran dan pengiriman file ditangani penyedia checkout. Periksa ketentuan produk di halaman checkout.</p></div></section>'
+    provider_link=('<p><a href="'+e(p['catalog_url'])+'" rel="noopener noreferrer">Lihat informasi produk di Mayar ↗</a></p>') if p.get('catalog_url') else ''
+    fulfillment=p.get('fulfillment_note') or 'Jika tersedia, pembayaran dan pengiriman file ditangani penyedia checkout. Periksa ketentuan produk di halaman checkout.'
+    body=f'<section class="product-layout">{media(p,art(p["art"],p["title"]),True)}<div><a href="/shop/">← Kembali ke Shop</a>'+head(e(p['category']),e(p['title']),e(p['description']))+f'<p>{price}</p><p>Format: {e(p["format"])}</p><p>{e(p["license"])}</p>'+cta+provider_link+'<p class="meta">'+e(fulfillment)+'</p></div></section>'
     previews=p.get('previews') or []
     if previews:body+='<section class="section"><h2>Lebih dekat dengan produk.</h2><div class="grid">'+''.join('<figure>'+tag(x['image'],x['alt'])+'<figcaption>'+e(x.get('caption',''))+'</figcaption></figure>' for x in previews)+'</div></section>'
     write('/shop/'+p['id']+'/',p['title'],p['short'],body,'shop',p)
