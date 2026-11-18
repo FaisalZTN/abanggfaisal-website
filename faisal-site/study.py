@@ -17,6 +17,7 @@ STUDY_QUOTE = '''
 </figure>'''
 MONTHS = ('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus',
           'September', 'Oktober', 'November', 'Desember')
+TIME_PATTERN = re.compile(r'(?:[01][0-9]|2[0-3]):[0-5][0-9]')
 
 
 def build_study(root, write, head, escape, render_article, preview=False):
@@ -36,6 +37,11 @@ def build_study(root, write, head, escape, render_article, preview=False):
     for item in lectures.values():
         if not item['teachers'] or any(key not in teachers for key in item['teachers']):
             raise ValueError(f'Pengajar tidak ditemukan: {item["title"]}')
+        start, end = item.get('lecture_start') or '', item.get('lecture_end') or ''
+        if (start or end) and not (item.get('lecture_date') and item.get('schedule_page')
+                                   and TIME_PATTERN.fullmatch(start) and TIME_PATTERN.fullmatch(end)
+                                   and start < end):
+            raise ValueError(f'Jam kuliah memerlukan tanggal, halaman jadwal, dan rentang waktu valid: {item["title"]}')
     for item in tutorials.values():
         if any(key not in lectures for key in item.get('related', [])):
             raise ValueError(f'Kuliah terkait tidak ditemukan: {item["title"]}')
@@ -64,8 +70,50 @@ def build_study(root, write, head, escape, render_article, preview=False):
             return ''
         day = date.fromisoformat(item['lecture_date'])
         label = f'{day.day} {MONTHS[day.month - 1]} {day.year}'
-        return (f'<span class="study-date"><time datetime="{day.isoformat()}">{label}</time>'
+        hours = lecture_hours(item)
+        if hours:
+            hours = f' · {e(hours)} WITA'
+        return (f'<span class="study-date"><time datetime="{day.isoformat()}">{label}</time>{hours}'
                 f' · Jadwal KSI, hlm. {e(item["schedule_page"])}</span>')
+
+    def lecture_hours(item):
+        start = item.get('lecture_start')
+        return f'{start}–{item["lecture_end"]}' if start else ''
+
+    def schedule_dashboard():
+        entries = []
+        scheduled = (item for item in active if item.get('lecture_date') and item.get('schedule_page'))
+        for item in sorted(scheduled, key=lambda x: (x['lecture_date'], x.get('lecture_start') or '99:99', x['number'])):
+            hours = lecture_hours(item) or 'Jam belum tercatat'
+            people = ', '.join(teachers[key]['title'] for key in item['teachers'])
+            entries.append(
+                f'<li class="study-slot" data-day="{e(item["lecture_date"])}" '
+                f'data-start="{e(item.get("lecture_start") or "")}" data-end="{e(item.get("lecture_end") or "")}">'
+                f'<p class="study-slot-time">{e(hours)}<span data-session-state hidden></span></p>'
+                f'<div><h4>{link("#" + item["id"], item["title"])}</h4>'
+                f'<p>{e(people)}</p><small>Jadwal KSI, hlm. {e(item["schedule_page"])}</small></div></li>'
+            )
+        days = ''.join(
+            f'<section class="study-agenda-day"><div class="study-agenda-day-head">'
+            f'<div><h3>{title}</h3><time data-agenda-date></time></div><span data-agenda-count></span></div>'
+            f'<ul class="study-agenda-list" data-agenda-list></ul><p class="study-agenda-empty" data-agenda-empty hidden>'
+            f'Tidak ada kuliah terverifikasi pada tanggal ini.</p></section>'
+            for title in ('Hari ini', 'Besok')
+        )
+        return f'''
+        <section class="study-section study-agenda" id="jadwal-kuliah" aria-labelledby="study-agenda-heading">
+          <div class="study-agenda-heading">
+            <h2 id="study-agenda-heading">Jadwal Kuliah</h2>
+            <p class="study-agenda-clock" data-agenda-clock hidden><time></time> WITA</p>
+          </div>
+          <div class="study-agenda-grid" data-agenda-days hidden>{days}</div>
+          <noscript><p>Aktifkan JavaScript untuk melihat jadwal hari ini dan besok dalam WITA. Tanggal tiap kuliah tersedia di katalog.</p></noscript>
+          <div class="study-agenda-foot">
+            <p>Jadwal mengikuti PDF Blok KSI. Topik dan pengajar dicocokkan dengan modul.</p>
+            {link('#kuliah', 'Lihat katalog kuliah ↓')}
+          </div>
+          <template id="study-agenda-data">{''.join(entries)}</template>
+        </section>'''
 
     def back():
         return '<p>' + link('', '← Ruang Belajar') + '</p>'
@@ -151,9 +199,9 @@ def build_study(root, write, head, escape, render_article, preview=False):
     page('', 'Ruang Belajar', intro,
          '<div class="study-heading"><p class="eyebrow">KSI · SEMESTER V · 2026/2027</p>'
          '<h1>Ruang Belajar</h1><p>' + e(intro) + '</p>'
-         '<div class="study-shortcuts">' + link('pengajar/', 'Cari dosen →')
+         '<div class="study-shortcuts">' + link('#jadwal-kuliah', 'Jadwal kuliah ↓') + link('pengajar/', 'Cari dosen →')
          + link('#tutorial', 'Buka tutorial ↓') + link('#sumber-belajar', 'Sumber belajar ↓') + '</div></div>'
-         + STUDY_QUOTE
+         + STUDY_QUOTE + schedule_dashboard()
          + f'<section class="study-section" id="kuliah"><h2>Katalog Kuliah</h2><p class="meta">Tanggal ditampilkan jika topik dan pengajarnya cocok antara modul dan jadwal KSI.</p>'
          + listing(''.join(cards), {x['department'] for x in active}, 'Cari materi atau dosen') + '</section>'
          + '<section class="study-section" id="tutorial"><h2>Tutorial KSI</h2><div class="grid">'

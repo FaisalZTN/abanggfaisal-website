@@ -9,5 +9,7 @@
   "source_page": "11",
   "status": "published",
   "lecture_date": "2026-11-09",
-  "schedule_page": 1
+  "schedule_page": 1,
+  "lecture_start": "09:00",
+  "lecture_end": "11:00"
 }
