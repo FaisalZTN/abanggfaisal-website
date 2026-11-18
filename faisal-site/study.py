@@ -1,0 +1,116 @@
+"""Build the KSI study catalogue, teacher directory and tutorials."""
+import json
+import re
+from collections import Counter
+
+BASE = '/ruang-belajar/'
+MODULE = 'Buku Modul KSI, semester V, TA 2026/2027'
+
+
+def build_study(root, write, head, escape, render_article, preview=False):
+    def records(collection):
+        items = {}
+        for path in sorted((root / 'content' / collection).glob('*.json')):
+            entry = json.loads(path.read_text(encoding='utf-8'))
+            key = entry['id']
+            if not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', key) or key in items:
+                raise ValueError(f'ID Ruang Belajar tidak valid atau ganda: {path}')
+            items[key] = entry
+        return items
+
+    teachers = records('study-teachers')
+    lectures = records('study-lectures')
+    tutorials = records('study-tutorials')
+    for item in lectures.values():
+        if not item['teachers'] or any(key not in teachers for key in item['teachers']):
+            raise ValueError(f'Pengajar tidak ditemukan: {item["title"]}')
+    for item in tutorials.values():
+        if any(key not in lectures for key in item.get('related', [])):
+            raise ValueError(f'Kuliah terkait tidak ditemukan: {item["title"]}')
+
+    active = sorted((x for x in lectures.values() if preview or x['status'] == 'published'),
+                    key=lambda x: x['number'])
+    published = {x['id'] for x in active}
+    sessions = sorted((x for x in tutorials.values() if preview or x['status'] == 'published'),
+                      key=lambda x: x['number'])
+    counts = Counter(key for item in active for key in item['teachers'])
+
+    e = escape
+
+    def link(path, title):
+        return f'<a href="{BASE}{path}">{e(title)}</a>'
+
+    def page(path, title, intro, body):
+        write(BASE + path, title, intro, body, 'study')
+
+    def back():
+        return '<p>' + link('', '← Ruang Belajar') + '</p>'
+
+    def listing(entries, categories, label):
+        options = ''.join(f'<option>{e(category)}</option>' for category in sorted(categories))
+        return f'''
+        <div class="toolbar">
+          <label for="search">{e(label)}</label><input id="search" type="search">
+          <label for="category">Departemen</label><select id="category">
+            <option value="">Semua departemen</option>{options}
+          </select>
+        </div>
+        <p id="count" role="status"></p><div id="results" class="study-list">{entries}</div>
+        <p id="empty" hidden>Tidak ada hasil. Coba kata kunci atau departemen lain.</p>'''
+
+    def card(category, query, body, anchor=''):
+        attr = f' id="{e(anchor)}"' if anchor else ''
+        return f'<article class="card study-row"{attr} data-category="{e(category)}" data-search="{e(query)}">{body}</article>'
+
+    cards = []
+    for item in active:
+        people = [teachers[key] for key in item['teachers']]
+        names = ', '.join(person['title'] for person in people)
+        links = ', '.join(link('pengajar/' + person['id'] + '/', person['title']) for person in people)
+        notes = render_article({'article': item['notes']}) if item.get('notes', '').strip() else ''
+        cards.append(card(item['department'], item['title'] + ' ' + names,
+                          f'<p class="eyebrow">{e(item["department"])}</p><h3>{e(item["title"])}</h3>'
+                          f'<p>{links}</p><p class="meta">Modul KSI, hlm. {e(item["source_page"])}</p>'
+                          f'<div class="prose">{notes}</div>', item['id']))
+    intro = 'Katalog kuliah, daftar dosen pengajar, dan catatan tutorial Blok KSI.'
+    tutorial_cards = ''.join(
+        f'<article class="card study-row"><p class="eyebrow">Skenario {e(item["number"])}</p>'
+        f'<h3>{link("tutorial/" + item["id"] + "/", item["title"])}</h3><p>{e(item["short"])}</p></article>'
+        for item in sessions)
+    page('', 'Ruang Belajar', intro,
+         head('SEMESTER V · 2026/2027', 'Ruang Belajar', e(intro))
+         + '<p>' + link('pengajar/', 'Direktori Pengajar →') + '</p>'
+         + '<section class="section"><h2>Tutorial KSI</h2><div class="grid">'
+         + tutorial_cards + '</div></section>'
+         + f'<section class="section" id="kuliah"><h2>Katalog Kuliah KSI</h2>'
+         + f'<p>{len(active)} topik · {len({x["department"] for x in active})} departemen.</p>'
+         + listing(''.join(cards), {x['department'] for x in active}, 'Cari materi atau dosen') + '</section>')
+
+    directory = []
+    visible_teachers = [x for x in teachers.values() if counts[x['id']]]
+    for person in sorted(visible_teachers, key=lambda x: x['title'].casefold()):
+        key = person['id']
+        url = 'pengajar/' + key + '/'
+        directory.append(card(person['department'], person['title'],
+                              f'<h2>{link(url, person["title"])}</h2>'
+                              f'<p>{e(person["department"])} · {counts[key]} topik</p>'))
+        topics = ''.join('<li>' + link('#' + item['id'], item['title']) + '</li>'
+                         for item in active if key in item['teachers'])
+        note = f'<p class="meta">{e(person["note"])}</p>' if person.get('note') else ''
+        page(url, person['title'], 'Daftar kuliah menurut Modul KSI.',
+             back() + head(e(person['department']), e(person['title']), e(MODULE)) + note
+             + '<section class="section"><h2>Materi kuliah</h2><ul class="study-topics">'
+             + topics + '</ul></section>')
+    page('pengajar/', 'Direktori Pengajar', MODULE, back()
+         + head('BLOK KSI', 'Direktori Pengajar', e(MODULE))
+         + listing(''.join(directory), {x['department'] for x in visible_teachers}, 'Cari dosen'))
+
+    for item in sessions:
+        related = [lectures[key] for key in item.get('related', []) if key in published]
+        related_links = ''.join('<li>' + link('#' + x['id'], x['title']) + '</li>' for x in related)
+        page('tutorial/' + item['id'] + '/', item['title'], item['short'],
+             '<article class="reading">' + back()
+             + head(f'KSI · SKENARIO {e(item["number"])}', e(item['title']), e(item['short']))
+             + f'<p class="meta">Catatan belajar Faisal · Sumber skenario: {e(MODULE)}, hlm. 23</p>'
+             + '<div class="prose">' + render_article(item) + '</div>'
+             + ('<h2>Kuliah terkait</h2><ul>' + related_links + '</ul>' if related else '') + '</article>')

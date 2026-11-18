@@ -1,10 +1,12 @@
 import subprocess,os,pathlib,json
 from html.parser import HTMLParser
+from urllib.parse import unquote, urlsplit
 P=pathlib.Path(__file__).parent
 class Parser(HTMLParser):
-    def __init__(self):super().__init__();self.links=[];self.h1=0
+    def __init__(self):super().__init__();self.links=[];self.ids=set();self.h1=0
     def handle_starttag(self,t,a):
         a=dict(a)
+        if a.get('id'):self.ids.add(a['id'])
         if t=='a':self.links.append(a.get('href',''))
         if t=='h1':self.h1+=1
 for preview in [False,True]:
@@ -16,7 +18,14 @@ for preview in [False,True]:
         assert '<link rel="canonical"' in s and 'name="description"' in s
         for u in p.links:
             if not u.startswith('/') or u.startswith('//'):continue
-            path=P/'dist'/u.lstrip('/');assert path.is_file() or (path/'index.html').is_file(),(f,u)
+            target=urlsplit(u)
+            path=P/'dist'/target.path.lstrip('/')
+            if path.is_dir():path=path/'index.html'
+            assert path.is_file(),(f,u)
+            if target.fragment:
+                linked=Parser()
+                linked.feed(path.read_text())
+                assert unquote(target.fragment) in linked.ids,(f,u)
     for folder,route in [('journal','journal'),('products','shop')]:
         for file in (P/'content'/folder).glob('*.json'):
             item=json.loads(file.read_text())

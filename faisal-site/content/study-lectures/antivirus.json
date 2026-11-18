@@ -1,0 +1,11 @@
+{
+  "id": "antivirus",
+  "title": "Antivirus",
+  "department": "Farmakologi",
+  "teachers": [
+    "dr-annisa-fitria"
+  ],
+  "number": 10,
+  "source_page": "9",
+  "status": "published"
+}
