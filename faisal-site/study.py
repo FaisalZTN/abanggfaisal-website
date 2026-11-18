@@ -178,9 +178,9 @@ def build_study(root, write, head, escape, render_article, preview=False):
         related = [lectures[key] for key in item.get('related', []) if key in published]
         related_links = ''.join('<li>' + link('#' + x['id'], x['title']) + '</li>' for x in related)
         page('tutorial/' + item['id'] + '/', item['title'], item['short'],
-             '<article class="reading">' + back() + TUTORIAL_QUOTE
+             '<article class="reading study-tutorial">' + back() + TUTORIAL_QUOTE
              + head(f'KSI · SKENARIO {e(item["number"])}', e(item['title']), e(item['short']))
              + f'<p class="meta">Catatan belajar Faisal · Sumber skenario: {e(MODULE)}, hlm. 23</p>'
-             + '<div class="prose">' + render_article(item) + '</div>'
+             + '<div class="prose study-tutorial-intro">' + render_article(item) + '</div>'
              + tutorial_topics(item)
              + ('<h2>Kuliah terkait</h2><ul>' + related_links + '</ul>' if related else '') + '</article>')
