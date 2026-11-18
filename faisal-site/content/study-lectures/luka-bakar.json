@@ -1,0 +1,13 @@
+{
+  "id": "luka-bakar",
+  "title": "Luka bakar",
+  "department": "Ilmu Bedah",
+  "teachers": [
+    "dr-sulandri-gusasi"
+  ],
+  "number": 44,
+  "source_page": "11",
+  "status": "published",
+  "lecture_date": "2026-12-04",
+  "schedule_page": 5
+}

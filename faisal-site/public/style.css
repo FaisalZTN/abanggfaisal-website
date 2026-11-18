@@ -15,3 +15,115 @@ main{min-height:60vh}h1,h2,h3,p,a{overflow-wrap:anywhere}.hero{position:relative
 .prose{min-width:0}.prose .inline-media{display:block;max-width:100%;width:auto;height:auto;margin:24px auto;border-radius:var(--radius)}.prose pre{max-width:100%;overflow:auto;background:var(--wash);padding:20px;border:1px solid var(--line);border-radius:var(--radius);font:14px/1.7 ui-monospace,monospace}.prose :not(pre)>code{font:.85em ui-monospace,monospace;background:var(--wash);padding:2px 5px}.prose ul,.prose ol{padding-left:1.5em}.prose .table-scroll{max-width:100%;overflow-x:auto;margin:28px 0;border:1px solid var(--line)}.prose table{width:100%;border-collapse:collapse;font:15px/1.6 system-ui,sans-serif}.prose th,.prose td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);min-width:120px}.prose th{background:var(--wash);font-weight:650}.prose h4{font:600 23px/1.4 Georgia,serif;margin:1.5em 0 .6em}
 
 .card h2{font-size:29px;line-height:1.18;letter-spacing:-.025em;margin:12px 0}.card:hover h2{text-decoration:underline;text-decoration-thickness:1px}
+
+/* Ruang Belajar */
+.study-list { display: grid; gap: .75rem; }
+.study-row { display: block; padding: 1.25rem; overflow-wrap: anywhere; scroll-margin-top: 7rem; }
+.study-row[hidden] { display: none; }
+.study-row h2 { font-size: clamp(1.3rem, 3vw, 1.75rem); }
+.study-row h2, .study-row h3, .study-row p { margin: 0 0 .5rem; }
+.study-row > :last-child { margin-bottom: 0; }
+.study-topics li { margin-block: .65rem; }
+
+.study-heading { padding-block: clamp(1.25rem, 4vw, 2.75rem) 1rem; }
+.study-heading h1 { font-size: clamp(2.2rem, 6vw, 3.9rem); margin-block: .25rem; }
+.study-heading p { margin-block: .25rem .75rem; }
+.study-shortcuts { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; }
+.study-shortcuts a { font-weight: 650; }
+.study-section { margin-block: 1rem 2.5rem; scroll-margin-top: 6rem; }
+.study-section h2 { font-size: clamp(1.4rem, 3vw, 2rem); margin-block: 0 .65rem; }
+.study-section .toolbar { margin-block: .5rem; }
+.study-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+.study-list .study-row { border: 1px solid var(--line); padding: .8rem .9rem; background: var(--paper); }
+.study-list .study-row h2, .study-list .study-row h3 { font-size: 1.05rem; line-height: 1.35; }
+.study-list .study-row .meta { margin-top: .45rem; }
+.study-list .study-row .eyebrow { font-size: .68rem; }
+.study-list .study-row p { line-height: 1.45; }
+.study-list .prose:empty { display: none; }
+.study-more { margin-top: 1rem; }
+/* Motif KSI menutupi latar halaman. Konten panjang tetap punya bidang baca polos. */
+.study-date { display: block; margin-block: .35rem; font-size: .78rem; color: var(--muted); }
+body:has(.study-block--ksi) {
+  position: relative;
+  isolation: isolate;
+}
+body:has(.study-block--ksi)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--accent);
+  mask: url('/patterns/ksi.svg') center top / 480px 356px repeat;
+  opacity: .19;
+}
+.study-block--ksi .reading {
+  background: var(--paper);
+  padding: clamp(.85rem, 3vw, 1.8rem);
+  border-radius: .8rem;
+}
+.study-block--ksi #tutorial .study-row {
+  background: var(--paper);
+}
+@media (max-width: 760px) {
+  body:has(.study-block--ksi)::before {
+    mask-size: 340px 252px;
+    opacity: .15;
+  }
+}
+
+.study-resource-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 1rem;
+}
+.study-resource {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.study-resource-preview {
+  display: grid;
+  align-content: center;
+  gap: .35rem;
+  min-height: 9rem;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--wash);
+}
+.study-resource-materi {
+  background: color-mix(in srgb, var(--wash) 45%, var(--paper));
+}
+.study-resource-preview h3,
+.study-resource-preview p {
+  margin: 0;
+}
+.study-resource-preview ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  padding: 0;
+  margin: .2rem 0 0;
+  list-style: none;
+}
+.study-resource-preview li {
+  padding: .1rem .5rem;
+  border: 1px solid var(--line);
+  border-radius: .35rem;
+  background: var(--paper);
+  font-size: .76rem;
+}
+.study-resource-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: 1rem 1.25rem;
+}
+.study-resource-body p { margin: 0; }
+.study-resource-links { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem; }

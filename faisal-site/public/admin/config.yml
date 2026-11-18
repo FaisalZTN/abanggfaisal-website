@@ -90,3 +90,73 @@ collections:
           - {label: Bidang minat, name: interests, widget: list, field: {label: Bidang, name: interest, widget: string}}
           - {label: URL kontak publik HTTPS, name: contact_url, widget: string, required: false}
           - {label: Saya menyetujui publikasi tautan kontak ini, name: contact_approved, widget: boolean, default: false}
+
+  - name: study_teachers
+    label: Pengajar KSI
+    folder: faisal-site/content/study-teachers
+    create: true
+    extension: json
+    format: json
+    identifier_field: id
+    slug: '{{id}}'
+    summary: '{{title}} · {{department}}'
+    fields:
+      - {label: ID tetap, name: id, widget: string, pattern: ['^[a-z0-9]+(-[a-z0-9]+)*$', 'Gunakan huruf kecil, angka, dan tanda hubung']}
+      - {label: Nama dan gelar sesuai modul, name: title, widget: string}
+      - {label: Departemen, name: department, widget: string}
+      - {label: Catatan sumber, name: note, widget: text, required: false}
+
+  - name: study_lectures
+    label: Materi Kuliah KSI
+    folder: faisal-site/content/study-lectures
+    create: true
+    extension: json
+    format: json
+    identifier_field: id
+    slug: '{{id}}'
+    summary: '{{number}} · {{title}}'
+    fields:
+      - {label: ID tetap, name: id, widget: string, pattern: ['^[a-z0-9]+(-[a-z0-9]+)*$', 'Gunakan huruf kecil, angka, dan tanda hubung']}
+      - {label: Judul, name: title, widget: string}
+      - {label: Departemen, name: department, widget: string}
+      - {label: Nomor di modul, name: number, widget: number, value_type: int, min: 1}
+      - {label: Halaman cetak di modul, name: source_page, widget: string}
+      - {label: Tanggal kuliah terverifikasi, name: lecture_date, widget: string, required: false, hint: 'Isi YYYY-MM-DD jika topik dan dosen cocok dengan jadwal.', pattern: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}$', 'Gunakan YYYY-MM-DD']}
+      - {label: Halaman PDF jadwal, name: schedule_page, widget: number, value_type: int, min: 1, required: false}
+      - label: Dosen pengajar
+        name: teachers
+        widget: relation
+        collection: study_teachers
+        search_fields: [title, department]
+        display_fields: [title, department]
+        value_field: id
+        multiple: true
+        min: 1
+      - {label: Catatan belajar dan referensi, name: notes, widget: markdown, required: false}
+      - {label: Status, name: status, widget: select, options: [draft, published], default: draft}
+
+  - name: study_tutorials
+    label: Tutorial KSI
+    folder: faisal-site/content/study-tutorials
+    create: true
+    extension: json
+    format: json
+    identifier_field: id
+    slug: '{{id}}'
+    summary: '{{number}} · {{title}}'
+    fields:
+      - {label: ID tetap, name: id, widget: string, pattern: ['^[a-z0-9]+(-[a-z0-9]+)*$', 'Gunakan huruf kecil, angka, dan tanda hubung']}
+      - {label: Judul, name: title, widget: string}
+      - {label: Nomor skenario, name: number, widget: number, value_type: int, min: 1}
+      - {label: Pengantar, name: short, widget: text}
+      - {label: Catatan belajar, name: article, widget: markdown}
+      - label: Kuliah terkait
+        name: related
+        widget: relation
+        collection: study_lectures
+        search_fields: [title]
+        display_fields: [title]
+        value_field: id
+        multiple: true
+        required: false
+      - {label: Status, name: status, widget: select, options: [draft, published], default: draft}
