@@ -59,6 +59,8 @@ main{min-height:60vh}h1,h2,h3,p,a{overflow-wrap:anywhere}.hero{position:relative
   border: 1px solid var(--line);
   border-radius: 50%;
   color: var(--accent);
+  font-size: .78rem;
+  font-variant-numeric: tabular-nums;
 }
 .study-welcome .study-quote { display: grid; align-content: center; margin: 0; border-radius: 1rem; }
 @media (min-width: 700px) {
@@ -353,6 +355,18 @@ body:has(.study-block--ksi)::before {
 .study-tutorial-intro > :first-child { margin-top: 0; }
 .study-tutorial-intro > :last-child { margin-bottom: 0; }
 .study-tutorial-intro blockquote { margin: 1rem 0; font-style: normal; }
+
+@media (max-width: 600px) {
+  .study-block--ksi #tutorial .study-row h3 { font-size: clamp(1.25rem, 5vw, 1.45rem); }
+  .study-tutorial.reading .page-hero h1 { font-size: clamp(1.8rem, 7vw, 2.15rem); line-height: 1.12; }
+  .study-tutorial .page-hero .intro,
+  .study-tutorial .prose { font-size: 1.0625rem; line-height: 1.68; }
+  .study-tutorial > h2,
+  .study-tutorial .prose h2,
+  .study-tutorial-topics h2 { font-size: clamp(1.45rem, 5.8vw, 1.65rem); line-height: 1.2; }
+  .study-tutorial .prose h3 { font-size: 1.2rem; }
+  .study-tutorial-intro blockquote { padding-inline-start: .85rem; }
+}
 
 @media (min-width: 900px) {
   .study-tutorial.reading { max-width: 58rem; }

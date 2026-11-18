@@ -259,15 +259,15 @@ def build_study(root, output, write, head, escape, render_article, preview=False
       </div>
     </section>'''
     shortcuts = (
-        ('#jadwal-kuliah', 'Jadwal kuliah', '↓'),
-        ('pengajar/', 'Cari dosen', '→'),
-        ('#kuliah', 'Katalog kuliah', '↓'),
-        ('#tutorial', 'Buka tutorial', '↓'),
-        ('#guideline', 'Guideline', '↓'),
-        ('#sumber-belajar', 'Sumber belajar', '↓'),
+        ('#jadwal-kuliah', 'Jadwal kuliah'),
+        ('pengajar/', 'Cari dosen'),
+        ('#kuliah', 'Katalog kuliah'),
+        ('#tutorial', 'Buka tutorial'),
+        ('#guideline', 'Guideline'),
+        ('#sumber-belajar', 'Sumber belajar'),
     )
-    shortcut_links = ''.join(f'<a href="{BASE}{path}">{e(label)}<span aria-hidden="true">{arrow}</span></a>'
-                             for path, label, arrow in shortcuts)
+    shortcut_links = ''.join(f'<a href="{BASE}{path}">{e(label)}<span aria-hidden="true">{number}</span></a>'
+                             for number, (path, label) in enumerate(shortcuts, start=1))
     page('', 'Ruang Belajar', intro,
          '<div class="study-heading"><p class="eyebrow">KSI · SEMESTER V · 2026/2027</p>'
          '<h1>Ruang Belajar</h1><p>' + e(intro) + '</p></div>'
