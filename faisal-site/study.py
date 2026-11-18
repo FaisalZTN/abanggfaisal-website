@@ -7,10 +7,13 @@ from datetime import date
 BASE = '/ruang-belajar/'
 MODULE = 'Buku Modul KSI, semester V, TA 2026/2027'
 BLOCK_THEME = 'ksi'
-TUTORIAL_QUOTE = '''
+STUDY_QUOTE = '''
 <figure class="study-quote">
-  <blockquote lang="en">“Studies serve for delight, for ornament, and for ability.”</blockquote>
-  <figcaption>Francis Bacon, <cite lang="en"><a href="https://www.columbia.edu/cu/lweb/digital/collections/cul/texts/ldpd_7914458_000/pages/ldpd_7914458_000_00000270.html">Of Studies</a></cite></figcaption>
+  <blockquote lang="ar" dir="rtl">وَقُلْ رَّبِّ زِدْنِيْ عِلْمًا</blockquote>
+  <figcaption>
+    <span class="study-quote-translation">“Ya Tuhanku, tambahkanlah ilmu kepadaku.”</span>
+    <a href="https://quran.kemenag.go.id/quran/per-ayat/surah/20?from=108&amp;to=135">QS Taha [20]: 114 · Qur’an Kemenag</a>
+  </figcaption>
 </figure>'''
 MONTHS = ('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus',
           'September', 'Oktober', 'November', 'Desember')
@@ -150,6 +153,7 @@ def build_study(root, write, head, escape, render_article, preview=False):
          '<h1>Ruang Belajar</h1><p>' + e(intro) + '</p>'
          '<div class="study-shortcuts">' + link('pengajar/', 'Cari dosen →')
          + link('#tutorial', 'Buka tutorial ↓') + link('#sumber-belajar', 'Sumber belajar ↓') + '</div></div>'
+         + STUDY_QUOTE
          + f'<section class="study-section" id="kuliah"><h2>Katalog Kuliah</h2><p class="meta">Tanggal ditampilkan jika topik dan pengajarnya cocok antara modul dan jadwal KSI.</p>'
          + listing(''.join(cards), {x['department'] for x in active}, 'Cari materi atau dosen') + '</section>'
          + '<section class="study-section" id="tutorial"><h2>Tutorial KSI</h2><div class="grid">'
@@ -178,9 +182,9 @@ def build_study(root, write, head, escape, render_article, preview=False):
         related = [lectures[key] for key in item.get('related', []) if key in published]
         related_links = ''.join('<li>' + link('#' + x['id'], x['title']) + '</li>' for x in related)
         page('tutorial/' + item['id'] + '/', item['title'], item['short'],
-             '<article class="reading study-tutorial">' + back() + TUTORIAL_QUOTE
+             '<article class="reading study-tutorial">' + back()
              + head(f'KSI · SKENARIO {e(item["number"])}', e(item['title']), e(item['short']))
-             + f'<p class="meta">Catatan belajar Faisal · Sumber skenario: {e(MODULE)}, hlm. 23</p>'
+             + '<p class="meta">Catatan belajar Faisal</p>'
              + '<div class="prose study-tutorial-intro">' + render_article(item) + '</div>'
              + tutorial_topics(item)
              + ('<h2>Kuliah terkait</h2><ul>' + related_links + '</ul>' if related else '') + '</article>')
