@@ -28,8 +28,44 @@ main{min-height:60vh}h1,h2,h3,p,a{overflow-wrap:anywhere}.hero{position:relative
 .study-heading { padding-block: clamp(1.25rem, 4vw, 2.75rem) 1rem; }
 .study-heading h1 { font-size: clamp(2.2rem, 6vw, 3.9rem); margin-block: .25rem; }
 .study-heading p { margin-block: .25rem .75rem; }
-.study-shortcuts { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; }
-.study-shortcuts a { font-weight: 650; }
+.study-welcome { display: grid; gap: 1rem; align-items: stretch; margin-block-end: 1.5rem; }
+.study-shortcuts {
+  display: grid;
+  gap: .2rem;
+  margin: 0;
+  padding: .45rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--paper);
+  box-shadow: 0 8px 24px rgb(0 0 0 / .08);
+}
+.study-shortcuts a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .7rem;
+  min-height: 44px;
+  padding: .35rem .6rem .35rem .75rem;
+  border-radius: .62rem;
+  color: var(--ink);
+  font-weight: 650;
+}
+.study-shortcuts a:hover, .study-shortcuts a:focus-visible { background: var(--wash); }
+.study-shortcuts a span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--accent);
+  font-size: .78rem;
+  font-variant-numeric: tabular-nums;
+}
+.study-welcome .study-quote { display: grid; align-content: center; margin: 0; border-radius: 1rem; }
+@media (min-width: 700px) {
+  .study-welcome { grid-template-columns: clamp(13rem, 23vw, 17rem) minmax(0, 1fr); }
+}
 .study-section { margin-block: 1rem 2.5rem; scroll-margin-top: 6rem; }
 .study-section h2 { font-size: clamp(1.4rem, 3vw, 2rem); margin-block: 0 .65rem; }
 .study-section .toolbar { margin-block: .5rem; }
@@ -319,6 +355,18 @@ body:has(.study-block--ksi)::before {
 .study-tutorial-intro > :first-child { margin-top: 0; }
 .study-tutorial-intro > :last-child { margin-bottom: 0; }
 .study-tutorial-intro blockquote { margin: 1rem 0; font-style: normal; }
+
+@media (max-width: 600px) {
+  .study-block--ksi #tutorial .study-row h3 { font-size: clamp(1.25rem, 5vw, 1.45rem); }
+  .study-tutorial.reading .page-hero h1 { font-size: clamp(1.8rem, 7vw, 2.15rem); line-height: 1.12; }
+  .study-tutorial .page-hero .intro,
+  .study-tutorial .prose { font-size: 1.0625rem; line-height: 1.68; }
+  .study-tutorial > h2,
+  .study-tutorial .prose h2,
+  .study-tutorial-topics h2 { font-size: clamp(1.45rem, 5.8vw, 1.65rem); line-height: 1.2; }
+  .study-tutorial .prose h3 { font-size: 1.2rem; }
+  .study-tutorial-intro blockquote { padding-inline-start: .85rem; }
+}
 
 @media (min-width: 900px) {
   .study-tutorial.reading { max-width: 58rem; }
