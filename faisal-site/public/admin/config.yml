@@ -150,6 +150,14 @@ collections:
       - {label: Nomor skenario, name: number, widget: number, value_type: int, min: 1}
       - {label: Pengantar, name: short, widget: text}
       - {label: Catatan belajar, name: article, widget: markdown}
+      - label: Topik Persiapan Tutorial 2
+        name: topics
+        widget: list
+        required: false
+        summary: '{{fields.title}}'
+        fields:
+          - {label: Judul topik, name: title, widget: string}
+          - {label: Isi topik, name: body, widget: markdown}
       - label: Kuliah terkait
         name: related
         widget: relation
