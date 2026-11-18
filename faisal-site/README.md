@@ -61,3 +61,9 @@ Setelah KYC disetujui: periksa checkout, harga dan biaya, metode dan estimasi ak
 - Transkripsikan skenario dari modul secara utuh. Cantumkan halaman sumber dan letakkan panduan analisis di panel terpisah.
 - Untuk materi klinis, periksa PNPK atau Panduan Praktik Klinis Kementerian Kesehatan RI yang berlaku terlebih dahulu, lalu pedoman organisasi profesi Indonesia. Periksa apakah dokumen memang membahas kondisi dan keputusan klinis yang ditulis. Gunakan pedoman internasional atau tinjauan ilmiah untuk melengkapi bagian yang belum dicakup.
 - Cantumkan nomor sitasi Vancouver dalam kurung sesuai urutan kemunculan pertama. Gunakan kembali nomor yang sama untuk sumber yang sama. Susun panel Referensi sesuai nomor dan beri tautan ke dokumen atau DOI jika tersedia.
+
+## Jadwal Kuliah Ruang Belajar
+
+Isi tanggal dan halaman PDF pada koleksi Katalog Kuliah saat topik serta pengajarnya cocok dengan modul. Jam mulai dan selesai dalam WITA dapat diisi berpasangan dengan format `HH:MM`. Entri yang baru memiliki tanggal tetap dapat muncul pada dasbor dengan keterangan jam belum tercatat.
+
+Dasbor memilih jadwal hari ini dan besok berdasarkan waktu Makassar dari jam perangkat. Keterangan sesi mengikuti rentang jam pada PDF. Untuk perubahan jadwal, perbarui datanya di CMS agar build berikutnya menyajikan informasi terbaru.

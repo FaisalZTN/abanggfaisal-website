@@ -45,5 +45,87 @@ const theme=document.querySelector('#theme');function setTheme(dark){document.bo
   filter();
   if (more) revealLinkedCard();
 }
+const agenda = document.querySelector('#jadwal-kuliah');
+if (agenda) {
+  const wita = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Makassar', calendar: 'gregory', numberingSystem: 'latn',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  });
+  const dateLabel = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full', timeZone: 'UTC' });
+  const clock = agenda.querySelector('[data-agenda-clock]');
+  const clockTime = clock.querySelector('time');
+  const grid = agenda.querySelector('[data-agenda-days]');
+  const panels = [...grid.children];
+  const slots = new Map();
+  for (const slot of agenda.querySelector('template').content.children) {
+    const day = slot.dataset.day;
+    if (!slots.has(day)) slots.set(day, []);
+    slots.get(day).push(slot);
+  }
+
+  function showDay(panel, day) {
+    const key = day.toISOString().slice(0, 10);
+    const date = panel.querySelector('[data-agenda-date]');
+    const sessions = slots.get(key) ?? [];
+    date.textContent = dateLabel.format(day);
+    date.dateTime = key;
+    panel.querySelector('[data-agenda-count]').textContent = `${sessions.length} kuliah`;
+    panel.querySelector('[data-agenda-empty]').hidden = sessions.length > 0;
+    panel.querySelector('[data-agenda-list]').replaceChildren(...sessions.map(slot => slot.cloneNode(true)));
+  }
+
+  let shownDay;
+  function refreshAgenda(now = new Date()) {
+    const { year, month, day, hour, minute } = Object.fromEntries(
+      wita.formatToParts(now).map(({ type, value }) => [type, value]),
+    );
+    const key = `${year}-${month}-${day}`;
+    const localTime = `${hour}:${minute}`;
+    clockTime.dateTime = `${key}T${localTime}:00+08:00`;
+    clockTime.textContent = localTime;
+
+    if (key !== shownDay) {
+      // UTC here represents calendar dates after converting the timestamp to WITA.
+      const today = new Date(Date.UTC(+year, +month - 1, +day));
+      const tomorrow = new Date(today);
+      tomorrow.setUTCDate(today.getUTCDate() + 1);
+      showDay(panels[0], today);
+      showDay(panels[1], tomorrow);
+      shownDay = key;
+    }
+
+    for (const slot of panels[0].querySelectorAll('.study-slot[data-start]:not([data-start=""])')) {
+      const status = slot.querySelector('[data-session-state]');
+      const { start, end } = slot.dataset;
+      if (localTime < start) {
+        status.textContent = 'Akan mulai';
+        status.dataset.sessionState = 'upcoming';
+      } else if (localTime < end) {
+        status.textContent = 'Sesi terjadwal';
+        status.dataset.sessionState = 'current';
+      } else {
+        status.textContent = 'Jam berlalu';
+        status.dataset.sessionState = 'past';
+      }
+      status.hidden = false;
+    }
+  }
+
+  let agendaTimer;
+  function tickAgenda() {
+    clearTimeout(agendaTimer);
+    refreshAgenda();
+    agendaTimer = setTimeout(tickAgenda, 60_000 - Date.now() % 60_000 + 50);
+  }
+  tickAgenda();
+  grid.hidden = false;
+  clock.hidden = false;
+  window.addEventListener('pageshow', tickAgenda);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) tickAgenda();
+  });
+}
+
 // Compatibility for old bookmarks, with a strict allowlist.
 const old=location.hash.slice(1);if(['home','journal','shop','about'].includes(old))location.replace(old==='home'?'/':'/'+old+'/');else if(/^(article|product)\/[a-z0-9-]+$/.test(old)){const [kind,id]=old.split('/');location.replace('/'+(kind==='article'?'journal':'shop')+'/'+id+'/')}
