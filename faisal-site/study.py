@@ -77,14 +77,14 @@ def build_study(root, output, write, head, escape, render_article, preview=False
               f'<div class="study-block study-block--{BLOCK_THEME}">{body}</div>', 'study')
 
     def schedule(item):
+        location = f' · {e(item["lecture_location"])}' if item.get('lecture_location') else ''
         if not item.get('lecture_date') or not item.get('schedule_page'):
-            return '<span class="study-date">Jadwal belum terverifikasi</span>'
+            return f'<span class="study-date">Jadwal belum terverifikasi{location}</span>'
         day = date.fromisoformat(item['lecture_date'])
         label = f'{day.day} {MONTHS[day.month - 1]} {day.year}'
         hours = lecture_hours(item)
         if hours:
             hours = f' · {e(hours)} WITA'
-        location = f' · {e(item["lecture_location"])}' if item.get('lecture_location') else ''
         return (f'<span class="study-date"><time datetime="{day.isoformat()}">{label}</time>{hours}'
                 f'{location} · {SCHEDULE_SOURCE}, hlm. {e(item["schedule_page"])}</span>')
 
@@ -125,7 +125,7 @@ def build_study(root, output, write, head, escape, render_article, preview=False
           <div class="study-agenda-grid" data-agenda-days hidden>{days}</div>
           <noscript><p>Aktifkan JavaScript untuk melihat jadwal hari ini dan besok dalam WITA. Tanggal tiap kuliah tersedia di katalog.</p></noscript>
           <div class="study-agenda-foot">
-            <p>Jadwal kuliah mengikuti PDF Vorticosa PSKPS 2024. Lokasi ditampilkan jika tersedia.</p>
+            <p>Tanggal dan jam mengikuti jadwal Vorticosa. Lokasi mengikuti pembaruan Ruang Belajar.</p>
             <div class="study-agenda-links">{calendar_link}{link('#kuliah', 'Lihat katalog kuliah ↓')}</div>
           </div>
           <template id="study-agenda-data">{''.join(entries)}</template>

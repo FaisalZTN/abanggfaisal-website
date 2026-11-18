@@ -64,7 +64,7 @@ Setelah KYC disetujui: periksa checkout, harga dan biaya, metode dan estimasi ak
 
 ## Jadwal Kuliah Ruang Belajar
 
-Isi tanggal dan halaman PDF Vorticosa pada koleksi Materi Kuliah KSI setelah memastikan padanan topiknya dengan katalog modul. Pilih pengajar sesuai jadwal Vorticosa. Masukkan jam berpasangan dalam format `HH:MM` WITA, dan isi Tempat kuliah jika lokasi diketahui. Lokasi Insect bites di RKB 4 dikonfirmasi terpisah oleh pemilik situs. Entri yang baru memiliki tanggal tetap dapat muncul pada dasbor dengan keterangan jam belum tercatat.
+Isi tanggal dan halaman PDF Vorticosa pada koleksi Materi Kuliah KSI setelah memastikan padanan topiknya dengan katalog modul. Pilih pengajar sesuai jadwal Vorticosa. Masukkan jam berpasangan dalam format `HH:MM` WITA, dan isi Tempat kuliah jika lokasi diketahui. Lokasi seluruh sesi KSI ditetapkan ke RKB 4 sesuai pembaruan pemilik situs. Entri yang baru memiliki tanggal tetap dapat muncul pada dasbor dengan keterangan jam belum tercatat.
 
 Dasbor memilih jadwal hari ini dan besok berdasarkan waktu Makassar dari jam perangkat. Keterangan sesi mengikuti rentang jam pada PDF. Untuk perubahan jadwal, perbarui datanya di CMS agar build berikutnya menyajikan informasi terbaru.
 
