@@ -258,14 +258,21 @@ def build_study(root, output, write, head, escape, render_article, preview=False
         </article>
       </div>
     </section>'''
+    shortcuts = (
+        ('#jadwal-kuliah', 'Jadwal kuliah', '↓'),
+        ('pengajar/', 'Cari dosen', '→'),
+        ('#kuliah', 'Katalog kuliah', '↓'),
+        ('#tutorial', 'Buka tutorial', '↓'),
+        ('#guideline', 'Guideline', '↓'),
+        ('#sumber-belajar', 'Sumber belajar', '↓'),
+    )
+    shortcut_links = ''.join(f'<a href="{BASE}{path}">{e(label)}<span aria-hidden="true">{arrow}</span></a>'
+                             for path, label, arrow in shortcuts)
     page('', 'Ruang Belajar', intro,
          '<div class="study-heading"><p class="eyebrow">KSI · SEMESTER V · 2026/2027</p>'
-         '<h1>Ruang Belajar</h1><p>' + e(intro) + '</p>'
-         '<div class="study-shortcuts">' + link('#jadwal-kuliah', 'Jadwal kuliah ↓') + link('pengajar/', 'Cari dosen →')
-         + link('#kuliah', 'Katalog kuliah ↓') + link('#tutorial', 'Buka tutorial ↓')
-         + link('#guideline', 'Guideline ↓')
-         + link('#sumber-belajar', 'Sumber belajar ↓') + '</div></div>'
-         + STUDY_QUOTE + schedule_dashboard()
+         '<h1>Ruang Belajar</h1><p>' + e(intro) + '</p></div>'
+         + '<div class="study-welcome"><nav class="study-shortcuts" aria-label="Pintasan Ruang Belajar">'
+         + shortcut_links + '</nav>' + STUDY_QUOTE + '</div>' + schedule_dashboard()
          + '<section class="study-section" id="kuliah"><h2>Katalog Kuliah</h2>'
          + '<details id="study-catalogue" class="study-catalogue"><summary>'
          + f'<span class="catalogue-show">Tampilkan katalog · {len(active)} kuliah</span>'
