@@ -55,3 +55,9 @@ Produk chatgpt-plus-1-bulan memakai published + coming-soon untuk menampilkan ha
 Field CMS Halaman informasi Mayar menampilkan tautan katalog meskipun belum tersedia. Instruksi pembayaran dan aktivasi menggantikan keterangan pengiriman file; produk lama tetap kompatibel. Redirect Telegram @Faysaruu memerlukan pembeli mengirim pesan sendiri. Aktivasi manual. Tidak ada bot, webhook, API aktivasi atau pengiriman file otomatis.
 
 Setelah KYC disetujui: periksa checkout, harga dan biaya, metode dan estimasi aktivasi serta ketentuan layanan. Transaksi uji memerlukan persetujuan pemilik. Periksa invoice/email, status lunas di dashboard dan redirect Telegram; baru ubah ketersediaan ke available. Simpan CMS menulis ke main dan memicu deployment. Katalog terbuka bukan bukti pembayaran aktif. Merge PR ini memerlukan persetujuan pemilik tersendiri.
+
+## Rujukan Ruang Belajar
+
+- Transkripsikan skenario dari modul secara utuh. Cantumkan halaman sumber dan letakkan panduan analisis di panel terpisah.
+- Untuk materi klinis, periksa PNPK atau Panduan Praktik Klinis Kementerian Kesehatan RI yang berlaku terlebih dahulu, lalu pedoman organisasi profesi Indonesia. Periksa apakah dokumen memang membahas kondisi dan keputusan klinis yang ditulis. Gunakan pedoman internasional atau tinjauan ilmiah untuk melengkapi bagian yang belum dicakup.
+- Cantumkan nomor sitasi Vancouver dalam kurung sesuai urutan kemunculan pertama. Gunakan kembali nomor yang sama untuk sumber yang sama. Susun panel Referensi sesuai nomor dan beri tautan ke dokumen atau DOI jika tersedia.

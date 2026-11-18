@@ -127,14 +127,14 @@ body:has(.study-block--ksi)::before {
 .study-resource-links { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem; }
 
 @font-face {
-  font-family: Caveat;
-  src: url('/fonts/caveat-latin-500.woff2') format('woff2');
-  font-weight: 500;
+  font-family: Amiri;
+  src: url('/fonts/amiri-arabic-400.woff2') format('woff2');
+  font-weight: 400;
   font-display: swap;
 }
 .study-quote {
-  margin-block: 1.35rem 0;
-  padding: clamp(1.15rem, 4vw, 2rem) clamp(1rem, 4vw, 2rem);
+  margin-block: .5rem 1.75rem;
+  padding: clamp(1.1rem, 4vw, 1.65rem);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--wash);
@@ -143,9 +143,10 @@ body:has(.study-block--ksi)::before {
 .study-quote blockquote {
   margin: 0;
   color: var(--ink);
-  font: 500 clamp(1.7rem, 4.5vw, 2.65rem)/1.1 Caveat, 'Segoe Print', 'Bradley Hand', cursive;
+  font: 400 clamp(2rem, 5vw, 3.15rem)/1.5 Amiri, 'Noto Naskh Arabic', 'Traditional Arabic', serif;
   text-wrap: balance;
 }
+.study-quote-translation { display: block; margin-bottom: .25rem; font-size: .95rem; color: var(--ink); }
 .study-tutorial-topics { margin-block: 3rem; }
 .study-tutorial-topics h2 { margin-bottom: .7rem; }
 .study-topic {
@@ -209,6 +210,7 @@ body:has(.study-block--ksi)::before {
 }
 .study-tutorial-intro > :first-child { margin-top: 0; }
 .study-tutorial-intro > :last-child { margin-bottom: 0; }
+.study-tutorial-intro blockquote { margin: 1rem 0; font-style: normal; }
 
 @media (min-width: 900px) {
   .study-tutorial.reading { max-width: 58rem; }
