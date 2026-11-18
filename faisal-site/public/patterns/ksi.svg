@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 356" fill="none" stroke="#000" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Eye and iris -->
+  <g transform="translate(28 44) rotate(-9 40 18)">
+    <path d="M1 18C23-4 56-4 79 18 56 40 23 40 1 18Z"/>
+    <circle cx="40" cy="18" r="11"/>
+    <circle cx="40" cy="18" r="4"/>
+    <path d="M9 8 6 5m20-2-1-4m29 4 1-4m17 9 3-3"/>
+  </g>
+  <!-- Cochlear spiral -->
+  <g transform="translate(290 24) rotate(12 29 31)">
+    <path d="M5 63c-2-10 0-17 5-22C-4 22 10 2 31 3c20 1 31 17 25 34-4 12-18 19-30 13-11-5-14-16-10-24 4-9 15-12 22-7 7 4 8 13 4 18-4 4-11 5-15 1-3-3-3-8 0-11"/>
+    <path d="M11 63c-1-7 1-13 5-17"/>
+  </g>
+  <!-- Skin layers and a hair follicle -->
+  <g transform="translate(154 146) rotate(-10 42 31)">
+    <path d="M2 13q10-5 20 0t20 0 20 0 20 0v44H2Z"/>
+    <path d="M2 23q10-5 20 0t20 0 20 0 20 0M2 45q10-5 20 0t20 0 20 0 20 0"/>
+    <path d="M41 0c3 9 10 19 9 32-1 8-6 9-8 4-1-5 3-13 1-23"/>
+    <path d="M11 51h9m44 0h8m-42-19h-9m48 0h4"/>
+  </g>
+  <g transform="translate(381 208) rotate(16 36 15) scale(.83)">
+    <path d="M1 18C23-4 56-4 79 18 56 40 23 40 1 18Z"/>
+    <circle cx="40" cy="18" r="11"/>
+    <circle cx="40" cy="18" r="4"/>
+  </g>
+  <g transform="translate(44 266) rotate(-17 29 31) scale(.72)">
+    <path d="M5 63c-2-10 0-17 5-22C-4 22 10 2 31 3c20 1 31 17 25 34-4 12-18 19-30 13-11-5-14-16-10-24 4-9 15-12 22-7 7 4 8 13 4 18-4 4-11 5-15 1-3-3-3-8 0-11"/>
+    <path d="M11 63c-1-7 1-13 5-17"/>
+  </g>
+  <g transform="translate(258 279) rotate(12 42 25) scale(.78)">
+    <path d="M2 13q10-5 20 0t20 0 20 0 20 0v44H2Z"/>
+    <path d="M2 23q10-5 20 0t20 0 20 0 20 0M2 45q10-5 20 0t20 0 20 0 20 0"/>
+    <path d="M41 0c3 9 10 19 9 32-1 8-6 9-8 4-1-5 3-13 1-23"/>
+  </g>
+</svg>

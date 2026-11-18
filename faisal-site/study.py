@@ -45,13 +45,8 @@ def build_study(root, write, head, escape, render_article, preview=False):
         return f'<a href="{BASE}{path}">{e(title)}</a>'
 
     def page(path, title, intro, body):
-        motifs = (
-            '<div class="study-motifs" aria-hidden="true">'
-            '<span class="study-eye"></span><span class="study-cochlea"></span>'
-            '<span class="study-skin"></span></div>'
-        ) if BLOCK_THEME == 'ksi' else ''
         write(BASE + path, title, intro,
-              f'<div class="study-block study-block--{BLOCK_THEME}">{motifs}{body}</div>', 'study')
+              f'<div class="study-block study-block--{BLOCK_THEME}">{body}</div>', 'study')
 
     def schedule(item):
         if not item.get('lecture_date') or not item.get('schedule_page'):
