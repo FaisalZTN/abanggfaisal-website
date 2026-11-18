@@ -41,7 +41,13 @@ def build_study(root, write, head, escape, render_article, preview=False):
         return f'<a href="{BASE}{path}">{e(title)}</a>'
 
     def page(path, title, intro, body):
-        write(BASE + path, title, intro, body, 'study')
+        motifs = (
+            '<div class="study-motifs" aria-hidden="true">'
+            '<span class="study-formula">C₆H₁₂O₆<br>CO₂ + H₂O</span>'
+            '<span class="study-bases">A ═ T<br>G ≡ C<br>T ═ A</span>'
+            '<span class="study-bone"></span></div>'
+        )
+        write(BASE + path, title, intro, motifs + body, 'study')
 
     def back():
         return '<p>' + link('', '← Ruang Belajar') + '</p>'
@@ -55,8 +61,9 @@ def build_study(root, write, head, escape, render_article, preview=False):
             <option value="">Semua departemen</option>{options}
           </select>
         </div>
-        <p id="count" role="status"></p><div id="results" class="study-list">{entries}</div>
-        <p id="empty" hidden>Tidak ada hasil. Coba kata kunci atau departemen lain.</p>'''
+        <p id="count" role="status"></p><div id="results" class="study-list" data-page-size="9">{entries}</div>
+        <p id="empty" hidden>Tidak ada hasil. Coba kata kunci atau departemen lain.</p>
+        <button type="button" class="btn study-more" id="study-more" hidden>Tampilkan lebih banyak</button>'''
 
     def card(category, query, body, anchor=''):
         attr = f' id="{e(anchor)}"' if anchor else ''
@@ -78,13 +85,14 @@ def build_study(root, write, head, escape, render_article, preview=False):
         f'<h3>{link("tutorial/" + item["id"] + "/", item["title"])}</h3><p>{e(item["short"])}</p></article>'
         for item in sessions)
     page('', 'Ruang Belajar', intro,
-         head('SEMESTER V · 2026/2027', 'Ruang Belajar', e(intro))
-         + '<p>' + link('pengajar/', 'Direktori Pengajar →') + '</p>'
-         + '<section class="section"><h2>Tutorial KSI</h2><div class="grid">'
-         + tutorial_cards + '</div></section>'
-         + f'<section class="section" id="kuliah"><h2>Katalog Kuliah KSI</h2>'
-         + f'<p>{len(active)} topik · {len({x["department"] for x in active})} departemen.</p>'
-         + listing(''.join(cards), {x['department'] for x in active}, 'Cari materi atau dosen') + '</section>')
+         '<div class="study-heading"><p class="eyebrow">KSI · SEMESTER V · 2026/2027</p>'
+         '<h1>Ruang Belajar</h1><p>' + e(intro) + '</p>'
+         '<div class="study-shortcuts">' + link('pengajar/', 'Cari dosen →')
+         + link('#tutorial', 'Buka tutorial ↓') + '</div></div>'
+         + f'<section class="study-section" id="kuliah"><h2>Katalog Kuliah</h2>'
+         + listing(''.join(cards), {x['department'] for x in active}, 'Cari materi atau dosen') + '</section>'
+         + '<section class="study-section" id="tutorial"><h2>Tutorial KSI</h2><div class="grid">'
+         + tutorial_cards + '</div></section>')
 
     directory = []
     visible_teachers = [x for x in teachers.values() if counts[x['id']]]
@@ -102,7 +110,7 @@ def build_study(root, write, head, escape, render_article, preview=False):
              + '<section class="section"><h2>Materi kuliah</h2><ul class="study-topics">'
              + topics + '</ul></section>')
     page('pengajar/', 'Direktori Pengajar', MODULE, back()
-         + head('BLOK KSI', 'Direktori Pengajar', e(MODULE))
+         + '<div class="study-heading"><h1>Direktori Pengajar</h1><p>' + e(MODULE) + '</p></div>'
          + listing(''.join(directory), {x['department'] for x in visible_teachers}, 'Cari dosen'))
 
     for item in sessions:

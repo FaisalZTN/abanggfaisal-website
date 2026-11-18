@@ -24,3 +24,30 @@ main{min-height:60vh}h1,h2,h3,p,a{overflow-wrap:anywhere}.hero{position:relative
 .study-row h2, .study-row h3, .study-row p { margin: 0 0 .5rem; }
 .study-row > :last-child { margin-bottom: 0; }
 .study-topics li { margin-block: .65rem; }
+
+.study-heading { padding-block: clamp(1.25rem, 4vw, 2.75rem) 1rem; }
+.study-heading h1 { font-size: clamp(2.2rem, 6vw, 3.9rem); margin-block: .25rem; }
+.study-heading p { margin-block: .25rem .75rem; }
+.study-shortcuts { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; }
+.study-shortcuts a { font-weight: 650; }
+.study-section { margin-block: 1rem 2.5rem; scroll-margin-top: 6rem; }
+.study-section h2 { font-size: clamp(1.4rem, 3vw, 2rem); margin-block: 0 .65rem; }
+.study-section .toolbar { margin-block: .5rem; }
+.study-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+.study-list .study-row { border: 1px solid var(--line); padding: .8rem .9rem; background: var(--paper); }
+.study-list .study-row h2, .study-list .study-row h3 { font-size: 1.05rem; line-height: 1.35; }
+.study-list .study-row .meta { margin-top: .45rem; }
+.study-list .study-row .eyebrow { font-size: .68rem; }
+.study-list .study-row p { line-height: 1.45; }
+.study-list .prose:empty { display: none; }
+.study-more { margin-top: 1rem; }
+.study-motifs { position: absolute; inset: 5rem 0 auto; height: 22rem; overflow: hidden; pointer-events: none; color: var(--accent); opacity: .12; }
+.study-motifs span { position: absolute; }
+.study-formula { top: 3rem; right: 2vw; font: 1.4rem/1.5 monospace; transform: rotate(-12deg); }
+.study-bases { top: 8rem; left: 2vw; font: 1.2rem/1.25 monospace; transform: rotate(14deg); }
+.study-bone { top: 13rem; right: 5vw; width: 3.5rem; height: .68rem; background: currentColor; transform: rotate(-34deg); }
+.study-bone::before, .study-bone::after { content: ''; position: absolute; top: -.45rem; width: .85rem; height: .85rem; border-radius: 50%; background: currentColor; box-shadow: 0 .44rem currentColor; }
+.study-bone::before { left: -.25rem; }
+.study-bone::after { right: -.25rem; }
+@media (max-width: 1300px) { .study-bases, .study-bone { display: none; } .study-formula { opacity: .55; } }
+@media (max-width: 600px) { .study-formula { opacity: .32; top: 1rem; font-size: 1rem; } }
