@@ -7,6 +7,11 @@ from datetime import date
 BASE = '/ruang-belajar/'
 MODULE = 'Buku Modul KSI, semester V, TA 2026/2027'
 BLOCK_THEME = 'ksi'
+TUTORIAL_QUOTE = '''
+<figure class="study-quote">
+  <blockquote lang="en">“Studies serve for delight, for ornament, and for ability.”</blockquote>
+  <figcaption>Francis Bacon, <cite lang="en"><a href="https://www.columbia.edu/cu/lweb/digital/collections/cul/texts/ldpd_7914458_000/pages/ldpd_7914458_000_00000270.html">Of Studies</a></cite></figcaption>
+</figure>'''
 MONTHS = ('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus',
           'September', 'Oktober', 'November', 'Desember')
 
@@ -31,6 +36,9 @@ def build_study(root, write, head, escape, render_article, preview=False):
     for item in tutorials.values():
         if any(key not in lectures for key in item.get('related', [])):
             raise ValueError(f'Kuliah terkait tidak ditemukan: {item["title"]}')
+        for topic in item.get('topics') or []:
+            if not topic['title'].strip() or not topic['body'].strip():
+                raise ValueError(f'Judul dan isi topik wajib diisi: {item["title"]}')
 
     active = sorted((x for x in lectures.values() if preview or x['status'] == 'published'),
                     key=lambda x: x['number'])
@@ -58,6 +66,19 @@ def build_study(root, write, head, escape, render_article, preview=False):
 
     def back():
         return '<p>' + link('', '← Ruang Belajar') + '</p>'
+
+    def tutorial_topics(item):
+        entries = ''.join(
+            f'<details class="study-topic"><summary>{e(topic["title"])}</summary>'
+            f'<div class="prose study-topic-body">{render_article({"article": topic["body"]})}</div></details>'
+            for topic in item.get('topics') or []
+        )
+        if not entries:
+            return ''
+        return ('<section class="study-tutorial-topics" aria-labelledby="tutorial-topics">'
+                '<h2 id="tutorial-topics">Persiapan Tutorial 2</h2>'
+                '<p>Pilih judul untuk membuka atau menutup topik.</p>'
+                + entries + '</section>')
 
     def listing(entries, categories, label):
         options = ''.join(f'<option>{e(category)}</option>' for category in sorted(categories))
@@ -157,8 +178,9 @@ def build_study(root, write, head, escape, render_article, preview=False):
         related = [lectures[key] for key in item.get('related', []) if key in published]
         related_links = ''.join('<li>' + link('#' + x['id'], x['title']) + '</li>' for x in related)
         page('tutorial/' + item['id'] + '/', item['title'], item['short'],
-             '<article class="reading">' + back()
+             '<article class="reading">' + back() + TUTORIAL_QUOTE
              + head(f'KSI · SKENARIO {e(item["number"])}', e(item['title']), e(item['short']))
              + f'<p class="meta">Catatan belajar Faisal · Sumber skenario: {e(MODULE)}, hlm. 23</p>'
              + '<div class="prose">' + render_article(item) + '</div>'
+             + tutorial_topics(item)
              + ('<h2>Kuliah terkait</h2><ul>' + related_links + '</ul>' if related else '') + '</article>')
