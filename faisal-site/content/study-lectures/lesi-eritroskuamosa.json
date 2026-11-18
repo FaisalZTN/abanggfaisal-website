@@ -3,9 +3,13 @@
   "title": "Lesi eritroskuamosa",
   "department": "Ilmu Penyakit Kulit dan Kelamin",
   "teachers": [
-    "dr-muhammad-mazaya-atif"
+    "dr-sani-widjaja"
   ],
   "number": 32,
   "source_page": "11",
-  "status": "published"
+  "status": "published",
+  "lecture_date": "2026-11-20",
+  "schedule_page": 2,
+  "lecture_start": "10:00",
+  "lecture_end": "12:00"
 }

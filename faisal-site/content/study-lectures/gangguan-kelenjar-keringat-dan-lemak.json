@@ -3,9 +3,14 @@
   "title": "Gangguan kelenjar keringat dan lemak",
   "department": "Ilmu Penyakit Kulit dan Kelamin",
   "teachers": [
-    "dr-medisiana-sukses-soenoe"
+    "dr-nanda-shaskia-larasaty"
   ],
   "number": 40,
   "source_page": "11",
-  "status": "published"
+  "status": "published",
+  "lecture_date": "2026-11-09",
+  "schedule_page": 1,
+  "lecture_start": "11:00",
+  "lecture_end": "13:00",
+  "lecture_location": "RKB 4"
 }

@@ -45,6 +45,19 @@ main{min-height:60vh}h1,h2,h3,p,a{overflow-wrap:anywhere}.hero{position:relative
 .study-material small, .study-row .study-material-empty { color: var(--muted); font-size: .8rem; }
 .study-material ul { margin: .3rem 0 .65rem; padding-inline-start: 1.15rem; }
 .study-calendar-link { display: inline-block; margin-block-start: .4rem; font-size: .8rem; }
+.study-catalogue, .study-guidelines {
+  padding: .85rem clamp(.85rem, 3vw, 1.35rem);
+  border: 1px solid var(--line);
+  border-radius: .8rem;
+  background: var(--paper);
+}
+.study-catalogue summary { cursor: pointer; padding: .45rem 0; font-weight: 650; }
+.study-catalogue summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.study-catalogue .catalogue-hide, .study-catalogue[open] .catalogue-show { display: none; }
+.study-catalogue[open] .catalogue-hide { display: inline; }
+.study-guideline-empty, .study-guideline-list { margin-block: .35rem .15rem; }
+.study-guideline-list li { padding-block: .35rem; }
+.study-guideline-list li p { margin: .1rem 0 0; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .study-more { margin-top: 1rem; }
@@ -209,6 +222,7 @@ body:has(.study-block--ksi)::before {
 }
 .study-slot h4 { margin: 0; font-size: .95rem; line-height: 1.4; overflow-wrap: anywhere; }
 .study-slot p { margin: 0; font-size: .82rem; line-height: 1.6; }
+.study-slot .study-slot-location { color: var(--ink); font-weight: 650; }
 .study-slot small { color: var(--muted); font-size: .78rem; }
 .study-slot .study-slot-time { color: var(--ink); font-size: .92rem; font-variant-numeric: tabular-nums; font-weight: 650; }
 .study-slot [data-session-state] {

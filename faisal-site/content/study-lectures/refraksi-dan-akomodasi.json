@@ -7,5 +7,9 @@
   ],
   "number": 28,
   "source_page": "10",
-  "status": "published"
+  "status": "published",
+  "lecture_date": "2026-11-16",
+  "schedule_page": 2,
+  "lecture_start": "08:00",
+  "lecture_end": "10:00"
 }

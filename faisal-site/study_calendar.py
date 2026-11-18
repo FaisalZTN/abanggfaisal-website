@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 WITA = timezone(timedelta(hours=8))
 SITE = 'https://abanggfaisal.my.id'
+SCHEDULE_SOURCE = 'Jadwal Vorticosa'
 
 
 def calendar_text(value):
@@ -49,7 +50,7 @@ def write_calendar(output, lectures, teachers):
         slug = item['id']
         day = item['lecture_date']
         names = ', '.join(teachers[key]['title'] for key in item['teachers'])
-        source = f'Pengajar: {names}\nJadwal KSI, hlm. {item["schedule_page"]}. Waktu sumber: WITA.'
+        source = f'Pengajar: {names}\n{SCHEDULE_SOURCE}, hlm. {item["schedule_page"]}. Waktu sumber: WITA.'
         event = [
             'BEGIN:VEVENT',
             f'UID:ksi-{slug}@abanggfaisal.my.id',
@@ -59,6 +60,7 @@ def write_calendar(output, lectures, teachers):
             'SUMMARY:' + calendar_text(item['title']),
             'DESCRIPTION:' + calendar_text(source),
             f'URL:{SITE}/ruang-belajar/#{slug}',
+            *([f'LOCATION:{calendar_text(item["lecture_location"])}'] if item.get('lecture_location') else []),
             'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:-PT30M',
             'DESCRIPTION:' + calendar_text(item['title']),
             'END:VALARM', 'END:VEVENT',

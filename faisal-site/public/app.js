@@ -15,6 +15,7 @@ const menu=document.querySelector('#menu'),nav=document.querySelector('#nav');me
   const results = document.querySelector('#results');
   const cards = [...results.querySelectorAll('.card')];
   const sort = document.querySelector('#study-sort');
+  const catalogue = document.querySelector('#study-catalogue');
   const more = document.querySelector('#study-more');
   const step = Number(results.dataset.pageSize) || cards.length || 1;
   let limit = step;
@@ -34,6 +35,7 @@ const menu=document.querySelector('#menu'),nav=document.querySelector('#nav');me
   function reset() { limit = step; filter(); }
   function revealLinkedCard() {
     const target = cards.find(card => card.id && '#' + card.id === location.hash);
+    if (catalogue && (target || location.hash === '#kuliah')) catalogue.open = true;
     if (!target) return;
     search.value = '';
     category.value = '';
