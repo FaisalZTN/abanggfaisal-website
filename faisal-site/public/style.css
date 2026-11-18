@@ -41,13 +41,15 @@ main{min-height:60vh}h1,h2,h3,p,a{overflow-wrap:anywhere}.hero{position:relative
 .study-list .study-row p { line-height: 1.45; }
 .study-list .prose:empty { display: none; }
 .study-more { margin-top: 1rem; }
-.study-motifs { position: absolute; inset: 5rem 0 auto; height: 22rem; overflow: hidden; pointer-events: none; color: var(--accent); opacity: .12; }
+/* Motif khusus Blok KSI: mata, koklea, dan lapisan kulit. */
+.study-block { position: relative; isolation: isolate; }
+.study-date { display: block; margin-block: .35rem; font-size: .78rem; color: var(--muted); }
+.study-block--ksi .study-motifs { position: absolute; z-index: -1; inset: 0 0 auto; height: 13rem; overflow: hidden; color: var(--accent); opacity: .13; pointer-events: none; }
 .study-motifs span { position: absolute; }
-.study-formula { top: 3rem; right: 2vw; font: 1.4rem/1.5 monospace; transform: rotate(-12deg); }
-.study-bases { top: 8rem; left: 2vw; font: 1.2rem/1.25 monospace; transform: rotate(14deg); }
-.study-bone { top: 13rem; right: 5vw; width: 3.5rem; height: .68rem; background: currentColor; transform: rotate(-34deg); }
-.study-bone::before, .study-bone::after { content: ''; position: absolute; top: -.45rem; width: .85rem; height: .85rem; border-radius: 50%; background: currentColor; box-shadow: 0 .44rem currentColor; }
-.study-bone::before { left: -.25rem; }
-.study-bone::after { right: -.25rem; }
-@media (max-width: 1300px) { .study-bases, .study-bone { display: none; } .study-formula { opacity: .55; } }
-@media (max-width: 600px) { .study-formula { opacity: .32; top: 1rem; font-size: 1rem; } }
+.study-eye { top: 2rem; right: 3%; width: 4.4rem; height: 4.4rem; border: 1px solid; border-radius: 70% 12%; transform: rotate(45deg); display: grid; place-items: center; }
+.study-eye::after { content: ''; width: 1.5rem; aspect-ratio: 1; border-radius: 50%; border: 1px solid; box-shadow: inset 0 0 0 .5rem var(--paper); background: currentColor; }
+.study-cochlea { right: 17%; top: 5rem; width: 3.8rem; height: 3.6rem; border: 1px solid; border-left-color: transparent; border-radius: 50%; transform: rotate(-28deg); }
+.study-cochlea::before, .study-cochlea::after { content: ''; position: absolute; inset: 18%; border: 1px solid; border-bottom-color: transparent; border-radius: 50%; }
+.study-cochlea::after { inset: 34%; }
+.study-skin { right: 9%; top: 9rem; width: 4.6rem; height: 2rem; border: 1px solid; border-radius: .65rem .65rem .25rem .25rem; background: repeating-linear-gradient(0deg, transparent 0 .43rem, currentColor .43rem .49rem); transform: rotate(-12deg); }
+@media (max-width: 760px) { .study-block--ksi .study-motifs { opacity: .08; } .study-cochlea, .study-skin { display: none; } .study-eye { width: 2.6rem; height: 2.6rem; right: 4%; } }

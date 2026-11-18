@@ -121,6 +121,8 @@ collections:
       - {label: Departemen, name: department, widget: string}
       - {label: Nomor di modul, name: number, widget: number, value_type: int, min: 1}
       - {label: Halaman cetak di modul, name: source_page, widget: string}
+      - {label: Tanggal kuliah terverifikasi, name: lecture_date, widget: string, required: false, hint: 'Isi YYYY-MM-DD jika topik dan dosen cocok dengan jadwal.', pattern: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}$', 'Gunakan YYYY-MM-DD']}
+      - {label: Halaman PDF jadwal, name: schedule_page, widget: number, value_type: int, min: 1, required: false}
       - label: Dosen pengajar
         name: teachers
         widget: relation

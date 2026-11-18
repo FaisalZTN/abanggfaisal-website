@@ -2,9 +2,13 @@
 import json
 import re
 from collections import Counter
+from datetime import date
 
 BASE = '/ruang-belajar/'
 MODULE = 'Buku Modul KSI, semester V, TA 2026/2027'
+BLOCK_THEME = 'ksi'
+MONTHS = ('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus',
+          'September', 'Oktober', 'November', 'Desember')
 
 
 def build_study(root, write, head, escape, render_article, preview=False):
@@ -43,11 +47,19 @@ def build_study(root, write, head, escape, render_article, preview=False):
     def page(path, title, intro, body):
         motifs = (
             '<div class="study-motifs" aria-hidden="true">'
-            '<span class="study-formula">C₆H₁₂O₆<br>CO₂ + H₂O</span>'
-            '<span class="study-bases">A ═ T<br>G ≡ C<br>T ═ A</span>'
-            '<span class="study-bone"></span></div>'
-        )
-        write(BASE + path, title, intro, motifs + body, 'study')
+            '<span class="study-eye"></span><span class="study-cochlea"></span>'
+            '<span class="study-skin"></span></div>'
+        ) if BLOCK_THEME == 'ksi' else ''
+        write(BASE + path, title, intro,
+              f'<div class="study-block study-block--{BLOCK_THEME}">{motifs}{body}</div>', 'study')
+
+    def schedule(item):
+        if not item.get('lecture_date') or not item.get('schedule_page'):
+            return ''
+        day = date.fromisoformat(item['lecture_date'])
+        label = f'{day.day} {MONTHS[day.month - 1]} {day.year}'
+        return (f'<span class="study-date"><time datetime="{day.isoformat()}">{label}</time>'
+                f' · Jadwal KSI, hlm. {e(item["schedule_page"])}</span>')
 
     def back():
         return '<p>' + link('', '← Ruang Belajar') + '</p>'
@@ -77,7 +89,7 @@ def build_study(root, write, head, escape, render_article, preview=False):
         notes = render_article({'article': item['notes']}) if item.get('notes', '').strip() else ''
         cards.append(card(item['department'], item['title'] + ' ' + names,
                           f'<p class="eyebrow">{e(item["department"])}</p><h3>{e(item["title"])}</h3>'
-                          f'<p>{links}</p><p class="meta">Modul KSI, hlm. {e(item["source_page"])}</p>'
+                          f'<p>{links}</p>{schedule(item)}<p class="meta">Modul KSI, hlm. {e(item["source_page"])}</p>'
                           f'<div class="prose">{notes}</div>', item['id']))
     intro = 'Katalog kuliah, daftar dosen pengajar, dan catatan tutorial Blok KSI.'
     tutorial_cards = ''.join(
@@ -89,7 +101,7 @@ def build_study(root, write, head, escape, render_article, preview=False):
          '<h1>Ruang Belajar</h1><p>' + e(intro) + '</p>'
          '<div class="study-shortcuts">' + link('pengajar/', 'Cari dosen →')
          + link('#tutorial', 'Buka tutorial ↓') + '</div></div>'
-         + f'<section class="study-section" id="kuliah"><h2>Katalog Kuliah</h2>'
+         + f'<section class="study-section" id="kuliah"><h2>Katalog Kuliah</h2><p class="meta">Tanggal ditampilkan jika topik dan pengajarnya cocok antara modul dan jadwal KSI.</p>'
          + listing(''.join(cards), {x['department'] for x in active}, 'Cari materi atau dosen') + '</section>'
          + '<section class="study-section" id="tutorial"><h2>Tutorial KSI</h2><div class="grid">'
          + tutorial_cards + '</div></section>')
@@ -102,7 +114,7 @@ def build_study(root, write, head, escape, render_article, preview=False):
         directory.append(card(person['department'], person['title'],
                               f'<h2>{link(url, person["title"])}</h2>'
                               f'<p>{e(person["department"])} · {counts[key]} topik</p>'))
-        topics = ''.join('<li>' + link('#' + item['id'], item['title']) + '</li>'
+        topics = ''.join('<li>' + link('#' + item['id'], item['title']) + schedule(item) + '</li>'
                          for item in active if key in item['teachers'])
         note = f'<p class="meta">{e(person["note"])}</p>' if person.get('note') else ''
         page(url, person['title'], 'Daftar kuliah menurut Modul KSI.',
