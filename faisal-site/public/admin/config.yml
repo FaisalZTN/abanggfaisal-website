@@ -135,6 +135,15 @@ collections:
         multiple: true
         min: 1
       - {label: Catatan belajar dan referensi, name: notes, widget: markdown, required: false}
+      - {label: Target belajar dari modul, name: objectives, widget: list, required: false}
+      - {label: Kata kunci pencarian, name: keywords, widget: list, required: false}
+      - label: Tautan bahan belajar
+        name: materials
+        widget: list
+        required: false
+        fields:
+          - {label: Judul tautan, name: label, widget: string}
+          - {label: URL HTTPS, name: url, widget: string, pattern: ['^https://\S+$', 'Masukkan tautan HTTPS']}
       - {label: Status, name: status, widget: select, options: [draft, published], default: draft}
 
   - name: study_tutorials

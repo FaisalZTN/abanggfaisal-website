@@ -1,6 +1,20 @@
-const theme=document.querySelector('#theme');function setTheme(dark){document.body.classList.toggle('dark',dark);theme.setAttribute('aria-label',dark?'Aktifkan mode terang':'Aktifkan mode gelap')}let dark=matchMedia('(prefers-color-scheme: dark)').matches;try{const saved=localStorage.getItem('theme');if(saved)dark=saved==='dark'}catch{}setTheme(dark);theme.addEventListener('click',()=>{dark=!dark;setTheme(dark);try{localStorage.setItem('theme',dark?'dark':'light')}catch{}});const menu=document.querySelector('#menu'),nav=document.querySelector('#nav');menu.addEventListener('click',()=>{const open=menu.getAttribute('aria-expanded')!=='true';menu.setAttribute('aria-expanded',String(open));nav.classList.toggle('open',open)});document.addEventListener('keydown',e=>{if(e.key==='Escape'){nav.classList.remove('open');menu.setAttribute('aria-expanded','false')}});const search=document.querySelector('#search'),category=document.querySelector('#category');if (search) {
+const theme = document.querySelector('#theme');
+const themeColor = document.querySelector('meta[name="theme-color"]');
+function setTheme(dark) {
+  document.documentElement.classList.toggle('dark', dark);
+  themeColor.content = dark ? '#18261f' : '#f6f4ed';
+  theme.setAttribute('aria-label', dark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap');
+}
+setTheme(document.documentElement.classList.contains('dark'));
+theme.addEventListener('click', () => {
+  const dark = !document.documentElement.classList.contains('dark');
+  setTheme(dark);
+  try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch {}
+});
+const menu=document.querySelector('#menu'),nav=document.querySelector('#nav');menu.addEventListener('click',()=>{const open=menu.getAttribute('aria-expanded')!=='true';menu.setAttribute('aria-expanded',String(open));nav.classList.toggle('open',open)});document.addEventListener('keydown',e=>{if(e.key==='Escape'){nav.classList.remove('open');menu.setAttribute('aria-expanded','false')}});const search=document.querySelector('#search'),category=document.querySelector('#category');if (search) {
   const results = document.querySelector('#results');
   const cards = [...results.querySelectorAll('.card')];
+  const sort = document.querySelector('#study-sort');
   const more = document.querySelector('#study-more');
   const step = Number(results.dataset.pageSize) || cards.length || 1;
   let limit = step;
@@ -29,6 +43,21 @@ const theme=document.querySelector('#theme');function setTheme(dark){document.bo
   }
   search.addEventListener('input', reset);
   category.addEventListener('change', reset);
+  if (sort) {
+    sort.addEventListener('change', () => {
+      const ordered = sort.value === 'date'
+        ? [...cards].sort((left, right) => (left.dataset.sortDate || '9999').localeCompare(right.dataset.sortDate || '9999'))
+        : cards;
+      results.append(...ordered);
+      filter();
+    });
+    window.addEventListener('hashchange', revealLinkedCard);
+    document.addEventListener('click', event => {
+      const anchor = event.target.closest('a[href]');
+      if (anchor && anchor.pathname === location.pathname && anchor.origin === location.origin
+          && anchor.hash && anchor.hash === location.hash) revealLinkedCard();
+    });
+  }
   if (more) {
     more.addEventListener('click', () => {
       const previous = cards.filter(card => !card.hidden).length;
@@ -43,7 +72,7 @@ const theme=document.querySelector('#theme');function setTheme(dark){document.bo
     window.addEventListener('hashchange', revealLinkedCard);
   }
   filter();
-  if (more) revealLinkedCard();
+  if (more || sort) revealLinkedCard();
 }
 const agenda = document.querySelector('#jadwal-kuliah');
 if (agenda) {

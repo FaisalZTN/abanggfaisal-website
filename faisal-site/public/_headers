@@ -4,3 +4,5 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 /admin/*
   X-Robots-Tag: noindex, nofollow
+/ruang-belajar/kalender/*
+  Content-Type: text/calendar; charset=utf-8

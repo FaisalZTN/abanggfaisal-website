@@ -11,5 +11,25 @@
   "lecture_date": "2026-12-07",
   "schedule_page": 5,
   "lecture_start": "08:00",
-  "lecture_end": "10:00"
+  "lecture_end": "10:00",
+  "objectives": [
+    "Bandingkan struktur konjungtiva dan kornea, lalu hubungkan lokasi lesi dengan keluhan pada skenario.",
+    "Susun temuan pemeriksaan yang membantu membedakan benda asing superfisial, abrasi, dan cedera tembus."
+  ],
+  "keywords": [
+    "corpus alienum",
+    "benda asing mata",
+    "abrasi kornea",
+    "fluoresein"
+  ],
+  "materials": [
+    {
+      "label": "PPK FKTP · Benda Asing di Konjungtiva, hlm. 216–218",
+      "url": "https://puskesmaslabuapi-dikes.lombokbaratkab.go.id/media/Kepmenkes_nomor_HK.01.07_MENKES_1186_2022_-_PPK_Dokter_Mei_2022.pdf"
+    },
+    {
+      "label": "Benda asing kornea di layanan primer · RACGP",
+      "url": "https://www.racgp.org.au/afp/2017/march/managing-corneal-foreign-bodies-in-office-based-ge"
+    }
+  ]
 }
