@@ -96,15 +96,48 @@ def build_study(root, write, head, escape, render_article, preview=False):
         f'<article class="card study-row"><p class="eyebrow">Skenario {e(item["number"])}</p>'
         f'<h3>{link("tutorial/" + item["id"] + "/", item["title"])}</h3><p>{e(item["short"])}</p></article>'
         for item in sessions)
+    resources = '''
+    <section class="study-section" id="sumber-belajar" aria-labelledby="study-resources-heading">
+      <h2 id="study-resources-heading">Sumber Belajar</h2>
+      <div class="study-resource-grid">
+        <article class="card study-resource">
+          <div class="study-resource-preview study-resource-osce">
+            <p class="eyebrow">Latihan OSCE</p>
+            <h3>PhaseMed</h3>
+            <ul aria-label="Materi dan fitur">
+              <li>Daftar tilik</li><li>Peragaan interaktif</li><li>Simulasi ujian</li>
+            </ul>
+          </div>
+          <div class="study-resource-body">
+            <p>Coba pemeriksaan fisik paru dan latihan mengenali bunyi paru tanpa akun.</p>
+            <div class="study-resource-links">
+              <a class="btn" href="https://phasemed.id/coba" rel="external">Coba latihan PhaseMed</a>
+              <a href="https://phasemed.id/" rel="external">Buka beranda PhaseMed ↗</a>
+            </div>
+          </div>
+        </article>
+        <article class="card study-resource">
+          <div class="study-resource-preview study-resource-materi">
+            <p class="eyebrow">Materi kedokteran</p>
+            <h3>Klinik Belajar Kedokteran</h3>
+            <p class="meta">klinikbelajarkedokteran.site</p>
+          </div>
+          <div class="study-resource-body">
+            <p>Tautan bacaan pendamping untuk meninjau materi kuliah.</p>
+            <a class="btn" href="http://klinikbelajarkedokteran.site/" rel="external">Buka Klinik Belajar Kedokteran ↗</a>
+          </div>
+        </article>
+      </div>
+    </section>'''
     page('', 'Ruang Belajar', intro,
          '<div class="study-heading"><p class="eyebrow">KSI · SEMESTER V · 2026/2027</p>'
          '<h1>Ruang Belajar</h1><p>' + e(intro) + '</p>'
          '<div class="study-shortcuts">' + link('pengajar/', 'Cari dosen →')
-         + link('#tutorial', 'Buka tutorial ↓') + '</div></div>'
+         + link('#tutorial', 'Buka tutorial ↓') + link('#sumber-belajar', 'Sumber belajar ↓') + '</div></div>'
          + f'<section class="study-section" id="kuliah"><h2>Katalog Kuliah</h2><p class="meta">Tanggal ditampilkan jika topik dan pengajarnya cocok antara modul dan jadwal KSI.</p>'
          + listing(''.join(cards), {x['department'] for x in active}, 'Cari materi atau dosen') + '</section>'
          + '<section class="study-section" id="tutorial"><h2>Tutorial KSI</h2><div class="grid">'
-         + tutorial_cards + '</div></section>')
+         + tutorial_cards + '</div></section>' + resources)
 
     directory = []
     visible_teachers = [x for x in teachers.values() if counts[x['id']]]
