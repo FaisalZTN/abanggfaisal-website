@@ -64,6 +64,16 @@ Setelah KYC disetujui: periksa checkout, harga dan biaya, metode dan estimasi ak
 
 ## Jadwal Kuliah Ruang Belajar
 
-Isi tanggal dan halaman PDF pada koleksi Katalog Kuliah saat topik serta pengajarnya cocok dengan modul. Jam mulai dan selesai dalam WITA dapat diisi berpasangan dengan format `HH:MM`. Entri yang baru memiliki tanggal tetap dapat muncul pada dasbor dengan keterangan jam belum tercatat.
+Isi tanggal dan halaman PDF Vorticosa pada koleksi Materi Kuliah KSI setelah memastikan padanan topiknya dengan katalog modul. Pilih pengajar sesuai jadwal Vorticosa. Masukkan jam berpasangan dalam format `HH:MM` WITA, dan isi Tempat kuliah jika lokasi diketahui. Lokasi seluruh sesi KSI ditetapkan ke RKB 4 sesuai pembaruan pemilik situs. Entri yang baru memiliki tanggal tetap dapat muncul pada dasbor dengan keterangan jam belum tercatat.
 
 Dasbor memilih jadwal hari ini dan besok berdasarkan waktu Makassar dari jam perangkat. Keterangan sesi mengikuti rentang jam pada PDF. Untuk perubahan jadwal, perbarui datanya di CMS agar build berikutnya menyajikan informasi terbaru.
+
+## Bahan belajar dan ekspor kalender KSI
+
+- Di koleksi Materi Kuliah KSI, gunakan Target belajar dari modul untuk adaptasi Sub-CPMK, Kata kunci untuk sinonim dan singkatan, serta Tautan bahan belajar untuk dokumen HTTPS yang boleh dibagikan. Halaman tutorial muncul pada kartu kuliah terkait sesuai pilihan Kuliah terkait di koleksi Tutorial KSI.
+- Katalog dilipat saat halaman dibuka. Pintasan katalog dan tautan ke kartu kuliah membukanya otomatis. Katalog dapat diurutkan berdasarkan tanggal dan jam. Kuliah yang tanggalnya belum terverifikasi ditampilkan setelah kuliah bertanggal.
+- Dasbor menyediakan kalender blok (.ics), dan tiap kartu dengan jam lengkap menyediakan kalender sesi. Waktu dari jadwal WITA ditulis sebagai UTC agar kalender perangkat menampilkan waktu yang sesuai dengan zona waktunya. Berkas menyertakan pengingat 30 menit. Unduh ulang ketika jadwal diperbarui untuk memperoleh data terbaru.
+
+## Kumpulan Guideline
+
+Di Decap CMS, buka Kumpulan Guideline lalu Daftar guideline Ruang Belajar. Tambahkan judul dan tautan HTTPS untuk tiap entri. Kolom Penerbit dan tahun bersifat opsional. Saat daftar kosong, halaman menampilkan keterangan Segera hadir.

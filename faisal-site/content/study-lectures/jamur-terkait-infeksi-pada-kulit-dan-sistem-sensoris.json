@@ -8,8 +8,9 @@
   "number": 2,
   "source_page": "9",
   "status": "published",
-  "lecture_date": "2026-11-18",
-  "schedule_page": 2,
-  "lecture_start": "10:00",
-  "lecture_end": "12:00"
+  "lecture_date": "2026-11-07",
+  "schedule_page": 1,
+  "lecture_start": "12:00",
+  "lecture_end": "14:00",
+  "lecture_location": "RKB 4"
 }

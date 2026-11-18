@@ -11,5 +11,22 @@
   "lecture_date": "2026-11-17",
   "schedule_page": 2,
   "lecture_start": "10:00",
-  "lecture_end": "12:00"
+  "lecture_end": "12:00",
+  "objectives": [
+    "Jelaskan hubungan temuan kulit dan gangguan saraf pada skenario lepra.",
+    "Susun dasar diagnosis dan bandingkan petunjuk untuk TB kulit dan kusta."
+  ],
+  "keywords": [
+    "lepra",
+    "Mycobacterium leprae",
+    "tuberkulosis kutis",
+    "saraf perifer"
+  ],
+  "materials": [
+    {
+      "label": "PNPK Tata Laksana Kusta · Kementerian Kesehatan RI",
+      "url": "https://jdih.kemkes.go.id/documents/keputusan-menteri-kesehatan-nomor-hk0107menkes3082019"
+    }
+  ],
+  "lecture_location": "RKB 4"
 }

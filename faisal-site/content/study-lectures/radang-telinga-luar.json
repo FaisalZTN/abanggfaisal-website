@@ -11,5 +11,22 @@
   "lecture_date": "2026-11-19",
   "schedule_page": 2,
   "lecture_start": "08:00",
-  "lecture_end": "10:00"
+  "lecture_end": "10:00",
+  "objectives": [
+    "Lokalisasi keluhan pada telinga luar dari riwayat dan temuan pemeriksaan.",
+    "Susun temuan yang membantu membedakan otomikosis dari penyebab lain pada skenario telinga gatal dan berair."
+  ],
+  "keywords": [
+    "otitis eksterna",
+    "otomikosis",
+    "liang telinga",
+    "otoskopi"
+  ],
+  "materials": [
+    {
+      "label": "PPK FKTP · Bagian Otitis Eksterna, hlm. 252–255",
+      "url": "https://puskesmaslabuapi-dikes.lombokbaratkab.go.id/media/Kepmenkes_nomor_HK.01.07_MENKES_1186_2022_-_PPK_Dokter_Mei_2022.pdf"
+    }
+  ],
+  "lecture_location": "RKB 4"
 }

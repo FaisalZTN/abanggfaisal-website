@@ -3,9 +3,14 @@
   "title": "Reaksi obat",
   "department": "Ilmu Penyakit Kulit dan Kelamin",
   "teachers": [
-    "dr-nanda-shaskia-larasaty"
+    "dr-sukses-hadi"
   ],
   "number": 33,
   "source_page": "11",
-  "status": "published"
+  "status": "published",
+  "lecture_date": "2026-12-04",
+  "schedule_page": 4,
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "lecture_location": "RKB 4"
 }

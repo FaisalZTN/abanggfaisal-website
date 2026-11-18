@@ -3,9 +3,14 @@
   "title": "Glaukoma dan kelainan diskus saraf optikus (glaukoma akut sudut tertutup)",
   "department": "Ilmu Penyakit Mata",
   "teachers": [
-    "dr-agus-f-razak"
+    "dr-agus-fitrian-noor"
   ],
   "number": 27,
   "source_page": "10",
-  "status": "published"
+  "status": "published",
+  "lecture_date": "2026-11-25",
+  "schedule_page": 3,
+  "lecture_start": "13:00",
+  "lecture_end": "16:00",
+  "lecture_location": "RKB 4"
 }

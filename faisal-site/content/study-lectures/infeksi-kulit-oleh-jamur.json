@@ -3,7 +3,7 @@
   "title": "Infeksi kulit oleh jamur",
   "department": "Ilmu Penyakit Kulit dan Kelamin",
   "teachers": [
-    "dr-erika-dewi-essary"
+    "dr-dwiana-savitri"
   ],
   "number": 37,
   "source_page": "11",
@@ -11,5 +11,6 @@
   "lecture_date": "2026-12-02",
   "schedule_page": 4,
   "lecture_start": "10:00",
-  "lecture_end": "12:00"
+  "lecture_end": "12:00",
+  "lecture_location": "RKB 4"
 }

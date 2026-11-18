@@ -3,7 +3,7 @@
   "title": "Dermatoterapi",
   "department": "Ilmu Penyakit Kulit dan Kelamin",
   "teachers": [
-    "dr-sukses-hadi"
+    "dr-erika-dewi-essary"
   ],
   "number": 35,
   "source_page": "11",
@@ -11,5 +11,6 @@
   "lecture_date": "2026-12-11",
   "schedule_page": 5,
   "lecture_start": "08:00",
-  "lecture_end": "10:00"
+  "lecture_end": "10:00",
+  "lecture_location": "RKB 4"
 }
