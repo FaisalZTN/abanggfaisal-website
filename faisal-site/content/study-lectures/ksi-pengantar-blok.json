@@ -1,0 +1,13 @@
+{
+  "id": "ksi-pengantar-blok",
+  "title": "Pengantar Blok KSI",
+  "department": "Pengantar Blok",
+  "teachers": [],
+  "number": 45,
+  "status": "published",
+  "lecture_date": "2026-11-09",
+  "lecture_start": "08:00",
+  "lecture_end": "09:00",
+  "lecture_location": "RKB 4",
+  "schedule_page": 1
+}

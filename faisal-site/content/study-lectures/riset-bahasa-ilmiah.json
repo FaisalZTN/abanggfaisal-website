@@ -10,8 +10,9 @@
   "number": 16,
   "source_page": "1",
   "lecture_date": "2026-11-25",
-  "schedule_page": 1,
-  "lecture_location": "RKB III",
-  "lecture_start": "08:00",
-  "lecture_end": "10:00"
+  "schedule_page": 3,
+  "lecture_location": "Zoom",
+  "lecture_start": "07:30",
+  "lecture_end": "09:00",
+  "schedule_source": "Jadwal Vorticosa KSI"
 }

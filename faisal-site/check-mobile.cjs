@@ -23,6 +23,17 @@ async function checkStudyFlow(page, width) {
   await page.getByRole('link', { name: 'Jadwal kuliah hari ini', exact: true }).click();
   assert.match(page.url(), /\/ruang-belajar\/#jadwal-kuliah$/);
   await checkWidth(page, 'Agenda', width);
+  const tomorrow = page.locator('[data-agenda-days] section').nth(1);
+  const glaucoma = tomorrow.locator('.study-slot').filter({ hasText: 'Glaukoma dan kelainan' });
+  assert.equal(await glaucoma.getAttribute('data-start'), '07:00');
+  assert.equal(await glaucoma.getAttribute('data-end'), '08:00');
+  assert.match(await tomorrow.textContent(), /Muhammad Mazaya Atif/);
+  assert.doesNotMatch(await tomorrow.textContent(), /Antivirus/);
+  if (width === 320) {
+    const result = await page.request.get(base + '/ruang-belajar/kalender/kuliah-antivirus.ics');
+    assert.ok(result.ok());
+    assert.match(await result.text(), /DTSTART:20261125T050000Z/);
+  }
 
   await page.evaluate(() => {
     // Approximate time from the action event to the next painted update.
@@ -149,8 +160,10 @@ async function checkKmsAndResearch(page, width) {
   const download = await page.request.get(base + '/ruang-belajar/blok/metodologi-riset-ii/kalender/metodologi-riset-ii.ics');
   assert.ok(download.ok());
   const calendar = await download.text();
-  assert.match(calendar, /DTSTART;VALUE=DATE:20261209/);
-  assert.match(calendar, /DTSTART:20261125T000000Z/);
+  assert.match(calendar, /DTSTART;VALUE=DATE:20261007/);
+  assert.match(calendar, /DTSTART:20261209T000000Z/);
+  assert.match(calendar, /DTSTART:20261124T233000Z/);
+  assert.match(calendar, /LOCATION:Zoom/);
   assert.equal((calendar.match(/BEGIN:VEVENT/g) || []).length, 18);
   await checkWidth(page, 'Metodologi Penelitian II', width);
 }

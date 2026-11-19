@@ -10,6 +10,9 @@
   "number": 18,
   "source_page": "1",
   "lecture_date": "2026-12-09",
-  "schedule_page": 1,
-  "lecture_location": "Labkom"
+  "schedule_page": 5,
+  "lecture_location": "Labkom",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "schedule_source": "Jadwal Vorticosa KSI"
 }

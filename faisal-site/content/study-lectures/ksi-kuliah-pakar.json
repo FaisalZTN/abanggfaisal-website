@@ -1,0 +1,12 @@
+{
+  "id": "ksi-kuliah-pakar",
+  "title": "Kuliah Pakar KSI",
+  "department": "Kuliah Pakar",
+  "teachers": [],
+  "number": 47,
+  "status": "published",
+  "lecture_date": "2026-12-14",
+  "lecture_start": "08:00",
+  "lecture_end": "12:00",
+  "schedule_page": 5
+}
