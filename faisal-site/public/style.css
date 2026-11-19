@@ -553,10 +553,75 @@ body > header {
 }
 .skip { position: fixed; }
 .site-footer {
+  display: block;
   margin-block-end: 4.5rem;
-  padding: clamp(1rem, 3vw, 2rem);
+  padding: clamp(1rem, 3vw, 2rem) clamp(1rem, 4vw, 2.5rem) .75rem;
   border-radius: 1.5rem;
 }
+.site-footer-main, .site-footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem 1.5rem;
+}
+.site-footer-brand p { font-size: .875rem; }
+.site-footer nav {
+  flex-wrap: wrap;
+  gap: .25rem;
+  margin: 0;
+}
+.site-footer nav a, .site-footer-social {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: .8rem;
+  border-radius: 1.5rem;
+  text-decoration: none;
+}
+.site-footer nav a:hover, .site-footer-social:hover { background: var(--wash); }
+.site-footer nav a[aria-current="page"] {
+  background: var(--wash);
+  font-weight: 650;
+}
+.site-footer-bottom {
+  margin-top: 1rem;
+  padding-top: .5rem;
+  border-top: 1px solid var(--line);
+}
+.site-footer-social {
+  gap: .55rem;
+  font-size: .875rem;
+  font-weight: 650;
+}
+.site-footer-social svg { flex: none; }
+.site-footer-platform { color: var(--muted); font-weight: 400; }
+
+.study-module {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid var(--line);
+  border-radius: .9rem;
+  background: var(--paper);
+}
+.study-module h3 { margin: 0; font-size: clamp(1.25rem, 3vw, 1.65rem); }
+.study-module p { margin: .25rem 0 0; }
+.study-module-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.study-module-actions .btn {
+  border: 1px solid transparent;
+  border-radius: .65rem;
+  font-weight: 650;
+}
+.study-module-actions .study-module-download {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.study-module-actions .study-module-download:hover { background: var(--wash); }
 #back-to-top {
   position: fixed;
   z-index: 4;
@@ -584,4 +649,5 @@ body > header {
     max-height: calc(100dvh - 5.5rem);
     overflow-y: auto;
   }
+  .site-footer-main { align-items: flex-start; flex-direction: column; }
 }
