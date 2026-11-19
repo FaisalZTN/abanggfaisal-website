@@ -82,7 +82,7 @@ async function checkStudyFlow(page, width) {
   await checkWidth(page, 'Blok segera hadir', width);
   assert.equal(await page.locator('#jadwal-kuliah').count(), 0);
   assert.ok(await page.getByRole('link', { name: /Pedoman IAUI/ }).isVisible());
-  await chooseBlock(page, 'KSI');
+  await chooseBlock(page, 'Keluhan Sensoris dan Integumentum');
   assert.ok(await page.locator('#jadwal-kuliah').isVisible());
   await checkWidth(page, 'Kembali ke blok KSI', width);
 
