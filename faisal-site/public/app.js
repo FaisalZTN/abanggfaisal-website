@@ -184,11 +184,15 @@ const search=document.querySelector('#search'),category=document.querySelector('
       const anchor = event.target.closest('a[href]');
       if (!anchor || anchor.pathname !== location.pathname || anchor.origin !== location.origin || !anchor.hash
           || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const linkedCard = cards.find(card => '#' + card.id === anchor.hash);
       if (anchor.hasAttribute('data-next-material')) {
-        const material = cards.find(card => '#' + card.id === anchor.hash)?.querySelector('.study-material');
+        const material = linkedCard?.querySelector('.study-material');
         if (material) material.open = true;
       }
-      if (anchor.hash === location.hash) revealLinkedCard();
+      if (anchor.hash === location.hash) {
+        if (linkedCard) event.preventDefault();
+        revealLinkedCard();
+      }
     });
   }
   if (more) {
