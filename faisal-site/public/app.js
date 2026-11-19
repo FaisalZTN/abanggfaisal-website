@@ -65,6 +65,69 @@ function oneStudyTypo(query, word) {
         && shorter.slice(index + 2) === longer.slice(index + 2));
 }
 
+function studyMatchScore(terms, words, context = []) {
+  let score = 0;
+  for (const term of terms) {
+    if (words.includes(term)) continue;
+    if (words.some(word => word.startsWith(term))) score += 1;
+    else if (words.some(word => word.includes(term)) || context.includes(term)) score += 2;
+    else if (context.some(word => word.includes(term)) || words.some(word => oneStudyTypo(term, word))) score += 3;
+    else if (context.some(word => oneStudyTypo(term, word))) score += 4;
+    else return Infinity;
+  }
+  return score;
+}
+
+const unifiedSearch = document.querySelector('#study-search');
+if (unifiedSearch) {
+  const panel = unifiedSearch.closest('[role="search"]');
+  const results = panel.querySelector('#study-search-results');
+  const status = panel.querySelector('[role="status"]');
+  const groups = [...results.querySelectorAll('[data-search-group]')].map(section => ({
+    section,
+    entries: [...section.querySelector('template').content.children].map(item => ({
+      item,
+      words: studySearchWords(item.querySelector('strong').textContent),
+      context: studySearchWords(item.dataset.terms),
+    })),
+  }));
+
+  function updateSearch() {
+    const terms = studySearchWords(unifiedSearch.value);
+    let count = 0;
+    for (const { section, entries } of groups) {
+      const matches = terms.length ? entries
+        .map(({ item, words, context }) => ({ item, score: studyMatchScore(terms, words, context) }))
+        .filter(result => Number.isFinite(result.score))
+        .sort((a, b) => a.score - b.score)
+        .map(({ item }) => item.cloneNode(true)) : [];
+      const more = section.querySelector('details');
+      section.querySelector(':scope > ul').replaceChildren(...matches.slice(0, 5));
+      more.querySelector('ul').replaceChildren(...matches.slice(5));
+      more.querySelector('summary').textContent = `Tampilkan ${matches.length - 5} hasil lainnya`;
+      more.open = false;
+      more.hidden = matches.length <= 5;
+      section.hidden = matches.length === 0;
+      count += matches.length;
+    }
+    results.hidden = count === 0;
+    status.textContent = count ? `${count} hasil`
+      : unifiedSearch.value.trim() ? 'Tidak ada hasil. Coba nama atau kata kunci lain.' : '';
+  }
+
+  unifiedSearch.addEventListener('input', updateSearch);
+  panel.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && unifiedSearch.value) {
+      event.preventDefault();
+      unifiedSearch.value = '';
+      unifiedSearch.focus();
+      updateSearch();
+    }
+  });
+  panel.hidden = false;
+  updateSearch();
+}
+
 const search=document.querySelector('#search'),category=document.querySelector('#category');if (search) {
   const results = document.querySelector('#results');
   const cards = [...results.querySelectorAll('.card')];
@@ -83,7 +146,7 @@ const search=document.querySelector('#search'),category=document.querySelector('
     for (const card of cards) {
       const matches = (!category.value || card.dataset.category === category.value)
         && (studyWords
-          ? terms.every(term => studyWords.get(card).some(word => word.includes(term) || oneStudyTypo(term, word)))
+          ? Number.isFinite(studyMatchScore(terms, studyWords.get(card)))
           : (card.dataset.search + ' ' + card.dataset.category).toLocaleLowerCase('id').includes(query));
       card.hidden = !matches || ++count > limit;
     }
@@ -94,6 +157,10 @@ const search=document.querySelector('#search'),category=document.querySelector('
   }
   function reset() { limit = step; filter(); }
   function revealLinkedCard() {
+    if (location.hash === '#prioritas-ujian') {
+      const examPanel = document.querySelector('.study-exam-panel');
+      if (examPanel) examPanel.open = true;
+    }
     const target = cards.find(card => card.id && '#' + card.id === location.hash);
     if (catalogue && (target || location.hash === '#kuliah')) catalogue.open = true;
     if (!target) return;
@@ -119,8 +186,17 @@ const search=document.querySelector('#search'),category=document.querySelector('
     window.addEventListener('hashchange', revealLinkedCard);
     document.addEventListener('click', event => {
       const anchor = event.target.closest('a[href]');
-      if (anchor && anchor.pathname === location.pathname && anchor.origin === location.origin
-          && anchor.hash && anchor.hash === location.hash) revealLinkedCard();
+      if (!anchor || anchor.pathname !== location.pathname || anchor.origin !== location.origin || !anchor.hash
+          || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const linkedCard = cards.find(card => '#' + card.id === anchor.hash);
+      if (anchor.hasAttribute('data-next-material')) {
+        const material = linkedCard?.querySelector('.study-material');
+        if (material) material.open = true;
+      }
+      if (anchor.hash === location.hash) {
+        if (linkedCard) event.preventDefault();
+        revealLinkedCard();
+      }
     });
   }
   if (more) {
@@ -152,11 +228,51 @@ if (agenda?.querySelector('[data-agenda-clock]')) {
   const grid = agenda.querySelector('[data-agenda-days]');
   const panels = [...grid.children];
   const pastClasses = agenda.querySelector('#arsip-kelas');
+  const nextClass = document.querySelector('[data-study-next]');
   const slots = new Map();
   for (const slot of agenda.querySelector('template').content.children) {
     const day = slot.dataset.day;
     if (!slots.has(day)) slots.set(day, []);
     slots.get(day).push(slot);
+  }
+
+  let shownSlot;
+  let shownStatus;
+  function showNextClass(today, time) {
+    const todaysSlots = slots.get(today) ?? [];
+    const current = todaysSlots.find(({ dataset }) => dataset.start && dataset.start <= time && time < dataset.end);
+    const upcoming = todaysSlots.find(({ dataset }) => dataset.start > time);
+    const untimed = todaysSlots.find(({ dataset }) => !dataset.start);
+    const nextDay = [...slots.keys()].find(day => day > today);
+    const slot = current ?? upcoming ?? untimed ?? slots.get(nextDay)?.[0];
+    const status = current ? 'Sedang berlangsung' : upcoming ? 'Kelas berikutnya hari ini'
+      : untimed ? 'Terjadwal hari ini' : slot ? 'Jadwal terdekat' : 'Belum ada jadwal berikutnya.';
+    if (slot === shownSlot && status === shownStatus) return;
+    shownSlot = slot;
+    shownStatus = status;
+
+    nextClass.querySelector('h2').textContent = !slot ? 'Jadwal Kuliah'
+      : slot.dataset.day === today ? 'Hari Ini' : 'Hari yang Akan Datang';
+    nextClass.querySelector('[data-next-status]').textContent = status;
+    const title = nextClass.querySelector('[data-next-title]');
+    const details = nextClass.querySelector('[data-next-details]');
+    const people = nextClass.querySelector('[data-next-people]');
+    const material = nextClass.querySelector('[data-next-material]');
+    title.hidden = details.hidden = people.hidden = !slot;
+    material.hidden = true;
+    if (slot) {
+      const { day, start, hours, location: room, people: teachers } = slot.dataset;
+      const session = slot.querySelector('h4 a');
+      title.textContent = session.textContent;
+      details.textContent = [day === today ? '' : dateLabel.format(new Date(day)),
+        start ? hours + ' WITA' : hours, room || 'Lokasi belum tercantum'].filter(Boolean).join(' · ');
+      people.textContent = teachers || 'Dosen belum tercantum';
+      const url = new URL(session.getAttribute('href'), location.href);
+      material.href = url.href;
+      const lecture = document.getElementById(url.hash.slice(1));
+      material.hidden = !lecture?.querySelector('.study-material');
+    }
+    nextClass.hidden = false;
   }
 
   function showDay(panel, day) {
@@ -225,6 +341,7 @@ if (agenda?.querySelector('[data-agenda-clock]')) {
     }
 
     if (pastClasses) showPastClasses(key, localTime);
+    if (nextClass) showNextClass(key, localTime);
 
     for (const slot of panels[0].querySelectorAll('.study-slot[data-start]:not([data-start=""])')) {
       const status = slot.querySelector('[data-session-state]');

@@ -22,7 +22,7 @@ for preview in [False,True]:
             path=P/'dist'/target.path.lstrip('/')
             if path.is_dir():path=path/'index.html'
             assert path.is_file(),(f,u)
-            if target.fragment:
+            if target.fragment and path.suffix == '.html':
                 linked=Parser()
                 linked.feed(path.read_text())
                 assert unquote(target.fragment) in linked.ids,(f,u)
