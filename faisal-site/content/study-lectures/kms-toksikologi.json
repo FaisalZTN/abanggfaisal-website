@@ -1,0 +1,14 @@
+{
+  "id": "kms-toksikologi",
+  "block": "kms",
+  "title": "Toksikologi dasar dan antidotum",
+  "department": "Farmakologi",
+  "teachers": [
+    "kms-bakhriansyah"
+  ],
+  "number": 26,
+  "source_page": "11",
+  "status": "published",
+  "lecture_date": "2026-09-07",
+  "schedule_week": 4
+}

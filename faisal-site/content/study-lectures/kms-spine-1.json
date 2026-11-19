@@ -1,0 +1,13 @@
+{
+  "id": "kms-spine-1",
+  "block": "kms",
+  "title": "Spine 1",
+  "department": "Ortopedi",
+  "teachers": [
+    "kms-iqbal"
+  ],
+  "number": 6,
+  "source_page": "12",
+  "status": "published",
+  "schedule_note": "Tanggal berbeda antara buku blok dan PDF jadwal."
+}

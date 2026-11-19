@@ -1,0 +1,17 @@
+{
+  "id": "riset-pengantar",
+  "block": "metodologi-riset-ii",
+  "title": "Pengantar dan Kontrak Kuliah",
+  "department": "Kuliah",
+  "teachers": [
+    "riset-herzan"
+  ],
+  "status": "published",
+  "number": 1,
+  "source_page": "1",
+  "lecture_date": "2026-08-19",
+  "schedule_page": 1,
+  "lecture_location": "RKB III",
+  "lecture_start": "07:30",
+  "lecture_end": "08:00"
+}

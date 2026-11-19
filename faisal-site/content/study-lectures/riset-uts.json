@@ -1,0 +1,15 @@
+{
+  "id": "riset-uts",
+  "block": "metodologi-riset-ii",
+  "title": "UTS · CBT",
+  "department": "Ujian",
+  "teachers": [
+    "riset-tim"
+  ],
+  "status": "published",
+  "number": 9,
+  "source_page": "1",
+  "lecture_date": "2026-10-07",
+  "schedule_page": 1,
+  "lecture_location": "Labkom"
+}

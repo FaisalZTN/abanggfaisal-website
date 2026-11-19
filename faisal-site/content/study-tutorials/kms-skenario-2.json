@@ -1,0 +1,13 @@
+{
+  "id": "kms-skenario-2",
+  "block": "kms",
+  "number": 2,
+  "title": "Kenapa kakiku…",
+  "short": "Nyeri dan bengkak tungkai setelah tabrakan sepeda motor.",
+  "article": "Baca skenario lengkap di Buku Blok KMS, hlm. 22. Gunakan pertanyaan berikut untuk diskusi.\n\n- Petakan mekanisme trauma dan jelaskan temuan yang perlu dicatat dalam pemeriksaan neurovaskular.\n- Teks modul menyebut kedua sisi tungkai. Konfirmasi sisi cedera bersama tutor sebelum menggunakannya untuk analisis.",
+  "related": [
+    "kms-pengantar-ortopedi",
+    "kms-radiologi-fraktur"
+  ],
+  "status": "published"
+}

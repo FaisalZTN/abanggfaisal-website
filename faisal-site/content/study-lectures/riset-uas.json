@@ -1,0 +1,15 @@
+{
+  "id": "riset-uas",
+  "block": "metodologi-riset-ii",
+  "title": "UAS · CBT",
+  "department": "Ujian",
+  "teachers": [
+    "riset-tim"
+  ],
+  "status": "published",
+  "number": 18,
+  "source_page": "1",
+  "lecture_date": "2026-12-09",
+  "schedule_page": 1,
+  "lecture_location": "Labkom"
+}

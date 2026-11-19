@@ -1,0 +1,17 @@
+{
+  "id": "riset-bahasa-ilmiah",
+  "block": "metodologi-riset-ii",
+  "title": "Penggunaan Bahasa Indonesia dan Inggris dalam Karya Ilmiah",
+  "department": "Kuliah",
+  "teachers": [
+    "riset-triawanti"
+  ],
+  "status": "published",
+  "number": 16,
+  "source_page": "1",
+  "lecture_date": "2026-11-25",
+  "schedule_page": 1,
+  "lecture_location": "RKB III",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00"
+}

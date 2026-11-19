@@ -1,0 +1,13 @@
+{
+  "id": "kms-skenario-1",
+  "block": "kms",
+  "number": 1,
+  "title": "Jari kakiku luka dan nyeri",
+  "short": "Luka jari kaki pada pasien dengan nyeri tungkai dan keluhan sensorik.",
+  "article": "Baca skenario lengkap di Buku Blok KMS, hlm. 22. Gunakan pertanyaan berikut untuk diskusi.\n\n- Apa petunjuk dari perubahan nyeri saat berjalan, beristirahat, atau mengubah posisi tungkai?\n- Bagaimana temuan vaskular dan neurologis membantu membedakan hipotesis?",
+  "related": [
+    "kms-ilmu-luka",
+    "kms-peroneal-palsy"
+  ],
+  "status": "published"
+}

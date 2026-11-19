@@ -1,0 +1,21 @@
+{
+  "id": "riset-statistik-parametrik",
+  "block": "metodologi-riset-ii",
+  "title": "Uji Hipotesis dan Statistik Parametrik",
+  "department": "Kuliah",
+  "teachers": [
+    "riset-alfi"
+  ],
+  "status": "published",
+  "number": 3,
+  "source_page": "1",
+  "lecture_date": "2026-08-26",
+  "schedule_page": 1,
+  "lecture_location": "RKB III",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "notes": "Uji normalitas dan homogenitas, uji t, ANOVA, dan korelasi Pearson.",
+  "keywords": [
+    "Uji normalitas dan homogenitas, uji t, ANOVA, dan korelasi Pearson."
+  ]
+}

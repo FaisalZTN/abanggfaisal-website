@@ -1,0 +1,14 @@
+{
+  "id": "kms-identifikasi-forensik",
+  "block": "kms",
+  "title": "Identifikasi Forensik",
+  "department": "Forensik",
+  "teachers": [
+    "kms-iwan"
+  ],
+  "number": 28,
+  "source_page": "12",
+  "status": "published",
+  "lecture_date": "2026-09-07",
+  "schedule_week": 4
+}

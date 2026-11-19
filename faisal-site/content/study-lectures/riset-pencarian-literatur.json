@@ -1,0 +1,17 @@
+{
+  "id": "riset-pencarian-literatur",
+  "block": "metodologi-riset-ii",
+  "title": "Metode Pencarian Literatur pada Jurnal Ilmiah",
+  "department": "Kuliah",
+  "teachers": [
+    "riset-rahmiati"
+  ],
+  "status": "published",
+  "number": 13,
+  "source_page": "1",
+  "lecture_date": "2026-11-04",
+  "schedule_page": 1,
+  "lecture_location": "RKB III",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00"
+}

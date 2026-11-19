@@ -139,13 +139,17 @@ def block_path(block_id):
 
 def block_selector(blocks, current, e):
     links = []
+    courses = []
     for block in blocks:
         selected = ' aria-current="page"' if current == block['id'] else ''
         status = {'archived': 'Arsip', 'coming-soon': 'Segera hadir'}.get(block['status'])
         badge = f' <span>{status}</span>' if status else ''
-        links.append(f'<a href="{block_path(block["id"])}"{selected}>{e(block["title"])}{badge}</a>')
-    return ('<nav class="study-block-selector" aria-label="Pilih blok belajar">'
-            '<p>Blok belajar</p><div>' + ''.join(links) + '</div></nav>')
+        group = courses if block.get('kind') == 'course' else links
+        group.append(f'<a href="{block_path(block["id"])}"{selected}>{e(block["title"])}{badge}</a>')
+    groups = [('Blok belajar', links), ('Jadwal mata kuliah', courses)]
+    content = ''.join(f'<div class="study-selector-group"><p>{label}</p><div>{"".join(items)}</div></div>'
+                      for label, items in groups if items)
+    return '<nav class="study-block-selector" aria-label="Pilih blok belajar">' + content + '</nav>'
 
 
 def render_pending_block(block, selector, guidelines, write, e):
@@ -192,7 +196,10 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
     block_id = block['id']
     base = block_path(block_id)
     block_name = block['title']
+    course = block.get('kind') == 'course'
+    schedule_note = block.get('schedule_note')
     subtitle = ' · '.join(value for value in (block_name, block.get('semester'), block.get('period')) if value)
+    session_name = 'sesi' if course else 'kuliah'
     module = block.get('module_label') or 'Modul ' + block_name
     schedule_source = block.get('schedule_source') or 'Sumber jadwal'
     active = sorted((x for x in lectures.values() if preview or x['status'] == 'published'),
@@ -211,15 +218,21 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         write(base + path, title, intro,
               f'<div class="study-block study-block--{block_id}">{body}</div>', 'study')
 
+    def date_label(day):
+        return f'{day.day} {MONTHS[day.month - 1]} {day.year}'
+
     def schedule(item):
         location = f' · {e(item["lecture_location"])}' if item.get('lecture_location') else ''
         if not item.get('lecture_date'):
-            return f'<span class="study-date">Jadwal belum terverifikasi{location}</span>'
+            note = item.get('schedule_note') or 'Jadwal belum terverifikasi'
+            return f'<span class="study-date">{e(note)}{location}</span>'
         day = date.fromisoformat(item['lecture_date'])
-        label = f'{day.day} {MONTHS[day.month - 1]} {day.year}'
+        label = date_label(day)
         hours = lecture_hours(item)
         if hours:
             hours = f' · {e(hours)} WITA'
+        elif item['department'] == 'Ujian':
+            hours = ' · Jam ujian belum tercantum'
         return (f'<span class="study-date"><time datetime="{day.isoformat()}">{label}</time>{hours}'
                 f'{location}<small class="study-schedule-source"> · {e(schedule_reference(item, schedule_source))}</small></span>')
 
@@ -231,7 +244,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         entries = defaultdict(list)
         scheduled = (item for item in active if item.get('lecture_date'))
         for item in sorted(scheduled, key=lambda x: (x['lecture_date'], x.get('lecture_start') or '99:99', x['number'])):
-            hours = lecture_hours(item) or 'Jam belum tercatat'
+            hours = lecture_hours(item) or ('Jam ujian belum tercantum' if item['department'] == 'Ujian' else 'Jam belum tercatat')
             people = ', '.join(teachers[key]['title'] for key in item['teachers'])
             location = (f'<p class="study-slot-location">{e(item["lecture_location"])}</p>'
                         if item.get('lecture_location') else '')
@@ -246,23 +259,28 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             f'<section class="study-agenda-day"><div class="study-agenda-day-head">'
             f'<div><h3>{title}</h3><time data-agenda-date></time></div><span data-agenda-count></span></div>'
             f'<ul class="study-agenda-list" data-agenda-list></ul><p class="study-agenda-empty" data-agenda-empty hidden>'
-            f'Tidak ada kuliah terverifikasi pada tanggal ini.</p></section>'
+            f'Tidak ada jadwal terverifikasi pada tanggal ini.</p></section>'
             for title in ('Hari ini', 'Besok')
         )
         calendar_link = (f'<a href="{base}kalender/{block_id}.ics" download>'
                          f'Unduh kalender {e(block_name)} (.ics)</a>' if calendar_ids else '')
-        if block['status'] == 'archived':
-            archive = []
+        archived = block['status'] == 'archived'
+        archive = []
+        if archived or course:
             for key, slots in entries.items():
                 day = date.fromisoformat(key)
-                label = f'{day.day} {MONTHS[day.month - 1]} {day.year}'
-                archive.append(f'<h3><time datetime="{key}">{label}</time></h3>'
+                archive.append(f'<h3><time datetime="{key}">{date_label(day)}</time></h3>'
                                f'<ul class="study-agenda-list">{"".join(slots)}</ul>')
+        full_schedule = (f'<details class="study-full-schedule"><summary>Lihat jadwal lengkap '
+                         f'({sum(map(len, entries.values()))} sesi)</summary>'
+                         + ''.join(archive) + '</details>' if archive else '')
+        if archived:
+            note = f'<p>{e(schedule_note)}</p>' if schedule_note else ''
             return (f'<section class="study-section study-agenda" id="jadwal-kuliah">'
-                    f'<h2>Arsip Jadwal Kuliah</h2><p>Waktu dalam WITA · {e(schedule_source)}</p>'
-                    + (f'<details><summary>Lihat jadwal kuliah ({sum(map(len, entries.values()))} sesi)</summary>'
-                       + ''.join(archive) + '</details>' if archive else '<p>Jadwal belum tersedia.</p>')
+                    f'<h2>Arsip Jadwal Kuliah</h2><p>WITA · {e(schedule_source)}</p>' + note
+                    + (full_schedule or '<p>Jadwal belum tersedia.</p>')
                     + f'<div class="study-agenda-links">{calendar_link}{link("#kuliah", "Lihat katalog kuliah")}</div></section>')
+        note = schedule_note or f'Tanggal dan jam mengikuti {schedule_source}. Lokasi mengikuti pembaruan Ruang Belajar.'
         return f'''
         <section class="study-section study-agenda" id="jadwal-kuliah" aria-labelledby="study-agenda-heading">
           <div class="study-agenda-heading">
@@ -270,13 +288,32 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             <p class="study-agenda-clock" data-agenda-clock hidden><time></time> WITA</p>
           </div>
           <div class="study-agenda-grid" data-agenda-days hidden>{days}</div>
-          <noscript><p>Aktifkan JavaScript untuk melihat jadwal hari ini dan besok dalam WITA. Tanggal tiap kuliah tersedia di katalog.</p></noscript>
+          <noscript><p>Aktifkan JavaScript untuk melihat jadwal hari ini dan besok dalam WITA. Tanggal tiap sesi tersedia di katalog.</p></noscript>
           <div class="study-agenda-foot">
-            <p>Tanggal dan jam mengikuti {e(schedule_source)}. Lokasi mengikuti pembaruan Ruang Belajar.</p>
-            <div class="study-agenda-links">{calendar_link}{link('#kuliah', 'Lihat katalog kuliah ↓')}</div>
+            <p>{e(note)}</p>
+            <div class="study-agenda-links">{calendar_link}{link('#kuliah', 'Lihat katalog ' + session_name)}</div>
           </div>
+          {full_schedule}
           <template id="study-agenda-data">{''.join(slot for slots in entries.values() for slot in slots)}</template>
         </section>'''
+
+    def exam_section():
+        cards = ''.join(f'<li><h3>{link("#" + item["id"], item["title"])}</h3>{schedule(item)}</li>'
+                        for item in active if item['department'] == 'Ujian')
+        return ('<section id="ujian" class="study-section study-guidelines"><h2>Jadwal Ujian</h2>'
+                f'<ul class="study-guideline-list">{cards}</ul></section>')
+
+    def skill_lab_section(items):
+        cards = []
+        for item in items:
+            days = ' dan '.join(f'<time datetime="{day}">{date_label(date.fromisoformat(day))}</time>'
+                                 for day in item['dates'])
+            cards.append(f'<article class="card study-row"><h3>{e(item["title"])}</h3><p>{days}</p>'
+                         f'<p>{e(item["focus"])}</p><p class="meta">Modul Skill Lab 4, hlm. {e(item["page"])}'
+                         f' · Materi terpisah {e(item["source"])}</p></article>')
+        return ('<section class="study-section" id="skill-lab"><h2>Skill Lab 4</h2>'
+                '<p>Tiga materi, masing-masing terdiri atas dua pertemuan.</p>'
+                '<div class="study-list">' + ''.join(cards) + '</div></section>')
 
     def back():
         return '<p>' + link('', '← Ruang Belajar') + '</p>'
@@ -302,11 +339,12 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         pagination = '' if catalogue else ' data-page-size="9"'
         more = ('' if catalogue else '<button type="button" class="btn study-more" id="study-more" hidden>'
                 'Tampilkan lebih banyak</button>')
+        category_label = 'Jenis sesi' if course and catalogue else 'Departemen'
         return f'''
         <div class="toolbar">
           <label for="search">{e(label)}</label><input id="search" type="search">
-          <label for="category">Departemen</label><select id="category">
-            <option value="">Semua departemen</option>{options}
+          <label for="category">{category_label}</label><select id="category">
+            <option value="">Semua {category_label.lower()}</option>{options}
           </select>{sort_control}
         </div>
         <p id="count" role="status"></p><div id="results" class="study-list"{pagination}>{entries}</div>
@@ -358,7 +396,11 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
                           f'{schedule(item)}<p class="study-lecturers">{links}</p>' + lecture_material(item)
                           + f'<div class="study-card-notes"><p>{e(module_ref)}</p>'
                           + calendar_link + '</div>', item['id'], date_key))
-    intro = f'Katalog kuliah, daftar dosen pengajar, dan catatan tutorial {block_name}.'
+    intro = (f'Jadwal kuliah, praktikum, dan ujian {block_name}.' if course else
+             f'Katalog kuliah, daftar dosen pengajar, dan catatan tutorial {block_name}.')
+    study_title = 'Katalog Sesi' if course else 'Katalog Kuliah'
+    catalogue_hint = (f'Jadwal dan pengajar mengikuti {schedule_source}.' if course else
+                      f'Topik mengacu pada modul. Jadwal dan pengajar sesi mengikuti {schedule_source}.')
     tutorial_cards = ''.join(
         f'<article class="card study-row"><p class="eyebrow">Skenario {e(item["number"])}</p>'
         f'<h3>{link("tutorial/" + item["id"] + "/", item["title"])}</h3><p>{e(item["short"])}</p></article>'
@@ -411,29 +453,35 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
     </section>'''
     shortcuts = (
         ('#jadwal-kuliah', 'Jadwal kuliah'),
+        *([('#ujian', 'Jadwal ujian')] if course else []),
         ('pengajar/', 'Cari dosen'),
-        ('#kuliah', 'Katalog kuliah'),
-        ('#tutorial', 'Buka tutorial'),
+        ('#kuliah', study_title),
+        *([] if course else [('#tutorial', 'Buka tutorial')]),
+        *([('#skill-lab', 'Skill Lab 4')] if block.get('skill_labs') else []),
         ('#guideline', 'Guideline'),
         ('#sumber-belajar', 'Sumber belajar'),
     )
     shortcut_links = ''.join(f'<a href="{base}{path}">{e(label)}<span aria-hidden="true">{number}</span></a>'
                              for number, (path, label) in enumerate(shortcuts, start=1))
+    tutorial_section = (f'<section class="study-section" id="tutorial"><h2>Tutorial {e(block_name)}</h2>'
+                        + (f'<div class="grid">{tutorial_cards}</div>' if tutorial_cards else '<p>Belum ada tutorial.</p>')
+                        + '</section>')
+    skill_labs = block.get('skill_labs') or []
     page('', 'Ruang Belajar' if block_id == DEFAULT_BLOCK else block_name + ' · Ruang Belajar', intro,
          f'<div class="study-heading"><p class="eyebrow">{e(subtitle)}</p>'
          f'<h1>Ruang Belajar</h1><p>{e(intro)}</p></div>' + selector
          + '<div class="study-welcome"><nav class="study-shortcuts" aria-label="Pintasan Ruang Belajar">'
          + shortcut_links + '</nav>' + STUDY_QUOTE + '</div>' + schedule_dashboard()
-         + '<section class="study-section" id="kuliah"><h2>Katalog Kuliah</h2>'
+         + (exam_section() if course else '')
+         + f'<section class="study-section" id="kuliah"><h2>{study_title}</h2>'
          + '<details id="study-catalogue" class="study-catalogue"><summary>'
-         + f'<span class="catalogue-show">Tampilkan katalog · {len(active)} kuliah</span>'
+         + f'<span class="catalogue-show">Tampilkan katalog · {len(active)} {session_name}</span>'
          + '<span class="catalogue-hide">Sembunyikan katalog</span></summary>'
-         + f'<p class="meta">Topik mengacu pada modul. Jadwal dan pengajar sesi mengikuti {e(schedule_source)}.</p>'
+         + f'<p class="meta">{e(catalogue_hint)}</p>'
          + listing(''.join(cards), {x['department'] for x in active}, 'Cari materi atau dosen', catalogue=True)
          + '</details></section>'
-         + f'<section class="study-section" id="tutorial"><h2>Tutorial {e(block_name)}</h2>'
-         + (f'<div class="grid">{tutorial_cards}</div>' if tutorial_cards else '<p>Belum ada tutorial.</p>')
-         + '</section>' + guidelines + resources)
+         + ('' if course else tutorial_section)
+         + (skill_lab_section(skill_labs) if skill_labs else '') + guidelines + resources)
 
     directory = []
     visible_teachers = [x for x in roster.values() if block_id != DEFAULT_BLOCK or counts[x['id']]]

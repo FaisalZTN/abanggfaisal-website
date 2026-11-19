@@ -1,0 +1,14 @@
+{
+  "id": "kms-oa-ra",
+  "block": "kms",
+  "title": "Osteoartritis dan artritis reumatoid",
+  "department": "Ilmu Penyakit Dalam",
+  "teachers": [
+    "kms-anggarda"
+  ],
+  "number": 29,
+  "source_page": "12",
+  "status": "published",
+  "lecture_date": "2026-09-09",
+  "schedule_week": 4
+}

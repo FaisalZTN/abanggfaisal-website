@@ -1,0 +1,14 @@
+{
+  "id": "kms-pengantar-ortopedi",
+  "block": "kms",
+  "title": "Pengantar Ortopedi, pemeriksaan fisik, fraktur femur, tibia, fibula dan jari kaki, balut dan traksi",
+  "department": "Ortopedi",
+  "teachers": [
+    "kms-sutan"
+  ],
+  "number": 2,
+  "source_page": "11",
+  "status": "published",
+  "lecture_date": "2026-08-18",
+  "schedule_week": 1
+}

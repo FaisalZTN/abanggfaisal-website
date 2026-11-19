@@ -429,12 +429,18 @@ body:has(.study-block--ksi)::before {
 }
 
 .study-block-selector {
+  display: grid;
+  gap: .65rem;
+  margin-block: 0 1.25rem;
+}
+.study-block-selector .study-selector-group {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: .45rem 1rem;
-  margin-block: 0 1.25rem;
 }
+.study-full-schedule { margin-block: 1rem; }
+.study-full-schedule > summary { cursor: pointer; font-weight: 650; }
 .study-block-selector p {
   margin: 0;
   color: var(--muted);
