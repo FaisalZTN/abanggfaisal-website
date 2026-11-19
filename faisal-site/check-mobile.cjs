@@ -92,7 +92,7 @@ async function checkKmsAndResearch(page, width) {
   await checkWidth(page, 'Arsip KMS', width);
   await page.locator('#jadwal-kuliah summary').click();
   assert.ok(await page.locator('#jadwal-kuliah').getByRole('link', { name: 'Ortopedi Onkologi 1' }).isVisible());
-  await page.locator('#study-catalogue summary').click();
+  await page.locator('#study-catalogue > summary').click();
   const conflicting = page.locator('#kms-streptococcus .study-date');
   assert.match(await conflicting.textContent(), /Tanggal berbeda/);
   assert.equal(await conflicting.locator('time').count(), 0);
