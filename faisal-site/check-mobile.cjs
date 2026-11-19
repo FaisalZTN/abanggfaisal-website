@@ -47,7 +47,7 @@ async function checkStudyFlow(page, width) {
 }
 
 async function main() {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ channel: 'chrome' });
   try {
     for (const width of widths) {
       const page = await browser.newPage({ viewport: { width, height: 800 }, isMobile: true, hasTouch: true });
