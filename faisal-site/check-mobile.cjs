@@ -112,7 +112,7 @@ async function checkStudyFlow(page, width) {
 
 async function checkExamPriorities(page, width) {
   await page.goto(base + '/ruang-belajar/');
-  await page.getByRole('link', { name: 'Prioritas ujian', exact: true }).click();
+  await page.getByRole('link', { name: 'Prioritas Ujian', exact: true }).click();
   const priorities = page.locator('#prioritas-ujian');
   assert.equal(await priorities.locator('summary').count(), 9);
   assert.match(await priorities.textContent(), /84 dari 150 soal \(56%\)/);
