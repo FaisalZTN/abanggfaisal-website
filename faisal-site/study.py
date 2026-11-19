@@ -20,7 +20,36 @@ STUDY_QUOTE = '''
 </figure>'''
 MONTHS = ('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus',
           'September', 'Oktober', 'November', 'Desember')
+DATE_PATTERN = re.compile(r'[0-9]{4}-[0-9]{2}-[0-9]{2}')
 TIME_PATTERN = re.compile(r'(?:[01][0-9]|2[0-3]):[0-5][0-9]')
+
+
+def valid_date(value):
+    if not isinstance(value, str) or not DATE_PATTERN.fullmatch(value):
+        return False
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def validate_lecture_schedule(item):
+    title = item['title']
+    day = item.get('lecture_date')
+    page = item.get('schedule_page')
+    has_day = day not in (None, '')
+    has_page = page not in (None, '')
+    if has_day and not valid_date(day):
+        raise ValueError(f'{title}: tanggal kuliah harus tanggal kalender yang valid (YYYY-MM-DD).')
+    if has_page and (type(page) is not int or page < 1):
+        raise ValueError(f'{title}: halaman PDF jadwal harus bilangan bulat minimal 1.')
+    if has_day != has_page:
+        raise ValueError(f'{title}: isi tanggal kuliah dan halaman PDF jadwal bersama-sama.')
+    start, end = item.get('lecture_start') or '', item.get('lecture_end') or ''
+    if (start or end) and not (has_day and isinstance(start, str) and isinstance(end, str)
+                              and TIME_PATTERN.fullmatch(start) and TIME_PATTERN.fullmatch(end) and start < end):
+        raise ValueError(f'{title}: isi tanggal, halaman PDF, dan jam mulai–selesai WITA yang valid.')
 
 
 def build_study(root, output, write, head, escape, render_article, preview=False):
@@ -41,11 +70,7 @@ def build_study(root, output, write, head, escape, render_article, preview=False
     for item in lectures.values():
         if not item['teachers'] or any(key not in teachers for key in item['teachers']):
             raise ValueError(f'Pengajar tidak ditemukan: {item["title"]}')
-        start, end = item.get('lecture_start') or '', item.get('lecture_end') or ''
-        if (start or end) and not (item.get('lecture_date') and item.get('schedule_page')
-                                   and TIME_PATTERN.fullmatch(start) and TIME_PATTERN.fullmatch(end)
-                                   and start < end):
-            raise ValueError(f'Jam kuliah memerlukan tanggal, halaman jadwal, dan rentang waktu valid: {item["title"]}')
+        validate_lecture_schedule(item)
         for material in item.get('materials') or []:
             if not material.get('label', '').strip() or not https_url(material.get('url', '')):
                 raise ValueError(f'Materi kuliah memerlukan judul dan URL HTTPS: {item["title"]}')
@@ -58,6 +83,11 @@ def build_study(root, output, write, head, escape, render_article, preview=False
     for item in guidelines:
         if not item.get('title', '').strip() or not https_url(item.get('url', '')):
             raise ValueError('Guideline memerlukan judul dan URL HTTPS.')
+        reviewed = item.get('reviewed_on')
+        if reviewed and not valid_date(reviewed):
+            raise ValueError(f'{item["title"]}: tanggal peninjauan guideline tidak valid.')
+        if item.get('review_status') not in (None, '', 'berlaku', 'perlu-dicek', 'digantikan'):
+            raise ValueError(f'{item["title"]}: status guideline tidak dikenal.')
 
     active = sorted((x for x in lectures.values() if preview or x['status'] == 'published'),
                     key=lambda x: x['number'])
@@ -86,7 +116,7 @@ def build_study(root, output, write, head, escape, render_article, preview=False
         if hours:
             hours = f' · {e(hours)} WITA'
         return (f'<span class="study-date"><time datetime="{day.isoformat()}">{label}</time>{hours}'
-                f'{location} · {SCHEDULE_SOURCE}, hlm. {e(item["schedule_page"])}</span>')
+                f'{location}<small class="study-schedule-source"> · {SCHEDULE_SOURCE}, hlm. {e(item["schedule_page"])}</small></span>')
 
     def lecture_hours(item):
         start = item.get('lecture_start')
@@ -137,7 +167,16 @@ def build_study(root, output, write, head, escape, render_article, preview=False
             entries = []
             for item in guidelines:
                 issuer = f'<p>{e(item["issuer"])}</p>' if item.get('issuer') else ''
-                entries.append(f'<li><a href="{e(item["url"])}">{e(item["title"])}</a>{issuer}</li>')
+                reviewed = item.get('reviewed_on')
+                status = {'berlaku': 'Berlaku', 'perlu-dicek': 'Perlu dicek',
+                          'digantikan': 'Digantikan'}.get(item.get('review_status'))
+                review_meta = [e(status)] if status else []
+                if reviewed:
+                    day = date.fromisoformat(reviewed)
+                    review_meta.append(f'Ditinjau <time datetime="{e(reviewed)}">'
+                                       f'{day.day} {MONTHS[day.month - 1]} {day.year}</time>')
+                review = f'<p class="meta">{" · ".join(review_meta)}</p>' if review_meta else ''
+                entries.append(f'<li><a href="{e(item["url"])}">{e(item["title"])}</a>{issuer}{review}</li>')
             body = '<ul class="study-guideline-list">' + ''.join(entries) + '</ul>'
         return ('<section class="study-section study-guidelines" id="guideline" aria-labelledby="guideline-heading">'
                 '<h2 id="guideline-heading">Kumpulan Guideline</h2>' + body + '</section>')
@@ -193,7 +232,7 @@ def build_study(root, output, write, head, escape, render_article, preview=False
         notes = (item.get('notes') or '').strip()
         content = []
         if objectives:
-            content.append(f'<p><strong>Target belajar</strong> <small>Adaptasi Sub-CPMK, Modul KSI hlm. 2</small></p><ul>{objectives}</ul>')
+            content.append(f'<p><strong>Target belajar</strong></p><ul>{objectives}</ul>')
         if resources:
             content.append('<p><strong>Bacaan dan tutorial</strong></p><ul>'
                            + ''.join(f'<li>{resource}</li>' for resource in resources) + '</ul>')
@@ -218,8 +257,9 @@ def build_study(root, output, write, head, escape, render_article, preview=False
         query = ' '.join([item['title'], names, *(item.get('keywords') or [])])
         cards.append(card(item['department'], query,
                           f'<p class="eyebrow">{e(item["department"])}</p><h3>{e(item["title"])}</h3>'
-                          f'<p>{links}</p>{schedule(item)}<p class="meta">Modul KSI, hlm. {e(item["source_page"])}</p>'
-                          + lecture_material(item) + calendar_link, item['id'], date_key))
+                          f'{schedule(item)}<p class="study-lecturers">{links}</p>' + lecture_material(item)
+                          + f'<div class="study-card-notes"><p>Modul KSI, hlm. {e(item["source_page"])}</p>'
+                          + calendar_link + '</div>', item['id'], date_key))
     intro = 'Katalog kuliah, daftar dosen pengajar, dan catatan tutorial Blok KSI.'
     tutorial_cards = ''.join(
         f'<article class="card study-row"><p class="eyebrow">Skenario {e(item["number"])}</p>'
@@ -252,7 +292,7 @@ def build_study(root, output, write, head, escape, render_article, preview=False
             <p class="meta">klinikbelajarkedokteran.site</p>
           </div>
           <div class="study-resource-body">
-            <p>Tautan bacaan pendamping untuk meninjau materi kuliah.</p>
+            <p>Tautan bacaan pendamping untuk meninjau materi kuliah. Situs eksternal tanpa HTTPS.</p>
             <a class="btn" href="http://klinikbelajarkedokteran.site/" rel="external">Buka Klinik Belajar Kedokteran ↗</a>
           </div>
         </article>

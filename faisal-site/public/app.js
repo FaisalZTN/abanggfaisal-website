@@ -41,6 +41,9 @@ const menu=document.querySelector('#menu'),nav=document.querySelector('#nav');me
     category.value = '';
     limit = Math.max(limit, cards.indexOf(target) + 1);
     filter();
+    const title = target.querySelector('h3');
+    title.tabIndex = -1;
+    title.focus({ preventScroll: true });
     target.scrollIntoView({ block: 'start' });
   }
   search.addEventListener('input', reset);

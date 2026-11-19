@@ -35,12 +35,21 @@ jobs:
             sleep 1
           done
           exit 1
+      - name: Mobile study flows
+        run: |
+          npm install --prefix "$RUNNER_TEMP/website-qa" --no-audit --no-fund playwright@1.56.1
+          "$RUNNER_TEMP/website-qa/node_modules/.bin/playwright" install --with-deps chromium
+          NODE_PATH="$RUNNER_TEMP/website-qa/node_modules" node faisal-site/check-mobile.cjs
       - name: Lighthouse reports
         run: |
           mkdir -p quality-reports
-          for page in home journal shop about; do
-            route="/$page/"
-            if [ "$page" = home ]; then route="/"; fi
+          for page in home journal shop about study tutorial; do
+            case "$page" in
+              home) route="/" ;;
+              study) route="/ruang-belajar/" ;;
+              tutorial) route="/ruang-belajar/tutorial/kusta/" ;;
+              *) route="/$page/" ;;
+            esac
             npx --yes lighthouse@12.8.2 "http://localhost:8080$route" --chrome-flags="--headless --no-sandbox" --only-categories=performance,accessibility,best-practices,seo --output=html --output=json --output-path="quality-reports/$page-mobile" --quiet
           done
           npx --yes lighthouse@12.8.2 http://localhost:8080/ --preset=desktop --chrome-flags="--headless --no-sandbox" --only-categories=performance,accessibility,best-practices,seo --output=html --output=json --output-path=quality-reports/home-desktop --quiet

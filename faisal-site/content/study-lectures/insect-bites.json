@@ -12,5 +12,21 @@
   "schedule_page": 2,
   "lecture_start": "10:00",
   "lecture_end": "12:00",
-  "lecture_location": "RKB 4"
+  "lecture_location": "RKB 4",
+  "objectives": [
+    "Hubungkan riwayat paparan, waktu timbul, dan pola lesi dengan reaksi gigitan serangga.",
+    "Bedakan reaksi lokal, tanda infeksi sekunder, dan gejala sistemik pada skenario latihan.",
+    "Jelaskan pencegahan gigitan sesuai jenis paparan."
+  ],
+  "keywords": [
+    "gigitan serangga",
+    "reaksi lokal",
+    "hipersensitivitas"
+  ],
+  "materials": [
+    {
+      "label": "PPK FKTP Kemenkes RI · Reaksi Gigitan Serangga",
+      "url": "https://puskesmaslabuapi-dikes.lombokbaratkab.go.id/media/Kepmenkes_nomor_HK.01.07_MENKES_1186_2022_-_PPK_Dokter_Mei_2022.pdf"
+    }
+  ]
 }
