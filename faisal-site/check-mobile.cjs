@@ -129,7 +129,6 @@ async function checkExamPriorities(page, width) {
 }
 
 async function checkCurrentBlockArchive(page, width) {
-  await page.clock.setFixedTime(new Date('2026-11-19T01:30:00Z'));
   await page.goto(base + '/ruang-belajar/#jadwal-kuliah');
   const archive = page.locator('#arsip-kelas');
   await archive.locator('summary').click();
@@ -183,8 +182,9 @@ async function checkKmsAndResearch(page, width) {
 }
 
 async function checkDashboardOverview(page, width) {
-  await page.clock.setFixedTime(new Date('2026-11-19T01:30:00Z'));
   await page.goto(base + '/ruang-belajar/');
+  await page.clock.setFixedTime(new Date('2026-11-19T01:30:00Z'));
+  await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
   const today = page.getByRole('region', { name: 'Hari Ini' });
   assert.match(await today.textContent(), /Sedang berlangsung.*Radang telinga luar.*08:00–10:00 WITA · RKB 4/s);
   await today.getByRole('link', { name: 'Buka materi' }).click();
@@ -292,12 +292,12 @@ async function main() {
       try {
         await checkHeader(page, width);
         await checkStudyFlow(page, width);
-        await checkDashboardOverview(page, width);
         if (width === 320) {
           await checkExamPriorities(page, width);
           await checkCurrentBlockArchive(page, width);
           await checkKmsAndResearch(page, width);
         }
+        await checkDashboardOverview(page, width);
         console.log('PASS ' + width + ' px: beranda, agenda, fokus, katalog, pengajar, dan tutorial');
       } finally {
         await page.close();
