@@ -245,12 +245,13 @@ def render_exam_priorities(blueprint, lectures, teachers, base, e):
         )
     share = f'{combined / total:.0%}'
     return ('<section class="study-section study-agenda study-exam" id="prioritas-ujian" '
-            'aria-labelledby="study-exam-heading"><h2 id="study-exam-heading">Prioritas Ujian Tulis KSI</h2>'
+            'aria-labelledby="study-exam-heading"><details class="study-exam-panel">'
+            '<summary><h2 id="study-exam-heading">Prioritas Ujian CBT KSI</h2></summary>'
             f'<p><strong>{combined} dari {total} soal ({share})</strong> dialokasikan untuk {e(names)}.'
             ' Buka departemen untuk melihat fokus latihan, topik kuliah, dan dosennya.</p>'
             + ''.join(rows)
             + f'<p class="meta">Alokasi soal per departemen mengikuti {e(blueprint["source"])}. '
-            'Fokus latihan adalah saran belajar. Cetak biru merinci sasaran belajar per departemen.</p></section>')
+            'Fokus latihan adalah saran belajar. Cetak biru merinci sasaran belajar per departemen.</p></details></section>')
 
 
 def render_block(block, selector, guidelines, lectures, tutorials, teachers, roster,

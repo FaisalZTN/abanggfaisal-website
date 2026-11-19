@@ -157,6 +157,10 @@ const search=document.querySelector('#search'),category=document.querySelector('
   }
   function reset() { limit = step; filter(); }
   function revealLinkedCard() {
+    if (location.hash === '#prioritas-ujian') {
+      const examPanel = document.querySelector('.study-exam-panel');
+      if (examPanel) examPanel.open = true;
+    }
     const target = cards.find(card => card.id && '#' + card.id === location.hash);
     if (catalogue && (target || location.hash === '#kuliah')) catalogue.open = true;
     if (!target) return;

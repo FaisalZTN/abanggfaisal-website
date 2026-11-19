@@ -112,11 +112,20 @@ async function checkStudyFlow(page, width) {
 
 async function checkExamPriorities(page, width) {
   await page.goto(base + '/ruang-belajar/');
+  const panel = page.locator('.study-exam-panel');
+  const heading = panel.locator(':scope > summary');
+  assert.equal(await heading.textContent(), 'Prioritas Ujian CBT KSI');
+  assert.equal(await panel.evaluate(element => element.open), false);
+  await heading.press('Enter');
+  assert.equal(await panel.evaluate(element => element.open), true);
+  await heading.press('Enter');
+  assert.equal(await panel.evaluate(element => element.open), false);
   await page.getByRole('link', { name: 'Prioritas Ujian', exact: true }).click();
   const priorities = page.locator('#prioritas-ujian');
-  assert.equal(await priorities.locator('summary').count(), 9);
+  await page.waitForFunction(() => document.querySelector('.study-exam-panel').open);
+  assert.equal(await priorities.locator('.study-topic > summary').count(), 9);
   assert.match(await priorities.textContent(), /84 dari 150 soal \(56%\)/);
-  const skin = priorities.locator('details').first();
+  const skin = priorities.locator('.study-topic').first();
   assert.match(await skin.locator('summary').textContent(), /Kulit dan Kelamin.*40 soal/);
   await skin.locator('summary').press('Enter');
   await checkWidth(page, 'Prioritas ujian KSI', width);

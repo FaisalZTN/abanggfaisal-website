@@ -393,6 +393,9 @@ body:has(.study-block--ksi)::before {
 .study-topic-body > :first-child { margin-top: .65em; }
 .study-topic-body > :last-child { margin-bottom: 0; }
 
+.study-exam-panel > summary { cursor: pointer; padding-block: .45rem; }
+.study-exam-panel > summary h2 { display: inline; }
+.study-exam-panel[open] > summary { border-bottom: 1px solid var(--line); }
 .study-exam .study-topic summary {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
