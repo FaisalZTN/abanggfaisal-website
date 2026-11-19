@@ -114,6 +114,32 @@ async function checkHeader(page, width) {
   if (isMobile) await menu.click();
   assert.equal(await header.locator('a[aria-current="page"]').textContent(), 'About');
   await checkWidth(page, 'Navigasi halaman About', width);
+
+  await page.goto(base + '/ruang-belajar/');
+  const backToTop = page.getByRole('button', { name: 'Kembali ke atas' });
+  assert.ok(!(await backToTop.isVisible()));
+  await page.evaluate(() => window.scrollTo(0, 900));
+  await backToTop.waitFor();
+  const bar = page.locator('body > header');
+  assert.ok(Math.abs((await bar.boundingBox()).y) <= 1);
+  await backToTop.focus();
+  await backToTop.press('Enter');
+  await page.waitForFunction(() => window.scrollY === 0);
+  assert.ok(await bar.locator('.brand').evaluate(element => element === document.activeElement));
+  await backToTop.waitFor({ state: 'hidden' });
+
+  const footer = await page.locator('.site-footer').evaluate(element => {
+    const { borderRadius, backdropFilter } = getComputedStyle(element);
+    return { borderRadius, backdropFilter };
+  });
+  assert.equal(footer.borderRadius, '24px');
+  assert.match(footer.backdropFilter, /blur/);
+
+  await page.goto(base + '/ruang-belajar/#jadwal-kuliah');
+  await page.waitForFunction(() => window.scrollY > 0);
+  const target = await page.locator('#jadwal-kuliah').boundingBox();
+  const sticky = await bar.boundingBox();
+  assert.ok(target.y >= sticky.y + sticky.height, 'Agenda is covered by the sticky header');
 }
 
 async function main() {

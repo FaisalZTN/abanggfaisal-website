@@ -27,6 +27,22 @@ document.addEventListener('keydown', event => {
   }
 });
 
+const backToTop = document.querySelector('#back-to-top');
+
+function updateBackToTop() {
+  if (document.activeElement !== backToTop) backToTop.hidden = window.scrollY < 480;
+}
+
+window.addEventListener('scroll', updateBackToTop, { passive: true });
+window.addEventListener('pageshow', updateBackToTop);
+backToTop.addEventListener('blur', updateBackToTop);
+backToTop.addEventListener('click', () => {
+  setMenu(false);
+  document.querySelector('.header-inner .brand').focus({ preventScroll: true });
+  window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+});
+updateBackToTop();
+
 const search=document.querySelector('#search'),category=document.querySelector('#category');if (search) {
   const results = document.querySelector('#results');
   const cards = [...results.querySelectorAll('.card')];
