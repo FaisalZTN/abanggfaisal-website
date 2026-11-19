@@ -1,0 +1,13 @@
+{
+  "id": "kms-ortopedi-anak-1",
+  "block": "kms",
+  "title": "Ortopedi Anak 1",
+  "department": "Ortopedi",
+  "teachers": [
+    "kms-rifqi"
+  ],
+  "number": 7,
+  "source_page": "12",
+  "status": "published",
+  "schedule_note": "Tanggal berbeda antara buku blok dan PDF jadwal."
+}

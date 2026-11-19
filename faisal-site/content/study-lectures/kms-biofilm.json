@@ -1,0 +1,13 @@
+{
+  "id": "kms-biofilm",
+  "block": "kms",
+  "title": "Infeksi bakteri pembentuk biofilm",
+  "department": "Mikrobiologi",
+  "teachers": [
+    "kms-rahmiati"
+  ],
+  "number": 15,
+  "source_page": "11",
+  "status": "published",
+  "schedule_note": "Tanggal berbeda antara buku blok dan PDF jadwal."
+}

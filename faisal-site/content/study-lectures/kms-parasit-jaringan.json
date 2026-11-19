@@ -1,0 +1,14 @@
+{
+  "id": "kms-parasit-jaringan",
+  "block": "kms",
+  "title": "Sarcocystis, miasis, penyakit Chagas, dan Trichinella spiralis",
+  "department": "Parasitologi",
+  "teachers": [
+    "kms-erida"
+  ],
+  "number": 17,
+  "source_page": "11",
+  "status": "published",
+  "lecture_date": "2026-08-28",
+  "schedule_week": 2
+}

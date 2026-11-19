@@ -1,0 +1,21 @@
+{
+  "id": "riset-statistik-deskriptif",
+  "block": "metodologi-riset-ii",
+  "title": "Statistik Deskriptif dan Visualisasi Data",
+  "department": "Kuliah",
+  "teachers": [
+    "riset-alfi"
+  ],
+  "status": "published",
+  "number": 2,
+  "source_page": "1",
+  "lecture_date": "2026-08-19",
+  "schedule_page": 1,
+  "lecture_location": "RKB III",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "notes": "Frekuensi, persentase, ukuran pemusatan dan penyebaran, distribusi, serta visualisasi data.",
+  "keywords": [
+    "Frekuensi, persentase, ukuran pemusatan dan penyebaran, distribusi, serta visualisasi data."
+  ]
+}

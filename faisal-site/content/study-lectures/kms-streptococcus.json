@@ -1,0 +1,13 @@
+{
+  "id": "kms-streptococcus",
+  "block": "kms",
+  "title": "Streptococcus dan Corynebacterium",
+  "department": "Mikrobiologi",
+  "teachers": [
+    "kms-lia"
+  ],
+  "number": 11,
+  "source_page": "11",
+  "status": "published",
+  "schedule_note": "Tanggal berbeda antara buku blok dan PDF jadwal."
+}

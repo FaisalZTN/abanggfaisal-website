@@ -1,0 +1,14 @@
+{
+  "id": "kms-bakteri-anaerob",
+  "block": "kms",
+  "title": "Bakteri anaerob",
+  "department": "Mikrobiologi",
+  "teachers": [
+    "kms-lia"
+  ],
+  "number": 20,
+  "source_page": "11",
+  "status": "published",
+  "lecture_date": "2026-08-31",
+  "schedule_week": 3
+}

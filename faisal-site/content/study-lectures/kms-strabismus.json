@@ -1,0 +1,13 @@
+{
+  "id": "kms-strabismus",
+  "block": "kms",
+  "title": "Strabismus, lagoftalmus, dan ptosis",
+  "department": "Ilmu Penyakit Mata",
+  "teachers": [
+    "kms-agus"
+  ],
+  "number": 14,
+  "source_page": "12",
+  "status": "published",
+  "schedule_note": "Tanggal berbeda antara buku blok dan PDF jadwal."
+}

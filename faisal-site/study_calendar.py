@@ -40,8 +40,9 @@ def schedule_reference(item, source):
 
 def write_calendar(output, lectures, teachers, base, block_id, block_name, schedule_source):
     scheduled = sorted(
-        (item for item in lectures if item.get('lecture_start') and item.get('lecture_end')),
-        key=lambda item: (item['lecture_date'], item['lecture_start'], item['number']),
+        (item for item in lectures if item.get('lecture_start')
+         or (item['department'] == 'Ujian' and item.get('lecture_date'))),
+        key=lambda item: (item['lecture_date'], item.get('lecture_start') or '99:99', item['number']),
     )
     if not scheduled:
         return set()
@@ -56,19 +57,28 @@ def write_calendar(output, lectures, teachers, base, block_id, block_name, sched
         day = item['lecture_date']
         names = ', '.join(teachers[key]['title'] for key in item['teachers'])
         source = f'Pengajar: {names}\n{schedule_reference(item, schedule_source)}. Waktu sumber: WITA.'
+        if item.get('lecture_start'):
+            timing = [
+                'DTSTART:' + calendar_datetime(day, item['lecture_start']),
+                'DTEND:' + calendar_datetime(day, item['lecture_end']),
+            ]
+            reminder = ['BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:-PT30M',
+                        'DESCRIPTION:' + calendar_text(item['title']), 'END:VALARM']
+        else:
+            # An exam date without a specified hour stays an all-day entry.
+            timing = ['DTSTART;VALUE=DATE:' + day.replace('-', '')]
+            reminder = []
+            source += '\nJam ujian belum tercantum.'
         event = [
             'BEGIN:VEVENT',
             f'UID:{block_id}-{slug}@abanggfaisal.my.id',
             f'DTSTAMP:{stamp}',
-            'DTSTART:' + calendar_datetime(day, item['lecture_start']),
-            'DTEND:' + calendar_datetime(day, item['lecture_end']),
+            *timing,
             'SUMMARY:' + calendar_text(item['title']),
             'DESCRIPTION:' + calendar_text(source),
             f'URL:{SITE}{base}#{slug}',
             *([f'LOCATION:{calendar_text(item["lecture_location"])}'] if item.get('lecture_location') else []),
-            'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:-PT30M',
-            'DESCRIPTION:' + calendar_text(item['title']),
-            'END:VALARM', 'END:VEVENT',
+            *reminder, 'END:VEVENT',
         ]
         (folder / f'kuliah-{slug}.ics').write_bytes(calendar_bytes([*header, *event, 'END:VCALENDAR']))
         events.extend(event)

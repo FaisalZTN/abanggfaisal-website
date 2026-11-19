@@ -85,6 +85,38 @@ async function checkStudyFlow(page, width) {
   assert.deepEqual(errors, []);
 }
 
+async function checkKmsAndResearch(page, width) {
+  await page.goto(base + '/ruang-belajar/');
+  const choices = page.getByRole('navigation', { name: 'Pilih blok belajar' });
+  await choices.getByRole('link', { name: 'Keluhan Muskuloskeletal (KMS) Arsip' }).click();
+  await checkWidth(page, 'Arsip KMS', width);
+  await page.locator('#jadwal-kuliah summary').click();
+  assert.ok(await page.locator('#jadwal-kuliah').getByRole('link', { name: 'Ortopedi Onkologi 1' }).isVisible());
+  await page.locator('#study-catalogue summary').click();
+  const conflicting = page.locator('#kms-streptococcus .study-date');
+  assert.match(await conflicting.textContent(), /Tanggal berbeda/);
+  assert.equal(await conflicting.locator('time').count(), 0);
+  assert.equal(await page.locator('#skill-lab article').count(), 3);
+  assert.equal(await page.locator('#skill-lab time').count(), 6);
+  assert.equal(await page.locator('#tutorial article').count(), 3);
+  await checkWidth(page, 'Katalog KMS terbuka', width);
+
+  await choices.getByRole('link', { name: 'Metodologi Penelitian II' }).click();
+  assert.equal(await page.locator('#ujian time[datetime="2026-10-07"]').count(), 1);
+  assert.equal(await page.locator('#ujian time[datetime="2026-12-09"]').count(), 1);
+  assert.match(await page.locator('#ujian').textContent(), /Jam ujian belum tercantum.*Labkom/);
+  assert.ok(await page.locator('#riset-uas').isHidden());
+  await page.locator('#ujian').getByRole('link', { name: 'UAS · CBT' }).press('Enter');
+  await page.waitForFunction(() => document.activeElement.matches('#riset-uas h3'));
+  const download = await page.request.get(base + '/ruang-belajar/blok/metodologi-riset-ii/kalender/metodologi-riset-ii.ics');
+  assert.ok(download.ok());
+  const calendar = await download.text();
+  assert.match(calendar, /DTSTART;VALUE=DATE:20261209/);
+  assert.match(calendar, /DTSTART:20261125T000000Z/);
+  assert.equal((calendar.match(/BEGIN:VEVENT/g) || []).length, 18);
+  await checkWidth(page, 'Metodologi Penelitian II', width);
+}
+
 async function checkHeader(page, width) {
   await page.goto(base);
   const header = page.getByRole('navigation', { name: 'Navigasi utama' });
@@ -150,6 +182,7 @@ async function main() {
       try {
         await checkHeader(page, width);
         await checkStudyFlow(page, width);
+        if (width === 320) await checkKmsAndResearch(page, width);
         console.log('PASS ' + width + ' px: beranda, agenda, fokus, katalog, pengajar, dan tutorial');
       } finally {
         await page.close();

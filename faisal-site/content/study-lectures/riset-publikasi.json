@@ -1,0 +1,21 @@
+{
+  "id": "riset-publikasi",
+  "block": "metodologi-riset-ii",
+  "title": "Teknik Publikasi Ilmiah",
+  "department": "Kuliah",
+  "teachers": [
+    "riset-eko"
+  ],
+  "status": "published",
+  "number": 17,
+  "source_page": "1",
+  "lecture_date": "2026-12-02",
+  "schedule_page": 1,
+  "lecture_location": "RKB III",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "notes": "Pemilihan jurnal, penulisan cover letter, dan gaya selingkung jurnal.",
+  "keywords": [
+    "Pemilihan jurnal, penulisan cover letter, dan gaya selingkung jurnal."
+  ]
+}

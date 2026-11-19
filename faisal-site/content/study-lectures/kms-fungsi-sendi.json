@@ -1,0 +1,14 @@
+{
+  "id": "kms-fungsi-sendi",
+  "block": "kms",
+  "title": "Indikasi dan kontraindikasi pemeriksaan sendi serta interpretasi hasil",
+  "department": "Patologi Klinik",
+  "teachers": [
+    "kms-hendriyono"
+  ],
+  "number": 9,
+  "source_page": "11",
+  "status": "published",
+  "lecture_date": "2026-08-21",
+  "schedule_week": 1
+}

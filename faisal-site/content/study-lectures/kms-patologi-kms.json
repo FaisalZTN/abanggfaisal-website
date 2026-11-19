@@ -1,0 +1,14 @@
+{
+  "id": "kms-patologi-kms",
+  "block": "kms",
+  "title": "Patologi sistem muskuloskeletal: herediter, trauma, inflamasi, dan neoplasma",
+  "department": "Patologi Anatomi",
+  "teachers": [
+    "kms-rika"
+  ],
+  "number": 31,
+  "source_page": "11",
+  "status": "published",
+  "lecture_date": "2026-09-11",
+  "schedule_week": 4
+}

@@ -1,0 +1,13 @@
+{
+  "id": "kms-visum",
+  "block": "kms",
+  "title": "Visum klinik atau visum hidup",
+  "department": "Forensik",
+  "teachers": [
+    "kms-mia"
+  ],
+  "number": 16,
+  "source_page": "12",
+  "status": "published",
+  "schedule_note": "Tanggal berbeda antara buku blok dan PDF jadwal."
+}

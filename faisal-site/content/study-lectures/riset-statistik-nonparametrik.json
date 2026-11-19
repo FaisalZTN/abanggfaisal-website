@@ -1,0 +1,21 @@
+{
+  "id": "riset-statistik-nonparametrik",
+  "block": "metodologi-riset-ii",
+  "title": "Statistik Nonparametrik",
+  "department": "Kuliah",
+  "teachers": [
+    "riset-bahkriansyah"
+  ],
+  "status": "published",
+  "number": 4,
+  "source_page": "1",
+  "lecture_date": "2026-09-02",
+  "schedule_page": 1,
+  "lecture_location": "RKB III",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "notes": "Mann–Whitney, Kruskal–Wallis, chi-square, Fisher, Kolmogorov–Smirnov, Wilcoxon, McNemar, dan Spearman.",
+  "keywords": [
+    "Mann–Whitney, Kruskal–Wallis, chi-square, Fisher, Kolmogorov–Smirnov, Wilcoxon, McNemar, dan Spearman."
+  ]
+}

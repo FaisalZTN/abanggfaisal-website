@@ -1,0 +1,14 @@
+{
+  "id": "kms-traumatologi-forensik",
+  "block": "kms",
+  "title": "Traumatologi Forensik",
+  "department": "Forensik",
+  "teachers": [
+    "kms-nila"
+  ],
+  "number": 12,
+  "source_page": "12",
+  "status": "published",
+  "lecture_date": "2026-08-26",
+  "schedule_week": 2
+}

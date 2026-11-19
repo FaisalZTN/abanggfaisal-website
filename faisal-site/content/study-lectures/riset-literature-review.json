@@ -1,0 +1,17 @@
+{
+  "id": "riset-literature-review",
+  "block": "metodologi-riset-ii",
+  "title": "Literature Review",
+  "department": "Kuliah",
+  "teachers": [
+    "riset-huldani"
+  ],
+  "status": "published",
+  "number": 10,
+  "source_page": "1",
+  "lecture_date": "2026-10-14",
+  "schedule_page": 1,
+  "lecture_location": "RKB III",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00"
+}
