@@ -123,6 +123,7 @@ if (agenda?.querySelector('[data-agenda-clock]')) {
   const clockTime = clock.querySelector('time');
   const grid = agenda.querySelector('[data-agenda-days]');
   const panels = [...grid.children];
+  const pastClasses = agenda.querySelector('#arsip-kelas');
   const slots = new Map();
   for (const slot of agenda.querySelector('template').content.children) {
     const day = slot.dataset.day;
@@ -139,6 +140,40 @@ if (agenda?.querySelector('[data-agenda-clock]')) {
     panel.querySelector('[data-agenda-count]').textContent = `${sessions.length} kuliah`;
     panel.querySelector('[data-agenda-empty]').hidden = sessions.length > 0;
     panel.querySelector('[data-agenda-list]').replaceChildren(...sessions.map(slot => slot.cloneNode(true)));
+  }
+
+  let shownPastCount = -1;
+  function showPastClasses(today, time) {
+    const days = [];
+    let count = 0;
+    // The build emits date groups in chronological order.
+    for (const [day, sessions] of slots) {
+      if (day > today) break;
+      const finished = day < today ? sessions : sessions.filter(slot => slot.dataset.end && slot.dataset.end <= time);
+      if (!finished.length) continue;
+      days.push([day, finished]);
+      count += finished.length;
+    }
+    if (count === shownPastCount) return;
+
+    const groups = days.reverse().map(([day, finished]) => {
+      const group = document.createElement('div');
+      const heading = document.createElement('h3');
+      const date = document.createElement('time');
+      date.dateTime = day;
+      date.textContent = dateLabel.format(new Date(day));
+      heading.append(date);
+      const list = document.createElement('ul');
+      list.className = 'study-agenda-list';
+      list.append(...finished.map(slot => slot.cloneNode(true)));
+      group.append(heading, list);
+      return group;
+    });
+    pastClasses.querySelector('[data-past-count]').textContent = `· ${count} kelas`;
+    pastClasses.querySelector('[data-past-list]').replaceChildren(...groups);
+    pastClasses.querySelector('[data-past-empty]').hidden = count > 0;
+    pastClasses.hidden = false;
+    shownPastCount = count;
   }
 
   let shownDay;
@@ -160,6 +195,8 @@ if (agenda?.querySelector('[data-agenda-clock]')) {
       showDay(panels[1], tomorrow);
       shownDay = key;
     }
+
+    if (pastClasses) showPastClasses(key, localTime);
 
     for (const slot of panels[0].querySelectorAll('.study-slot[data-start]:not([data-start=""])')) {
       const status = slot.querySelector('[data-session-state]');

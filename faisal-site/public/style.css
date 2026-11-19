@@ -352,6 +352,7 @@ body:has(.study-block--ksi)::before {
   font-variant-numeric: tabular-nums;
 }
 .study-exam .study-topic-body li { margin-block: .25rem; }
+.study-exam-lecturers { font-size: .88em; }
 
 .study-tutorial-intro,
 .study-topic[open] {
@@ -457,6 +458,8 @@ body:has(.study-block--ksi)::before {
 }
 .study-full-schedule { margin-block: 1rem; }
 .study-full-schedule > summary { cursor: pointer; font-weight: 650; }
+.study-past-classes { scroll-margin-top: .5rem; }
+.study-past-classes h3 { margin: 1rem 0 .35rem; font-size: 1rem; }
 .study-block-selector p {
   margin: 0;
   color: var(--muted);

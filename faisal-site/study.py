@@ -191,7 +191,7 @@ def render_guidelines(guidelines, e):
             '<h2 id="guideline-heading">Kumpulan Guideline</h2>' + body + '</section>')
 
 
-def render_exam_priorities(blueprint, lectures, base, e):
+def render_exam_priorities(blueprint, lectures, teachers, base, e):
     departments = sorted(blueprint['departments'], key=lambda item: -item['questions'])
     total = sum(item['questions'] for item in departments)
     highest = departments[:3]
@@ -199,8 +199,13 @@ def render_exam_priorities(blueprint, lectures, base, e):
     names = ', '.join(item.get('label', item['name']) for item in highest)
     materials = defaultdict(list)
     for lecture in lectures:
+        people = ', '.join(
+            f'<a href="{base}pengajar/{e(key)}/">{e(teachers[key]["title"])}</a>'
+            for key in lecture['teachers']
+        )
         materials[lecture['department']].append(
-            f'<li><a href="{base}#{e(lecture["id"])}">{e(lecture["title"])}</a></li>')
+            f'<li><a href="{base}#{e(lecture["id"])}">{e(lecture["title"])}</a>'
+            f' <span class="study-exam-lecturers">· {people}</span></li>')
     rows = []
     for item in departments:
         count = item['questions']
@@ -217,7 +222,7 @@ def render_exam_priorities(blueprint, lectures, base, e):
     return ('<section class="study-section study-agenda study-exam" id="prioritas-ujian" '
             'aria-labelledby="study-exam-heading"><h2 id="study-exam-heading">Prioritas Ujian Tulis KSI</h2>'
             f'<p><strong>{combined} dari {total} soal ({share})</strong> dialokasikan untuk {e(names)}.'
-            ' Buka departemen untuk melihat fokus latihan dan tautan materi.</p>'
+            ' Buka departemen untuk melihat fokus latihan, topik kuliah, dan dosennya.</p>'
             + ''.join(rows)
             + f'<p class="meta">Alokasi soal per departemen mengikuti {e(blueprint["source"])}. '
             'Fokus latihan adalah saran belajar. Cetak biru merinci sasaran belajar per departemen.</p></section>')
@@ -313,6 +318,13 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
                     + (full_schedule or '<p>Jadwal belum tersedia.</p>')
                     + f'<div class="study-agenda-links">{calendar_link}{link("#kuliah", "Lihat katalog kuliah")}</div></section>')
         note = schedule_note or f'Tanggal dan jam mengikuti {schedule_source}. Lokasi mengikuti pembaruan Ruang Belajar.'
+        past_classes = '''
+          <details class="study-full-schedule study-past-classes" id="arsip-kelas" hidden>
+            <summary>Arsip kelas <span data-past-count></span></summary>
+            <p class="meta">Berdasarkan waktu selesai di jadwal WITA. Untuk sesi yang hanya mencantumkan tanggal, entri muncul mulai hari berikutnya.</p>
+            <p data-past-empty hidden>Belum ada kelas yang jadwalnya sudah lewat.</p>
+            <div data-past-list></div>
+          </details>''' if not course else ''
         return f'''
         <section class="study-section study-agenda" id="jadwal-kuliah" aria-labelledby="study-agenda-heading">
           <div class="study-agenda-heading">
@@ -325,7 +337,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             <p>{e(note)}</p>
             <div class="study-agenda-links">{calendar_link}{link('#kuliah', 'Lihat katalog ' + session_name)}</div>
           </div>
-          {full_schedule}
+          {full_schedule}{past_classes}
           <template id="study-agenda-data">{''.join(slot for slots in entries.values() for slot in slots)}</template>
         </section>'''
 
@@ -507,7 +519,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
          + '<div class="study-welcome"><nav class="study-shortcuts" aria-label="Pintasan Ruang Belajar">'
          + shortcut_links + '</nav>' + STUDY_QUOTE + '</div>' + schedule_dashboard()
          + (exam_section() if course else '')
-         + (render_exam_priorities(blueprint, active, base, e) if blueprint else '')
+         + (render_exam_priorities(blueprint, active, teachers, base, e) if blueprint else '')
          + f'<section class="study-section" id="kuliah"><h2>{study_title}</h2>'
          + '<details id="study-catalogue" class="study-catalogue"><summary>'
          + f'<span class="catalogue-show">Tampilkan katalog · {len(active)} {session_name}</span>'
