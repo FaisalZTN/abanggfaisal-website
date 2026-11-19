@@ -85,17 +85,55 @@ async function checkStudyFlow(page, width) {
   assert.deepEqual(errors, []);
 }
 
+async function checkHeader(page, width) {
+  await page.goto(base);
+  const header = page.getByRole('navigation', { name: 'Navigasi utama' });
+  const menu = page.locator('#menu');
+  const isMobile = width <= 740;
+  if (isMobile) {
+    assert.ok(!(await header.isVisible()));
+    await menu.click();
+    const home = header.getByRole('link', { name: 'Home', exact: true });
+    await home.focus();
+    await home.press('Escape');
+    assert.ok(!(await header.isVisible()));
+    assert.ok(await menu.evaluate(element => element === document.activeElement));
+    await menu.click();
+  } else {
+    assert.ok(!(await menu.isVisible()));
+  }
+  await checkWidth(page, 'Navigasi atas', width);
+  const home = header.locator('a[aria-current="page"]');
+  assert.equal(await home.textContent(), 'Home');
+  const light = await home.evaluate(element => getComputedStyle(element).backgroundColor);
+  await page.locator('#theme').click();
+  const dark = await home.evaluate(element => getComputedStyle(element).backgroundColor);
+  assert.notEqual(light, 'rgba(0, 0, 0, 0)');
+  assert.notEqual(dark, light);
+  await header.getByRole('link', { name: 'About', exact: true }).click();
+  if (isMobile) await menu.click();
+  assert.equal(await header.locator('a[aria-current="page"]').textContent(), 'About');
+  await checkWidth(page, 'Navigasi halaman About', width);
+}
+
 async function main() {
   const browser = await chromium.launch({ channel: 'chrome' });
   try {
     for (const width of widths) {
-      const page = await browser.newPage({ viewport: { width, height: 800 }, isMobile: true, hasTouch: true });
+      const page = await browser.newPage({ viewport: { width, height: 800 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
       try {
+        await checkHeader(page, width);
         await checkStudyFlow(page, width);
         console.log('PASS ' + width + ' px: beranda, agenda, fokus, katalog, pengajar, dan tutorial');
       } finally {
         await page.close();
       }
+    }
+    const page = await browser.newPage({ viewport: { width: 768, height: 800 }, reducedMotion: 'reduce' });
+    try {
+      await checkHeader(page, 768);
+    } finally {
+      await page.close();
     }
   } finally {
     await browser.close();

@@ -11,7 +11,23 @@ theme.addEventListener('click', () => {
   setTheme(dark);
   try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch {}
 });
-const menu=document.querySelector('#menu'),nav=document.querySelector('#nav');menu.addEventListener('click',()=>{const open=menu.getAttribute('aria-expanded')!=='true';menu.setAttribute('aria-expanded',String(open));nav.classList.toggle('open',open)});document.addEventListener('keydown',e=>{if(e.key==='Escape'){nav.classList.remove('open');menu.setAttribute('aria-expanded','false')}});const search=document.querySelector('#search'),category=document.querySelector('#category');if (search) {
+const menu = document.querySelector('#menu');
+const nav = document.querySelector('#nav');
+
+function setMenu(open) {
+  menu.setAttribute('aria-expanded', String(open));
+  nav.classList.toggle('open', open);
+}
+
+menu.addEventListener('click', () => setMenu(menu.getAttribute('aria-expanded') !== 'true'));
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && menu.getAttribute('aria-expanded') === 'true') {
+    if (nav.contains(document.activeElement) && menu.getClientRects().length) menu.focus();
+    setMenu(false);
+  }
+});
+
+const search=document.querySelector('#search'),category=document.querySelector('#category');if (search) {
   const results = document.querySelector('#results');
   const cards = [...results.querySelectorAll('.card')];
   const sort = document.querySelector('#study-sort');
