@@ -17,3 +17,45 @@
     toPreview: data => '<div style="overflow:auto"><table><thead><tr>' + cells(data.headers || '').map(h => '<th>' + escape(h) + '</th>').join('') + '</tr></thead><tbody>' + String(data.rows || '').split('\n').filter(Boolean).map(row => '<tr>' + cells(row).map(c => '<td>' + escape(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>'
   });
 })();
+
+CMS.registerEventListener({
+  name: 'preSave',
+  handler: ({ entry }) => {
+    const collection = entry.get('collection');
+    const data = entry.get('data');
+    const validDate = value => {
+      if (typeof value !== 'string' || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value) || value.startsWith('0000')) {
+        return false;
+      }
+      const parsed = new Date(value + 'T00:00:00Z');
+      return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+    };
+
+    if (collection === 'study_guidelines') {
+      data.get('entries')?.forEach(item => {
+        const reviewed = item.get('reviewed_on');
+        if (reviewed && !validDate(reviewed)) {
+          throw new Error(`${item.get('title')}: Terakhir ditinjau harus tanggal kalender yang valid (YYYY-MM-DD).`);
+        }
+      });
+    }
+
+    if (collection !== 'study_lectures') return;
+    const { title, lecture_date: day, schedule_page: page, lecture_start: start, lecture_end: end } = data.toJS();
+    const hasDay = day != null && day !== '';
+    const hasPage = page != null && page !== '';
+    if (hasDay && !validDate(day)) {
+      throw new Error(`${title}: Tanggal kuliah harus tanggal kalender yang valid (YYYY-MM-DD).`);
+    }
+    if (hasPage && (!Number.isInteger(page) || page < 1)) {
+      throw new Error(`${title}: Halaman PDF jadwal harus bilangan bulat minimal 1.`);
+    }
+    if (hasDay !== hasPage) {
+      throw new Error(`${title}: Isi Tanggal kuliah dan Halaman PDF jadwal bersama-sama.`);
+    }
+    const time = /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/;
+    if ((start || end) && !(hasDay && time.test(start) && time.test(end) && start < end)) {
+      throw new Error(`${title}: Isi tanggal, halaman PDF, dan jam mulai–selesai WITA yang valid.`);
+    }
+  }
+});

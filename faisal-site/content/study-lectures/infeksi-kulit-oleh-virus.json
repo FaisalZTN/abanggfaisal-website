@@ -12,5 +12,22 @@
   "schedule_page": 2,
   "lecture_start": "13:00",
   "lecture_end": "15:00",
-  "lecture_location": "RKB 4"
+  "lecture_location": "RKB 4",
+  "objectives": [
+    "Bandingkan morfologi dan distribusi lesi varisela, herpes zoster, dan herpes simpleks.",
+    "Hubungkan pola lesi dermatomal pada herpes zoster dengan reaktivasi virus varisela-zoster.",
+    "Kenali temuan yang perlu mendorong evaluasi lanjutan, termasuk dugaan keterlibatan mata."
+  ],
+  "keywords": [
+    "varisela",
+    "herpes zoster",
+    "herpes simpleks",
+    "vesikel"
+  ],
+  "materials": [
+    {
+      "label": "PPK FKTP Kemenkes RI · Varisela, Herpes Zoster, dan Herpes Simpleks",
+      "url": "https://puskesmaslabuapi-dikes.lombokbaratkab.go.id/media/Kepmenkes_nomor_HK.01.07_MENKES_1186_2022_-_PPK_Dokter_Mei_2022.pdf"
+    }
+  ]
 }
