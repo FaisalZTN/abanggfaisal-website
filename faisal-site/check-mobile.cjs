@@ -185,7 +185,8 @@ async function checkDashboardOverview(page, width) {
   await page.goto(base + '/ruang-belajar/');
   await page.clock.setFixedTime(new Date('2026-11-19T01:30:00Z'));
   await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
-  const today = page.getByRole('region', { name: 'Hari Ini' });
+  const today = page.locator('[data-study-next]');
+  assert.equal(await today.getByRole('heading', { level: 2 }).textContent(), 'Hari Ini');
   assert.match(await today.textContent(), /Sedang berlangsung.*Radang telinga luar.*08:00–10:00 WITA · RKB 4/s);
   await today.getByRole('link', { name: 'Buka materi' }).click();
   await page.waitForFunction(() => document.activeElement.matches('#radang-telinga-luar h3'));
@@ -193,10 +194,12 @@ async function checkDashboardOverview(page, width) {
 
   await page.clock.setFixedTime(new Date('2026-11-19T15:00:00Z'));
   await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
+  assert.equal(await today.getByRole('heading', { level: 2 }).textContent(), 'Hari yang Akan Datang');
   assert.match(await today.textContent(), /Jadwal terdekat.*Glaukoma.*20 November 2026.*07:00–08:00 WITA/s);
   assert.ok(await today.getByRole('link', { name: 'Buka materi' }).isHidden());
   await page.clock.setFixedTime(new Date('2026-12-20T00:00:00Z'));
   await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
+  assert.equal(await today.getByRole('heading', { level: 2 }).textContent(), 'Jadwal Kuliah');
   assert.match(await today.textContent(), /Belum ada jadwal berikutnya/);
 
   const shortcuts = page.getByRole('navigation', { name: 'Pintasan Ruang Belajar' });

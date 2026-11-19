@@ -247,6 +247,8 @@ if (agenda?.querySelector('[data-agenda-clock]')) {
     shownSlot = slot;
     shownStatus = status;
 
+    nextClass.querySelector('h2').textContent = !slot ? 'Jadwal Kuliah'
+      : slot.dataset.day === today ? 'Hari Ini' : 'Hari yang Akan Datang';
     nextClass.querySelector('[data-next-status]').textContent = status;
     const title = nextClass.querySelector('[data-next-title]');
     const details = nextClass.querySelector('[data-next-details]');
