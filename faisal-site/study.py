@@ -83,7 +83,7 @@ def build_study(root, output, write, head, escape, render_article, preview=False
             raise ValueError(f'Blok tidak ditemukan: {item["title"]}.')
 
     for item in lectures.values():
-        if not item['teachers'] or any(key not in teachers for key in item['teachers']):
+        if any(key not in teachers for key in (item.get('teachers') or [])):
             raise ValueError(f'Pengajar tidak ditemukan: {item["title"]}')
         validate_lecture_schedule(item)
         for material in item.get('materials') or []:
@@ -201,11 +201,11 @@ def render_exam_priorities(blueprint, lectures, teachers, base, e):
     for lecture in lectures:
         people = ', '.join(
             f'<a href="{base}pengajar/{e(key)}/">{e(teachers[key]["title"])}</a>'
-            for key in lecture['teachers']
+            for key in (lecture.get('teachers') or [])
         )
         materials[lecture['department']].append(
             f'<li><a href="{base}#{e(lecture["id"])}">{e(lecture["title"])}</a>'
-            f' <span class="study-exam-lecturers">· {people}</span></li>')
+            f' <span class="study-exam-lecturers">· {people or "Dosen belum tercantum"}</span></li>')
     rows = []
     for item in departments:
         count = item['questions']
@@ -244,7 +244,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
     published = {x['id'] for x in active}
     sessions = sorted((x for x in tutorials.values() if preview or x['status'] == 'published'),
                       key=lambda x: x['number'])
-    counts = Counter(key for item in active for key in item['teachers'])
+    counts = Counter(key for item in active for key in (item.get('teachers') or []))
     calendar_ids = write_calendar(output, active, teachers, base, block_id, block_name, schedule_source)
     roster = {**roster, **{key: teachers[key] for key in counts}}
 
@@ -282,7 +282,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         scheduled = (item for item in active if item.get('lecture_date'))
         for item in sorted(scheduled, key=lambda x: (x['lecture_date'], x.get('lecture_start') or '99:99', x['number'])):
             hours = lecture_hours(item) or ('Jam ujian belum tercantum' if item['department'] == 'Ujian' else 'Jam belum tercatat')
-            people = ', '.join(teachers[key]['title'] for key in item['teachers'])
+            people = ', '.join(teachers[key]['title'] for key in (item.get('teachers') or []))
             location = (f'<p class="study-slot-location">{e(item["lecture_location"])}</p>'
                         if item.get('lecture_location') else '')
             entries[item['lecture_date']].append(
@@ -290,7 +290,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
                 f'data-start="{e(item.get("lecture_start") or "")}" data-end="{e(item.get("lecture_end") or "")}">'
                 f'<p class="study-slot-time">{e(hours)}<span data-session-state hidden></span></p>'
                 f'<div><h4>{link("#" + item["id"], item["title"])}</h4>'
-                f'<p>{e(people)}</p>{location}<small>{e(schedule_reference(item, schedule_source))}</small></div></li>'
+                f'<p>{e(people or "Dosen belum tercantum")}</p>{location}<small>{e(schedule_reference(item, schedule_source))}</small></div></li>'
             )
         days = ''.join(
             f'<section class="study-agenda-day"><div class="study-agenda-day-head">'
@@ -425,7 +425,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
 
     cards = []
     for item in active:
-        people = [teachers[key] for key in item['teachers']]
+        people = [teachers[key] for key in (item.get('teachers') or [])]
         names = ', '.join(person['title'] for person in people)
         links = ', '.join(link('pengajar/' + person['id'] + '/', person['title']) for person in people)
         calendar_link = (f'<a class="study-calendar-link" href="{base}kalender/kuliah-{e(item["id"])}.ics" download>'
@@ -434,10 +434,13 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         date_key = (item['lecture_date'] + 'T' + (item.get('lecture_start') or '99:99')
                     if item.get('lecture_date') else '')
         query = ' '.join([item['title'], names, *(item.get('keywords') or [])])
-        module_ref = module + (f', hlm. {item["source_page"]}' if item.get('source_page') else ', bagian Materi Kuliah')
+        if item.get('source_page'):
+            module_ref = f'{module}, hlm. {item["source_page"]}'
+        else:
+            module_ref = schedule_reference(item, schedule_source) if item.get('lecture_date') else module
         cards.append(card(item['department'], query,
                           f'<p class="eyebrow">{e(item["department"])}</p><h3>{e(item["title"])}</h3>'
-                          f'{schedule(item)}<p class="study-lecturers">{links}</p>' + lecture_material(item)
+                          f'{schedule(item)}<p class="study-lecturers">{links or "Dosen belum tercantum"}</p>' + lecture_material(item)
                           + f'<div class="study-card-notes"><p>{e(module_ref)}</p>'
                           + calendar_link + '</div>', item['id'], date_key))
     intro = (f'Jadwal kuliah, praktikum, dan ujian {block_name}.' if course else
@@ -540,7 +543,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
                                   f'<h2>{link(url, person["title"])}</h2>'
                                   f'<p>{e(person["department"])} · {counts[key]} topik</p>'))
         topics = ''.join('<li>' + link('#' + item['id'], item['title']) + schedule(item) + '</li>'
-                         for item in active if key in item['teachers'])
+                         for item in active if key in (item.get('teachers') or []))
         note = f'<p class="meta">{e(person["note"])}</p>' if person.get('note') else ''
         topic_list = (f'<ul class="study-topics">{topics}</ul>' if topics
                       else '<p>Belum ada sesi yang tercantum untuk pengajar ini.</p>')

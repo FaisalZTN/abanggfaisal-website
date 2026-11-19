@@ -33,6 +33,7 @@ def calendar_datetime(day, clock):
 
 
 def schedule_reference(item, source):
+    source = item.get('schedule_source') or source
     if item.get('schedule_week'):
         return f'{source}, minggu {item["schedule_week"]}'
     return f'{source}, hlm. {item["schedule_page"]}'
@@ -55,7 +56,7 @@ def write_calendar(output, lectures, teachers, base, block_id, block_name, sched
     for item in scheduled:
         slug = item['id']
         day = item['lecture_date']
-        names = ', '.join(teachers[key]['title'] for key in item['teachers'])
+        names = ', '.join(teachers[key]['title'] for key in (item.get('teachers') or [])) or 'Dosen belum tercantum'
         source = f'Pengajar: {names}\n{schedule_reference(item, schedule_source)}. Waktu sumber: WITA.'
         if item.get('lecture_start'):
             timing = [
