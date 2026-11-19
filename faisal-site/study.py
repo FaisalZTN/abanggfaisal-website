@@ -359,6 +359,24 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
                 '<p>Tiga materi, masing-masing terdiri atas dua pertemuan.</p>'
                 '<div class="study-list">' + ''.join(cards) + '</div></section>')
 
+    def skill_lab_module(filename):
+        pdf = f'/dokumen/{e(filename)}'
+        return f'''
+        <section class="study-section" id="skill-lab" aria-labelledby="skill-lab-heading">
+          <h2 id="skill-lab-heading">Skill Lab 4</h2>
+          <div class="study-module">
+            <div>
+              <h3>Modul Skill Lab 4 · Blok {e(block_name)}</h3>
+              <p>FKIK Universitas Lambung Mangkurat · 2026</p>
+            </div>
+            <div class="study-module-actions">
+              <a class="btn" href="{pdf}" target="_blank" rel="noopener"
+                 aria-label="Preview PDF Modul Skill Lab 4 (tab baru)">Preview PDF</a>
+              <a class="btn study-module-download" href="{pdf}" download>Unduh PDF</a>
+            </div>
+          </div>
+        </section>'''
+
     def back():
         return '<p>' + link('', '← Ruang Belajar') + '</p>'
 
@@ -499,6 +517,10 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
       </div>
     </section>'''
     blueprint = block.get('exam_blueprint')
+    skill_labs = block.get('skill_labs') or []
+    skill_lab_pdf = block.get('skill_lab_pdf')
+    skill_lab = (skill_lab_module(skill_lab_pdf) if skill_lab_pdf
+                 else skill_lab_section(skill_labs) if skill_labs else '')
     shortcuts = (
         ('#jadwal-kuliah', 'Jadwal kuliah'),
         *([('#prioritas-ujian', 'Prioritas ujian')] if blueprint else []),
@@ -506,7 +528,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         ('pengajar/', 'Cari dosen'),
         ('#kuliah', study_title),
         *([] if course else [('#tutorial', 'Buka tutorial')]),
-        *([('#skill-lab', 'Skill Lab 4')] if block.get('skill_labs') else []),
+        *([('#skill-lab', 'Skill Lab 4')] if skill_lab else []),
         ('#guideline', 'Guideline'),
         ('#sumber-belajar', 'Sumber belajar'),
     )
@@ -515,7 +537,6 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
     tutorial_section = (f'<section class="study-section" id="tutorial"><h2>Tutorial {e(block_name)}</h2>'
                         + (f'<div class="grid">{tutorial_cards}</div>' if tutorial_cards else '<p>Belum ada tutorial.</p>')
                         + '</section>')
-    skill_labs = block.get('skill_labs') or []
     page('', 'Ruang Belajar' if block_id == DEFAULT_BLOCK else block_name + ' · Ruang Belajar', intro,
          f'<div class="study-heading"><p class="eyebrow">{e(subtitle)}</p>'
          f'<h1>Ruang Belajar</h1><p>{e(intro)}</p></div>' + selector
@@ -531,7 +552,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
          + listing(''.join(cards), {x['department'] for x in active}, 'Cari materi atau dosen', catalogue=True)
          + '</details></section>'
          + ('' if course else tutorial_section)
-         + (skill_lab_section(skill_labs) if skill_labs else '') + guidelines + resources)
+         + skill_lab + guidelines + resources)
 
     directory = []
     visible_teachers = [x for x in roster.values() if block_id != DEFAULT_BLOCK or counts[x['id']]]
