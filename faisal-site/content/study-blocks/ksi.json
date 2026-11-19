@@ -5,5 +5,58 @@
   "period": "2026/2027",
   "status": "active",
   "module_label": "Modul KSI",
-  "schedule_source": "Jadwal Vorticosa"
+  "schedule_source": "Jadwal Vorticosa",
+  "exam_blueprint": {
+    "source": "Modul KSI TA 2026/2027, Tabel 3, hlm. 15–16",
+    "departments": [
+      {
+        "name": "Ilmu Penyakit Kulit dan Kelamin",
+        "label": "Kulit dan Kelamin",
+        "questions": 40,
+        "focus": "Latih lima aspek secara merata: gambaran klinis, tujuan dan risiko prosedur, interpretasi pemeriksaan, alasan pemilihan terapi, dan peresepan. Mulai dari membedakan pola lesi dan mengerjakan vignette."
+      },
+      {
+        "name": "Ilmu Penyakit Mata",
+        "label": "Mata",
+        "questions": 22,
+        "focus": "Hubungkan keluhan mata dengan temuan pemeriksaan, pilihan tindakan, dan rasional tatalaksana. Gunakan topik glaukoma, kelainan kornea, dan ablasio retina untuk latihan kasus."
+      },
+      {
+        "name": "Ilmu Penyakit THT-BKL",
+        "label": "THT-BKL",
+        "questions": 22,
+        "focus": "Utamakan gambaran klinis dan tatalaksana. Bandingkan lokasi radang telinga, jenis gangguan pendengaran, dan keluhan vestibular."
+      },
+      {
+        "name": "Mikrobiologi",
+        "questions": 18,
+        "focus": "Mulai dari etiologi dan gambaran klinis infeksi. Hubungkan bakteri, virus, dan jamur dengan spesimen, pilihan pemeriksaan, dan interpretasi hasil."
+      },
+      {
+        "name": "Farmakologi",
+        "questions": 12,
+        "focus": "Utamakan peresepan rasional. Latih pemilihan obat, bentuk sediaan, dosis, cara, dan waktu pemberian berdasarkan vignette."
+      },
+      {
+        "name": "Anestesiologi",
+        "questions": 12,
+        "focus": "Bagi latihan antara pemilihan obat dan tindakan anestesi rawat jalan, termasuk pemantauan pascaanestesi."
+      },
+      {
+        "name": "Parasitologi",
+        "questions": 8,
+        "focus": "Bedakan penyebab, riwayat paparan, dan gambaran klinis pada gigitan serangga, pedikulosis, dan skabies."
+      },
+      {
+        "name": "Patologi Anatomi",
+        "questions": 8,
+        "focus": "Hubungkan proses penyakit di kulit dan mata dengan gambaran patologis, serta pahami peran pemeriksaan penunjang."
+      },
+      {
+        "name": "Ilmu Bedah",
+        "questions": 8,
+        "focus": "Gunakan topik luka bakar dan tumor jaringan lunak untuk latihan gambaran klinis, penunjang, serta alasan pemilihan tindakan."
+      }
+    ]
+  }
 }

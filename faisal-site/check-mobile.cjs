@@ -85,6 +85,21 @@ async function checkStudyFlow(page, width) {
   assert.deepEqual(errors, []);
 }
 
+async function checkExamPriorities(page, width) {
+  await page.goto(base + '/ruang-belajar/');
+  await page.getByRole('link', { name: 'Prioritas ujian', exact: true }).click();
+  const priorities = page.locator('#prioritas-ujian');
+  assert.equal(await priorities.locator('summary').count(), 9);
+  assert.match(await priorities.textContent(), /84 dari 150 soal \(56%\)/);
+  const skin = priorities.locator('details').first();
+  assert.match(await skin.locator('summary').textContent(), /Kulit dan Kelamin.*40 soal/);
+  await skin.locator('summary').press('Enter');
+  await checkWidth(page, 'Prioritas ujian KSI', width);
+  await skin.getByRole('link', { name: 'Dermatitis eksematosa', exact: true }).press('Enter');
+  await page.waitForFunction(() => document.activeElement.matches('#dermatitis-eksematosa h3'));
+  assert.ok(await page.locator('#study-catalogue').evaluate(element => element.open));
+}
+
 async function checkKmsAndResearch(page, width) {
   await page.goto(base + '/ruang-belajar/');
   const choices = page.getByRole('navigation', { name: 'Pilih blok belajar' });
@@ -182,7 +197,10 @@ async function main() {
       try {
         await checkHeader(page, width);
         await checkStudyFlow(page, width);
-        if (width === 320) await checkKmsAndResearch(page, width);
+        if (width === 320) {
+          await checkExamPriorities(page, width);
+          await checkKmsAndResearch(page, width);
+        }
         console.log('PASS ' + width + ' px: beranda, agenda, fokus, katalog, pengajar, dan tutorial');
       } finally {
         await page.close();

@@ -191,6 +191,38 @@ def render_guidelines(guidelines, e):
             '<h2 id="guideline-heading">Kumpulan Guideline</h2>' + body + '</section>')
 
 
+def render_exam_priorities(blueprint, lectures, base, e):
+    departments = sorted(blueprint['departments'], key=lambda item: -item['questions'])
+    total = sum(item['questions'] for item in departments)
+    highest = departments[:3]
+    combined = sum(item['questions'] for item in highest)
+    names = ', '.join(item.get('label', item['name']) for item in highest)
+    materials = defaultdict(list)
+    for lecture in lectures:
+        materials[lecture['department']].append(
+            f'<li><a href="{base}#{e(lecture["id"])}">{e(lecture["title"])}</a></li>')
+    rows = []
+    for item in departments:
+        count = item['questions']
+        percent = f'{count / total:.1%}'.replace('.', ',')
+        links = ''.join(materials[item['name']])
+        rows.append(
+            '<details class="study-topic">'
+            f'<summary><span>{e(item.get("label", item["name"]))}</span>'
+            f'<span class="study-exam-weight">{count} soal · {percent}</span></summary>'
+            f'<div class="study-topic-body"><p><strong>Fokus latihan</strong> {e(item["focus"])}</p>'
+            + (f'<ul>{links}</ul>' if links else '') + '</div></details>'
+        )
+    share = f'{combined / total:.0%}'
+    return ('<section class="study-section study-agenda study-exam" id="prioritas-ujian" '
+            'aria-labelledby="study-exam-heading"><h2 id="study-exam-heading">Prioritas Ujian Tulis KSI</h2>'
+            f'<p><strong>{combined} dari {total} soal ({share})</strong> dialokasikan untuk {e(names)}.'
+            ' Buka departemen untuk melihat fokus latihan dan tautan materi.</p>'
+            + ''.join(rows)
+            + f'<p class="meta">Alokasi soal per departemen mengikuti {e(blueprint["source"])}. '
+            'Fokus latihan adalah saran belajar. Cetak biru merinci sasaran belajar per departemen.</p></section>')
+
+
 def render_block(block, selector, guidelines, lectures, tutorials, teachers, roster,
                  output, write, head, e, render_article, preview):
     block_id = block['id']
@@ -451,8 +483,10 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         </article>
       </div>
     </section>'''
+    blueprint = block.get('exam_blueprint')
     shortcuts = (
         ('#jadwal-kuliah', 'Jadwal kuliah'),
+        *([('#prioritas-ujian', 'Prioritas ujian')] if blueprint else []),
         *([('#ujian', 'Jadwal ujian')] if course else []),
         ('pengajar/', 'Cari dosen'),
         ('#kuliah', study_title),
@@ -473,6 +507,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
          + '<div class="study-welcome"><nav class="study-shortcuts" aria-label="Pintasan Ruang Belajar">'
          + shortcut_links + '</nav>' + STUDY_QUOTE + '</div>' + schedule_dashboard()
          + (exam_section() if course else '')
+         + (render_exam_priorities(blueprint, active, base, e) if blueprint else '')
          + f'<section class="study-section" id="kuliah"><h2>{study_title}</h2>'
          + '<details id="study-catalogue" class="study-catalogue"><summary>'
          + f'<span class="catalogue-show">Tampilkan katalog · {len(active)} {session_name}</span>'

@@ -337,6 +337,22 @@ body:has(.study-block--ksi)::before {
 .study-topic-body > :first-child { margin-top: .65em; }
 .study-topic-body > :last-child { margin-bottom: 0; }
 
+.study-exam .study-topic summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: .55rem;
+}
+.study-exam-weight {
+  padding: .15rem .45rem;
+  border-radius: 1rem;
+  background: var(--wash);
+  color: var(--ink);
+  white-space: nowrap;
+  font-size: .8rem;
+  font-variant-numeric: tabular-nums;
+}
+.study-exam .study-topic-body li { margin-block: .25rem; }
+
 .study-tutorial-intro,
 .study-topic[open] {
   background-color: var(--paper);
