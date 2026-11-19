@@ -24,6 +24,20 @@ async function checkStudyFlow(page, width) {
   assert.match(page.url(), /\/ruang-belajar\/#jadwal-kuliah$/);
   await checkWidth(page, 'Agenda', width);
 
+  await page.evaluate(() => {
+    // Approximate time from the action event to the next painted update.
+    for (const [name, type, selector] of [
+      ['open', 'click', '#jadwal-kuliah a[href$="#insect-bites"]'],
+      ['filter', 'input', '#search'],
+    ]) {
+      document.querySelector(selector).addEventListener(type, () => {
+        const started = performance.now();
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          document.documentElement.dataset[name + 'Ms'] = Math.round(performance.now() - started);
+        }));
+      }, { capture: true, once: true });
+    }
+  });
   await page.getByRole('link', { name: 'Insect bites', exact: true }).press('Enter');
   await page.waitForFunction(() => document.activeElement.matches('#insect-bites h3'));
   await checkWidth(page, 'Katalog terbuka', width);
@@ -35,6 +49,12 @@ async function checkStudyFlow(page, width) {
   const search = page.getByRole('searchbox', { name: 'Cari materi atau dosen' });
   await search.fill('gigitan serangga');
   assert.ok(await card.isVisible());
+  const timings = await page.waitForFunction(() => {
+    const { openMs, filterMs } = document.documentElement.dataset;
+    return openMs && filterMs && { openMs, filterMs };
+  });
+  const { openMs, filterMs } = await timings.jsonValue();
+  console.log(width + ' px, synthetic catalogue interaction: open ' + openMs + ' ms, filter ' + filterMs + ' ms');
   await search.fill('bukan-sesi');
   assert.ok(await page.locator('#empty').isVisible());
 
