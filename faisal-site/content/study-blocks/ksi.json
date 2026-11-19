@@ -6,6 +6,12 @@
   "status": "active",
   "module_label": "Modul KSI",
   "skill_lab_pdf": "modul-skill-lab-4-ksi-2026.pdf",
+  "skill_lab_chapters": [
+    {"title": "Anamnesis kulit dan interpretasi UKK", "keywords": "dermatologi lesi kulit", "pdf_page": 12},
+    {"title": "Anamnesis dan pemeriksaan mata", "keywords": "oftalmologi visus", "pdf_page": 40},
+    {"title": "Pemeriksaan THT dan penanganan epistaksis", "keywords": "telinga hidung tenggorokan", "pdf_page": 65},
+    {"title": "Pemeriksaan kerokan kulit (KOH)", "keywords": "kalium hidroksida mikosis", "pdf_page": 100}
+  ],
   "schedule_source": "Jadwal Vorticosa",
   "exam_blueprint": {
     "source": "Modul KSI TA 2026/2027, Tabel 3, hlm. 15–16",

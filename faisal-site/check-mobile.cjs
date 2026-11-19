@@ -13,6 +13,12 @@ async function checkWidth(page, name, width) {
   assert.ok(content <= viewport, name + ' overflows at ' + width + ' px');
 }
 
+async function chooseBlock(page, name) {
+  await page.locator('.study-block-picker > summary').click();
+  await page.getByRole('navigation', { name: 'Pilih blok belajar' })
+    .getByRole('link', { name, exact: true }).click();
+}
+
 async function checkStudyFlow(page, width) {
   await page.clock.setFixedTime(new Date('2026-11-19T01:30:00Z'));
   const errors = [];
@@ -71,17 +77,16 @@ async function checkStudyFlow(page, width) {
   await search.fill('bukan-sesi');
   assert.ok(await page.locator('#empty').isVisible());
 
-  const blocks = page.getByRole('navigation', { name: 'Pilih blok belajar' });
-  await blocks.getByRole('link', { name: 'Blok berikutnya Segera hadir' }).click();
+  await chooseBlock(page, 'Blok berikutnya Segera hadir');
   assert.match(page.url(), /\/ruang-belajar\/blok\/blok-berikutnya\/$/);
   await checkWidth(page, 'Blok segera hadir', width);
   assert.equal(await page.locator('#jadwal-kuliah').count(), 0);
   assert.ok(await page.getByRole('link', { name: /Pedoman IAUI/ }).isVisible());
-  await blocks.getByRole('link', { name: 'KSI', exact: true }).click();
+  await chooseBlock(page, 'KSI');
   assert.ok(await page.locator('#jadwal-kuliah').isVisible());
   await checkWidth(page, 'Kembali ke blok KSI', width);
 
-  await blocks.getByRole('link', { name: 'Keluhan Neuropsikiatri Arsip' }).click();
+  await chooseBlock(page, 'Keluhan Neuropsikiatri Arsip');
   assert.equal(await page.locator('#study-agenda-data').count(), 0);
   const archive = page.locator('#jadwal-kuliah');
   await archive.locator('summary').click();
@@ -145,8 +150,7 @@ async function checkCurrentBlockArchive(page, width) {
 
 async function checkKmsAndResearch(page, width) {
   await page.goto(base + '/ruang-belajar/');
-  const choices = page.getByRole('navigation', { name: 'Pilih blok belajar' });
-  await choices.getByRole('link', { name: 'Keluhan Muskuloskeletal (KMS) Arsip' }).click();
+  await chooseBlock(page, 'Keluhan Muskuloskeletal (KMS) Arsip');
   await checkWidth(page, 'Arsip KMS', width);
   await page.locator('#jadwal-kuliah summary').click();
   assert.ok(await page.locator('#jadwal-kuliah').getByRole('link', { name: 'Ortopedi Onkologi 1' }).isVisible());
@@ -159,7 +163,7 @@ async function checkKmsAndResearch(page, width) {
   assert.equal(await page.locator('#tutorial article').count(), 3);
   await checkWidth(page, 'Katalog KMS terbuka', width);
 
-  await choices.getByRole('link', { name: 'Metodologi Penelitian II' }).click();
+  await chooseBlock(page, 'Metodologi Penelitian II');
   assert.equal(await page.locator('#ujian time[datetime="2026-10-07"]').count(), 1);
   assert.equal(await page.locator('#ujian time[datetime="2026-12-09"]').count(), 1);
   assert.match(await page.locator('#ujian').textContent(), /Jam ujian belum tercantum.*Labkom/);
@@ -175,6 +179,50 @@ async function checkKmsAndResearch(page, width) {
   assert.match(calendar, /LOCATION:Zoom/);
   assert.equal((calendar.match(/BEGIN:VEVENT/g) || []).length, 18);
   await checkWidth(page, 'Metodologi Penelitian II', width);
+}
+
+async function checkDashboardOverview(page, width) {
+  await page.clock.setFixedTime(new Date('2026-11-19T01:30:00Z'));
+  await page.goto(base + '/ruang-belajar/');
+  const today = page.getByRole('region', { name: 'Hari Ini' });
+  assert.match(await today.textContent(), /Sedang berlangsung.*Radang telinga luar.*08:00–10:00 WITA · RKB 4/s);
+  await today.getByRole('link', { name: 'Buka materi' }).click();
+  await page.waitForFunction(() => document.activeElement.matches('#radang-telinga-luar h3'));
+  assert.ok(await page.locator('#radang-telinga-luar .study-material').evaluate(element => element.open));
+
+  await page.clock.setFixedTime(new Date('2026-11-19T15:00:00Z'));
+  await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
+  assert.match(await today.textContent(), /Jadwal terdekat.*Glaukoma.*20 November 2026.*07:00–08:00 WITA/s);
+  assert.ok(await today.getByRole('link', { name: 'Buka materi' }).isHidden());
+  await page.clock.setFixedTime(new Date('2026-12-20T00:00:00Z'));
+  await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
+  assert.match(await today.textContent(), /Belum ada jadwal berikutnya/);
+
+  const shortcuts = page.getByRole('navigation', { name: 'Pintasan Ruang Belajar' });
+  assert.equal(await shortcuts.getByRole('link').count(), 4);
+  await shortcuts.getByText('Lainnya', { exact: true }).press('Enter');
+  assert.ok(await shortcuts.getByRole('link', { name: 'Direktori dosen' }).isVisible());
+  await shortcuts.getByText('Lainnya', { exact: true }).press('Enter');
+
+  const search = page.getByRole('searchbox', { name: 'Cari di Ruang Belajar' });
+  const results = page.locator('#study-search-results');
+  const teachers = results.locator('[data-search-group="Dosen"]');
+  await search.fill('agus');
+  assert.match(await teachers.getByRole('link').first().textContent(), /Agus/);
+  await search.fill('agng');
+  assert.ok(await teachers.getByRole('link', { name: /Agung Biworo/ }).isVisible());
+  await search.fill('telinga');
+  const chapter = results.getByRole('link', { name: /Pemeriksaan THT dan penanganan epistaksis/ });
+  assert.equal(await chapter.getAttribute('href'), '/dokumen/modul-skill-lab-4-ksi-2026.pdf#page=65');
+  assert.equal(await chapter.getAttribute('target'), '_blank');
+  await checkWidth(page, 'Hasil pencarian Ruang Belajar', width);
+  const lecture = results.getByRole('link', { name: /Radang telinga luar/ });
+  await lecture.press('Enter');
+  await page.waitForFunction(() => document.activeElement.matches('#radang-telinga-luar h3'));
+  await search.fill('zzqxyv');
+  assert.ok(await page.getByRole('status').filter({ hasText: 'Tidak ada hasil' }).isVisible());
+  await search.press('Escape');
+  assert.equal(await search.inputValue(), '');
 }
 
 async function checkHeader(page, width) {
@@ -235,13 +283,15 @@ async function checkHeader(page, width) {
 }
 
 async function main() {
-  const browser = await chromium.launch({ channel: 'chrome' });
+  const chromiumPath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
+  const browser = await chromium.launch(chromiumPath ? { executablePath: chromiumPath } : { channel: 'chrome' });
   try {
     for (const width of widths) {
       const page = await browser.newPage({ viewport: { width, height: 800 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
       try {
         await checkHeader(page, width);
         await checkStudyFlow(page, width);
+        await checkDashboardOverview(page, width);
         if (width === 320) {
           await checkExamPriorities(page, width);
           await checkCurrentBlockArchive(page, width);
@@ -255,6 +305,7 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: 768, height: 800 }, reducedMotion: 'reduce' });
     try {
       await checkHeader(page, 768);
+      await checkDashboardOverview(page, 768);
     } finally {
       await page.close();
     }
