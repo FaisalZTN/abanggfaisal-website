@@ -1,0 +1,15 @@
+{
+  "id": "neuro-neoplasma-pada-ssp",
+  "block": "neuropsikiatri",
+  "title": "Neoplasma pada SSP",
+  "department": "Patologi Anatomi",
+  "number": 5,
+  "teachers": [
+    "neuro-dr-dr-ika-k-oktaviyanti"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-07",
+  "lecture_start": "10:00",
+  "lecture_end": "12:00",
+  "schedule_week": 2
+}

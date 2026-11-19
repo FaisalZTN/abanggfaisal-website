@@ -1,0 +1,15 @@
+{
+  "id": "neuro-psikotik",
+  "block": "neuropsikiatri",
+  "title": "Psikotik",
+  "department": "Ilmu Kesehatan Jiwa",
+  "number": 41,
+  "teachers": [
+    "neuro-dr-syaiful-fadilah"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-21",
+  "lecture_start": "15:00",
+  "lecture_end": "17:00",
+  "schedule_week": 4
+}

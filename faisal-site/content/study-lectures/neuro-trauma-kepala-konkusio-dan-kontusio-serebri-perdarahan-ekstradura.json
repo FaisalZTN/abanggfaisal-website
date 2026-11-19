@@ -1,0 +1,15 @@
+{
+  "id": "neuro-trauma-kepala-konkusio-dan-kontusio-serebri-perdarahan-ekstradura",
+  "block": "neuropsikiatri",
+  "title": "Trauma kepala (konkusio dan kontusio serebri, perdarahan ekstradural, perdarahan subdural, fraktur basis kranii, kematian otak)",
+  "department": "Ilmu Bedah",
+  "number": 20,
+  "teachers": [
+    "neuro-dr-zainal-abidin"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-29",
+  "lecture_start": "10:00",
+  "lecture_end": "12:00",
+  "schedule_week": 5
+}

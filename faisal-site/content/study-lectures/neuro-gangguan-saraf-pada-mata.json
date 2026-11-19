@@ -1,0 +1,15 @@
+{
+  "id": "neuro-gangguan-saraf-pada-mata",
+  "block": "neuropsikiatri",
+  "title": "Gangguan saraf pada mata",
+  "department": "Ilmu Penyakit Mata",
+  "number": 55,
+  "teachers": [
+    "dr-agus-fitrian-noor"
+  ],
+  "status": "published",
+  "lecture_date": "2026-09-30",
+  "lecture_start": "10:00",
+  "lecture_end": "11:00",
+  "schedule_week": 1
+}

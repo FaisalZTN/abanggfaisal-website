@@ -6,6 +6,24 @@
       "issuer": "Kemenkes RI",
       "reviewed_on": "2026-11-19",
       "review_status": "berlaku"
+    },
+    {
+      "url": "https://iaui.or.id/guidelines",
+      "title": "Urologi · Pedoman IAUI",
+      "issuer": "Ikatan Ahli Urologi Indonesia",
+      "kind": "portal"
+    },
+    {
+      "url": "https://www.pogi.or.id/pogi-clinic",
+      "title": "Obstetri & Ginekologi · POGI Klinis",
+      "issuer": "Perkumpulan Obstetri dan Ginekologi Indonesia",
+      "kind": "portal"
+    },
+    {
+      "url": "https://perdosni.org/documents",
+      "title": "Neurologi · Pustaka & Unduhan PERDOSNI",
+      "issuer": "Perhimpunan Dokter Spesialis Neurologi Indonesia",
+      "kind": "portal"
     }
   ]
 }

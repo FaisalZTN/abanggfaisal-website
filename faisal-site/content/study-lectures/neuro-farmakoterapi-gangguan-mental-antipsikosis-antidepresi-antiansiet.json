@@ -1,0 +1,15 @@
+{
+  "id": "neuro-farmakoterapi-gangguan-mental-antipsikosis-antidepresi-antiansiet",
+  "block": "neuropsikiatri",
+  "title": "Farmakoterapi gangguan mental (antipsikosis, antidepresi, antiansietas, dan psikostimulan)",
+  "department": "Farmakologi",
+  "number": 9,
+  "teachers": [
+    "neuro-dr-h-pagan-pambudi"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-02",
+  "lecture_start": "14:00",
+  "lecture_end": "16:00",
+  "schedule_week": 1
+}

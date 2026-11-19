@@ -1,0 +1,15 @@
+{
+  "id": "neuro-farmakoterapi-gangguan-saraf-antiepilepsi-obat-parkinson-obat-ber",
+  "block": "neuropsikiatri",
+  "title": "Farmakoterapi gangguan saraf (antiepilepsi, obat Parkinson, obat berbagai tipe headache, antidemensia)",
+  "department": "Farmakologi",
+  "number": 8,
+  "teachers": [
+    "neuro-dr-h-pagan-pambudi"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-12",
+  "lecture_start": "10:00",
+  "lecture_end": "12:00",
+  "schedule_week": 3
+}

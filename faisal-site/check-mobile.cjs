@@ -58,6 +58,25 @@ async function checkStudyFlow(page, width) {
   await search.fill('bukan-sesi');
   assert.ok(await page.locator('#empty').isVisible());
 
+  const blocks = page.getByRole('navigation', { name: 'Pilih blok belajar' });
+  await blocks.getByRole('link', { name: 'Blok berikutnya Segera hadir' }).click();
+  assert.match(page.url(), /\/ruang-belajar\/blok\/blok-berikutnya\/$/);
+  await checkWidth(page, 'Blok segera hadir', width);
+  assert.equal(await page.locator('#jadwal-kuliah').count(), 0);
+  assert.ok(await page.getByRole('link', { name: /Pedoman IAUI/ }).isVisible());
+  await blocks.getByRole('link', { name: 'KSI', exact: true }).click();
+  assert.ok(await page.locator('#jadwal-kuliah').isVisible());
+  await checkWidth(page, 'Kembali ke blok KSI', width);
+
+  await blocks.getByRole('link', { name: 'Keluhan Neuropsikiatri Arsip' }).click();
+  assert.equal(await page.locator('#study-agenda-data').count(), 0);
+  const archive = page.locator('#jadwal-kuliah');
+  await archive.locator('summary').click();
+  await checkWidth(page, 'Arsip Neuropsikiatri terbuka', width);
+  await archive.getByRole('link', { name: 'Anatomi otak, hubungan dengan peningkatan TIK' }).press('Enter');
+  await page.waitForFunction(() => document.activeElement.matches('#neuro-anatomi-otak-hubungan-dengan-peningkatan-tik h3'));
+  assert.ok(await page.getByRole('link', { name: 'Anakku kejang', exact: true }).isVisible());
+
   await page.goto(base + '/ruang-belajar/pengajar/');
   await checkWidth(page, 'Direktori pengajar', width);
   await page.goto(base + '/ruang-belajar/tutorial/kusta/');

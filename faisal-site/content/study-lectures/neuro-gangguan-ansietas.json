@@ -1,0 +1,15 @@
+{
+  "id": "neuro-gangguan-ansietas",
+  "block": "neuropsikiatri",
+  "title": "Gangguan ansietas",
+  "department": "Ilmu Kesehatan Jiwa",
+  "number": 43,
+  "teachers": [
+    "neuro-dr-yanti-fitria"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-09",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "schedule_week": 2
+}

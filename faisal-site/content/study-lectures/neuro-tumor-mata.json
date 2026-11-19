@@ -1,0 +1,15 @@
+{
+  "id": "neuro-tumor-mata",
+  "block": "neuropsikiatri",
+  "title": "Tumor mata",
+  "department": "Ilmu Penyakit Mata",
+  "number": 57,
+  "teachers": [
+    "dr-agus-fitrian-noor"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-26",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "schedule_week": 5
+}

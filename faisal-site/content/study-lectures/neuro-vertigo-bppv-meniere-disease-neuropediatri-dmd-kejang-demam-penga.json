@@ -1,0 +1,15 @@
+{
+  "id": "neuro-vertigo-bppv-meniere-disease-neuropediatri-dmd-kejang-demam-penga",
+  "block": "neuropsikiatri",
+  "title": "Vertigo (BPPV, Meniere disease); neuropediatri (DMD, kejang demam); pengantar neurointervensi",
+  "department": "Ilmu Penyakit Saraf",
+  "number": 33,
+  "teachers": [
+    "neuro-dr-muhammad-welly-dafif"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-28",
+  "lecture_start": "10:00",
+  "lecture_end": "12:00",
+  "schedule_week": 5
+}

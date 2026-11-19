@@ -1,0 +1,15 @@
+{
+  "id": "neuro-epilepsi-dan-status-epileptikus-penyakit-tulang-belakang-dan-spin",
+  "block": "neuropsikiatri",
+  "title": "Epilepsi dan status epileptikus; penyakit tulang belakang dan spinal cord (HNP, medulla compressi akut, myelopathy, spondilitisTB)",
+  "department": "Ilmu Penyakit Saraf",
+  "number": 23,
+  "teachers": [
+    "neuro-dr-h-pagan-pambudi"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-16",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "schedule_week": 3
+}

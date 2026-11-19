@@ -1,0 +1,16 @@
+{
+  "id": "neuro-tatalaksana-cedera-kepala-dan-spinal-2",
+  "block": "neuropsikiatri",
+  "title": "Tatalaksana cedera kepala dan spinal: 2",
+  "department": "Ilmu Bedah",
+  "number": 19,
+  "teachers": [
+    "neuro-dr-agus-suhendar"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-23",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "schedule_week": 4,
+  "lecture_location": "Daring"
+}

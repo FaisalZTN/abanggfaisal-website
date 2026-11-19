@@ -1,0 +1,15 @@
+{
+  "id": "neuro-trauma-mata",
+  "block": "neuropsikiatri",
+  "title": "Trauma mata",
+  "department": "Ilmu Penyakit Mata",
+  "number": 56,
+  "teachers": [
+    "neuro-dr-dr-ali-faisal"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-26",
+  "lecture_start": "13:00",
+  "lecture_end": "15:00",
+  "schedule_week": 5
+}

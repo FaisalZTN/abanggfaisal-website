@@ -77,3 +77,11 @@ Dasbor memilih jadwal hari ini dan besok berdasarkan waktu Makassar dari jam per
 ## Kumpulan Guideline
 
 Di Decap CMS, buka Kumpulan Guideline lalu Daftar guideline Ruang Belajar. Tambahkan judul dan tautan HTTPS untuk tiap entri. Kolom Penerbit dan tahun bersifat opsional. Saat daftar kosong, halaman menampilkan keterangan Segera hadir.
+
+## Menambah blok Ruang Belajar
+
+Buat atau perbarui entri di **Blok Ruang Belajar** dalam CMS. Isi nama, semester, periode, nama modul, dan sumber jadwal sesuai dokumen yang dipakai. Pertahankan ID setelah dibuat. KSI memakai alamat lama `/ruang-belajar/`. Blok lain memakai `/ruang-belajar/blok/<id>/`.
+
+Pilih blok pada materi kuliah, tutorial, dan entri pengajar baru. Pengajar dapat dipakai kembali di blok lain lewat relasi pada kuliah. Tutorial hanya dapat menunjuk kuliah dalam bloknya sendiri. Entri lama tanpa pilihan blok dibaca sebagai KSI. Gunakan ID yang berbeda untuk topik atau skenario dengan judul sama.
+
+Status **Segera hadir** menampilkan halaman persiapan. Setelah data diperiksa, pilih **Aktif**. Halaman akan menggunakan data blok tersebut untuk agenda WITA, direktori, katalog, tutorial, dan kalender. Kumpulan Guideline tampil di semua dashboard blok. Di CMS, pilih jenis **Portal rujukan profesi** untuk tautan ke direktori pedoman organisasi.

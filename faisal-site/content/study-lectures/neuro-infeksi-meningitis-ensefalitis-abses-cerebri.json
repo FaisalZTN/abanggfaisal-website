@@ -1,0 +1,15 @@
+{
+  "id": "neuro-infeksi-meningitis-ensefalitis-abses-cerebri",
+  "block": "neuropsikiatri",
+  "title": "Infeksi (meningitis, ensefalitis, abses cerebri)",
+  "department": "Radiologi",
+  "number": 53,
+  "teachers": [
+    "neuro-dr-mashuri"
+  ],
+  "status": "published",
+  "lecture_date": "2026-09-29",
+  "lecture_start": "13:00",
+  "lecture_end": "15:00",
+  "schedule_week": 1
+}

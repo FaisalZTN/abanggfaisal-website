@@ -1,0 +1,15 @@
+{
+  "id": "neuro-kelainan-kongenital-bidang-bedah-saraf-hydrocephalus-rupture-cele",
+  "block": "neuropsikiatri",
+  "title": "Kelainan kongenital bidang bedah saraf (hydrocephalus, rupture cele (meningo/encephalocele, myelo/encephalocele), dll",
+  "department": "Ilmu Bedah",
+  "number": 21,
+  "teachers": [
+    "neuro-dr-zainal-abidin"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-26",
+  "lecture_start": "10:00",
+  "lecture_end": "12:00",
+  "schedule_week": 5
+}

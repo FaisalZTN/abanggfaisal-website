@@ -1,0 +1,15 @@
+{
+  "id": "neuro-penyakit-neurovascular-tia-cerebral-infark-ich-sah",
+  "block": "neuropsikiatri",
+  "title": "Penyakit neurovascular (TIA, cerebral infark, ICH, SAH)",
+  "department": "Ilmu Penyakit Saraf",
+  "number": 25,
+  "teachers": [
+    "neuro-dr-hj-lily-runtuwene"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-19",
+  "lecture_start": "08:00",
+  "lecture_end": "09:00",
+  "schedule_week": 4
+}

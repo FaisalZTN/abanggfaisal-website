@@ -1,0 +1,15 @@
+{
+  "id": "neuro-dasar-dasar-anestesi-umum",
+  "block": "neuropsikiatri",
+  "title": "Dasar-dasar anestesi umum",
+  "department": "Anestesiologi",
+  "number": 36,
+  "teachers": [
+    "neuro-dr-rapto-hardian"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-16",
+  "lecture_start": "10:00",
+  "lecture_end": "12:00",
+  "schedule_week": 3
+}

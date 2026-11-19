@@ -1,0 +1,15 @@
+{
+  "id": "neuro-nyeri-neuropatik-dan-nosiseptik-nyeri-kepala-primer-dan-sekunder",
+  "block": "neuropsikiatri",
+  "title": "Nyeri (neuropatik dan nosiseptik); nyeri kepala (primer dan sekunder)",
+  "department": "Ilmu Penyakit Saraf",
+  "number": 24,
+  "teachers": [
+    "neuro-dr-h-pagan-pambudi"
+  ],
+  "status": "published",
+  "lecture_date": "2026-09-30",
+  "lecture_start": "11:00",
+  "lecture_end": "12:00",
+  "schedule_week": 1
+}

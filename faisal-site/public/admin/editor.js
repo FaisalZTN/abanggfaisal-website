@@ -41,21 +41,25 @@ CMS.registerEventListener({
     }
 
     if (collection !== 'study_lectures') return;
-    const { title, lecture_date: day, schedule_page: page, lecture_start: start, lecture_end: end } = data.toJS();
+    const { title, lecture_date: day, schedule_page: page, schedule_week: week, lecture_start: start, lecture_end: end } = data.toJS();
     const hasDay = day != null && day !== '';
     const hasPage = page != null && page !== '';
+    const hasWeek = week != null && week !== '';
     if (hasDay && !validDate(day)) {
       throw new Error(`${title}: Tanggal kuliah harus tanggal kalender yang valid (YYYY-MM-DD).`);
     }
     if (hasPage && (!Number.isInteger(page) || page < 1)) {
       throw new Error(`${title}: Halaman PDF jadwal harus bilangan bulat minimal 1.`);
     }
-    if (hasDay !== hasPage) {
-      throw new Error(`${title}: Isi Tanggal kuliah dan Halaman PDF jadwal bersama-sama.`);
+    if (hasWeek && (!Number.isInteger(week) || week < 1)) {
+      throw new Error(`${title}: Minggu jadwal harus bilangan bulat minimal 1.`);
+    }
+    if (hasDay !== (hasPage || hasWeek) || (hasPage && hasWeek)) {
+      throw new Error(`${title}: Isi tanggal kuliah dan salah satu sumber (halaman atau minggu) bersama-sama.`);
     }
     const time = /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/;
     if ((start || end) && !(hasDay && time.test(start) && time.test(end) && start < end)) {
-      throw new Error(`${title}: Isi tanggal, halaman PDF, dan jam mulai–selesai WITA yang valid.`);
+      throw new Error(`${title}: Isi tanggal, sumber jadwal, dan jam mulai–selesai WITA yang valid.`);
     }
   }
 });

@@ -1,0 +1,15 @@
+{
+  "id": "neuro-neuroonkologi-bidang-bedah-saraf",
+  "block": "neuropsikiatri",
+  "title": "Neuroonkologi bidang bedah saraf",
+  "department": "Ilmu Bedah",
+  "number": 22,
+  "teachers": [
+    "neuro-dr-dr-ardik-lahdimawan"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-14",
+  "lecture_start": "13:00",
+  "lecture_end": "15:00",
+  "schedule_week": 3
+}
