@@ -129,6 +129,7 @@ async function checkExamPriorities(page, width) {
 }
 
 async function checkCurrentBlockArchive(page, width) {
+  await page.clock.setFixedTime(new Date('2026-11-19T01:30:00Z'));
   await page.goto(base + '/ruang-belajar/#jadwal-kuliah');
   const archive = page.locator('#arsip-kelas');
   await archive.locator('summary').click();
