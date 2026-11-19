@@ -394,6 +394,19 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             <a class="btn" href="http://klinikbelajarkedokteran.site/" rel="external">Buka Klinik Belajar Kedokteran ↗</a>
           </div>
         </article>
+        <article class="card study-resource">
+          <div class="study-resource-preview">
+            <p class="eyebrow">AI untuk belajar</p>
+            <h3>Gizmo</h3>
+            <ul aria-label="Fitur Gizmo">
+              <li>Flashcard</li><li>Kuis</li><li>Pengulangan berjeda</li>
+            </ul>
+          </div>
+          <div class="study-resource-body">
+            <p>Ubah catatan kuliah atau PDF menjadi flashcard dan kuis untuk menguji ingatan.</p>
+            <a class="btn" href="https://gizmo.ai/" rel="external">Buka Gizmo ↗</a>
+          </div>
+        </article>
       </div>
     </section>'''
     shortcuts = (
