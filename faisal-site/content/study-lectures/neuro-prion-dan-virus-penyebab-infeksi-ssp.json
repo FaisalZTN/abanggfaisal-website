@@ -1,0 +1,15 @@
+{
+  "id": "neuro-prion-dan-virus-penyebab-infeksi-ssp",
+  "block": "neuropsikiatri",
+  "title": "Prion dan virus penyebab infeksi SSP",
+  "department": "Mikrobiologi",
+  "number": 3,
+  "teachers": [
+    "dr-rahmiati"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-01",
+  "lecture_start": "13:00",
+  "lecture_end": "16:00",
+  "schedule_week": 1
+}

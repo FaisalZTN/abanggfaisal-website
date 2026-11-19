@@ -1,0 +1,15 @@
+{
+  "id": "neuro-gangguan-neurobehaviour-afasia-mci-demensia-alzheimer-demensia-va",
+  "block": "neuropsikiatri",
+  "title": "Gangguan neurobehaviour (afasia, MCI, demensia Alzheimer, demensia vaskuler); gangguan gerak (Parkinson dan gangguan gerak lainnya)",
+  "department": "Ilmu Penyakit Saraf",
+  "number": 29,
+  "teachers": [
+    "neuro-dr-steven"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-12",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "schedule_week": 3
+}

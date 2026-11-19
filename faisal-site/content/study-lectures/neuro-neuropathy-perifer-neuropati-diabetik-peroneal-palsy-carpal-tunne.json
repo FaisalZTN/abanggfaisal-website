@@ -1,0 +1,15 @@
+{
+  "id": "neuro-neuropathy-perifer-neuropati-diabetik-peroneal-palsy-carpal-tunne",
+  "block": "neuropsikiatri",
+  "title": "Neuropathy perifer (neuropati diabetik, peroneal palsy, carpal tunnel syndrom, tarsal tunnel syndrome)",
+  "department": "Ilmu Penyakit Saraf",
+  "number": 26,
+  "teachers": [
+    "neuro-dr-meilda-sartika-dewi"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-14",
+  "lecture_start": "10:00",
+  "lecture_end": "12:00",
+  "schedule_week": 3
+}

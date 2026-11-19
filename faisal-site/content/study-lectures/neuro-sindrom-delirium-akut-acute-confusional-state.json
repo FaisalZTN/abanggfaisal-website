@@ -1,0 +1,15 @@
+{
+  "id": "neuro-sindrom-delirium-akut-acute-confusional-state",
+  "block": "neuropsikiatri",
+  "title": "Sindrom delirium akut (acute confusional state)",
+  "department": "Ilmu Penyakit Dalam",
+  "number": 39,
+  "teachers": [
+    "neuro-dr-meldy-muzada-elfa"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-09",
+  "lecture_start": "14:00",
+  "lecture_end": "16:00",
+  "schedule_week": 2
+}

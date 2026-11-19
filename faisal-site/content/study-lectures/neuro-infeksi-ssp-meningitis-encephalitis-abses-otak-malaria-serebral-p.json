@@ -1,0 +1,15 @@
+{
+  "id": "neuro-infeksi-ssp-meningitis-encephalitis-abses-otak-malaria-serebral-p",
+  "block": "neuropsikiatri",
+  "title": "Infeksi SSP (meningitis, encephalitis, abses otak, malaria serebral); penurunan kesadaran (koma, ensefalopati [termasuk sindrom delirium akut], mati batang otak",
+  "department": "Ilmu Penyakit Saraf",
+  "number": 27,
+  "teachers": [
+    "neuro-dr-fakhrurrazy"
+  ],
+  "status": "published",
+  "lecture_date": "2026-09-29",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "schedule_week": 1
+}

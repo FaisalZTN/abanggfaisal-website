@@ -1,0 +1,15 @@
+{
+  "id": "neuro-neuromuscular-disease-sgb-myopathy-myasthenia-gravis-bells-palsy",
+  "block": "neuropsikiatri",
+  "title": "Neuromuscular disease (SGB, myopathy, myasthenia gravis, Bell’s palsy)",
+  "department": "Ilmu Penyakit Saraf",
+  "number": 32,
+  "teachers": [
+    "neuro-dr-fitriah-handayani"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-29",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "schedule_week": 5
+}

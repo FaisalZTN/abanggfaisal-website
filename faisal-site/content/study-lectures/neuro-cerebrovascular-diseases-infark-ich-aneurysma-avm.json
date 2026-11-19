@@ -1,0 +1,15 @@
+{
+  "id": "neuro-cerebrovascular-diseases-infark-ich-aneurysma-avm",
+  "block": "neuropsikiatri",
+  "title": "Cerebrovascular diseases (infark, ICH, aneurysma, AVM)",
+  "department": "Radiologi",
+  "number": 54,
+  "teachers": [
+    "neuro-dr-mashuri"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-30",
+  "lecture_start": "10:00",
+  "lecture_end": "12:00",
+  "schedule_week": 5
+}

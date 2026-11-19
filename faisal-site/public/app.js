@@ -80,7 +80,7 @@ const menu=document.querySelector('#menu'),nav=document.querySelector('#nav');me
   if (more || sort) revealLinkedCard();
 }
 const agenda = document.querySelector('#jadwal-kuliah');
-if (agenda) {
+if (agenda?.querySelector('[data-agenda-clock]')) {
   const wita = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Makassar', calendar: 'gregory', numberingSystem: 'latn',
     year: 'numeric', month: '2-digit', day: '2-digit',

@@ -1,0 +1,21 @@
+{
+  "id": "neuro-nyeri-yang-tidak-kunjung-hilang",
+  "block": "neuropsikiatri",
+  "title": "Nyeri yang tidak kunjung hilang",
+  "number": 3,
+  "status": "published",
+  "short": "Keluhan nyeri menetap, kekhawatiran akan penyakit serius, dan dampak pada aktivitas.",
+  "article": "## Ringkasan skenario\n\nPerempuan 35 tahun mengalami nyeri perut berulang selama delapan bulan yang mengganggu aktivitas. Pemeriksaan yang telah dijalani tidak menunjukkan kelainan yang menjelaskan keluhannya. Ia tetap khawatir mengalami penyakit berat dan meminta CT scan. Ia juga melaporkan mudah lelah, sulit tidur dan berkonsentrasi, konflik rumah tangga, serta merasa kurang mendapat dukungan.\n\n*Sumber: Modul Keluhan Neuropsikiatri, bagian Skenario Tutorial 3.*",
+  "topics": [
+    {
+      "title": "Pertanyaan diskusi",
+      "body": "- Petakan durasi, dampak gejala, dan kekhawatiran utama pasien.\n- Temuan apa yang perlu digali ulang sebelum memutuskan pemeriksaan lebih lanjut?\n- Rancang respons yang mengakui nyeri pasien sekaligus menjelaskan rencana evaluasi."
+    }
+  ],
+  "related": [
+    "neuro-neuropati-dm-neuropati-ht-dan-psikosomatis",
+    "neuro-gangguan-ansietas",
+    "neuro-gangguan-somatoform",
+    "neuro-insomnia-non-organik"
+  ]
+}

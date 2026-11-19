@@ -1,0 +1,15 @@
+{
+  "id": "neuro-persiapan-anestesi-dan-premedikasi",
+  "block": "neuropsikiatri",
+  "title": "Persiapan anestesi dan premedikasi",
+  "department": "Anestesiologi",
+  "number": 34,
+  "teachers": [
+    "neuro-dr-dr-kenanga-m-s"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-01",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "schedule_week": 1
+}

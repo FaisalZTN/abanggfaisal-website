@@ -1,0 +1,21 @@
+{
+  "id": "neuro-kaki-yang-semakin-lemah",
+  "block": "neuropsikiatri",
+  "title": "Kaki yang semakin lemah",
+  "number": 1,
+  "status": "published",
+  "short": "Kelemahan progresif yang bermula dari tungkai.",
+  "article": "## Ringkasan skenario\n\nLaki-laki 24 tahun mengalami kesemutan pada telapak kaki, disusul kelemahan kedua tungkai yang memburuk selama tiga hari. Keluhan kemudian menjalar ke lengan. Sekitar 10 hari sebelumnya, ia mengalami demam ringan dan diare yang membaik sendiri. Tidak ada riwayat trauma, kejang, atau penurunan kesadaran. Fungsi berkemih dan buang air besar saat ini dilaporkan normal.\n\n*Sumber: Modul Keluhan Neuropsikiatri, bagian Skenario Tutorial 1.*",
+  "topics": [
+    {
+      "title": "Pertanyaan diskusi",
+      "body": "- Susun garis waktu dari gejala awal hingga kelemahan lengan.\n- Temuan kekuatan, refleks, sensorik, dan saraf kranial apa yang perlu dicari untuk menentukan lokasi gangguan?\n- Tentukan temuan yang dapat mengubah prioritas penilaian di IGD."
+    }
+  ],
+  "related": [
+    "neuro-lumpuh-layu-akut-acute-flaccid-paralysis",
+    "neuro-epilepsi-dan-status-epileptikus-penyakit-tulang-belakang-dan-spin",
+    "neuro-neuropathy-perifer-neuropati-diabetik-peroneal-palsy-carpal-tunne",
+    "neuro-neuromuscular-disease-sgb-myopathy-myasthenia-gravis-bells-palsy"
+  ]
+}

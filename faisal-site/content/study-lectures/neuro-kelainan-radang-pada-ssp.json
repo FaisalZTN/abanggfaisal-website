@@ -1,0 +1,15 @@
+{
+  "id": "neuro-kelainan-radang-pada-ssp",
+  "block": "neuropsikiatri",
+  "title": "Kelainan radang pada SSP",
+  "department": "Patologi Anatomi",
+  "number": 4,
+  "teachers": [
+    "neuro-dr-dr-ika-k-oktaviyanti"
+  ],
+  "status": "published",
+  "lecture_date": "2026-09-28",
+  "lecture_start": "13:00",
+  "lecture_end": "15:00",
+  "schedule_week": 1
+}

@@ -1,0 +1,15 @@
+{
+  "id": "neuro-patofisiologi-peningkatan-tekanan-intrakranial-perdarahan-stroke",
+  "block": "neuropsikiatri",
+  "title": "Patofisiologi peningkatan tekanan intrakranial (perdarahan, stroke perdarahan, dll)",
+  "department": "Ilmu Bedah",
+  "number": 17,
+  "teachers": [
+    "neuro-dr-audi-ardansyah"
+  ],
+  "status": "published",
+  "lecture_date": "2026-09-30",
+  "lecture_start": "15:00",
+  "lecture_end": "17:00",
+  "schedule_week": 1
+}

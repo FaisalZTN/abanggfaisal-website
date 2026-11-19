@@ -32,6 +32,12 @@ def calendar_datetime(day, clock):
     return value.astimezone(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
 
 
+def schedule_reference(item, source):
+    if item.get('schedule_week'):
+        return f'{source}, minggu {item["schedule_week"]}'
+    return f'{source}, hlm. {item["schedule_page"]}'
+
+
 def write_calendar(output, lectures, teachers, base, block_id, block_name, schedule_source):
     scheduled = sorted(
         (item for item in lectures if item.get('lecture_start') and item.get('lecture_end')),
@@ -49,7 +55,7 @@ def write_calendar(output, lectures, teachers, base, block_id, block_name, sched
         slug = item['id']
         day = item['lecture_date']
         names = ', '.join(teachers[key]['title'] for key in item['teachers'])
-        source = f'Pengajar: {names}\n{schedule_source}, hlm. {item["schedule_page"]}. Waktu sumber: WITA.'
+        source = f'Pengajar: {names}\n{schedule_reference(item, schedule_source)}. Waktu sumber: WITA.'
         event = [
             'BEGIN:VEVENT',
             f'UID:{block_id}-{slug}@abanggfaisal.my.id',

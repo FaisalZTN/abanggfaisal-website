@@ -1,0 +1,15 @@
+{
+  "id": "neuro-bakteri-dan-jamur-penyebab-infeksi-ssp",
+  "block": "neuropsikiatri",
+  "title": "Bakteri dan jamur penyebab infeksi SSP",
+  "department": "Mikrobiologi",
+  "number": 2,
+  "teachers": [
+    "dra-hj-lia-yulia-b"
+  ],
+  "status": "published",
+  "lecture_date": "2026-09-28",
+  "lecture_start": "15:00",
+  "lecture_end": "17:00",
+  "schedule_week": 1
+}

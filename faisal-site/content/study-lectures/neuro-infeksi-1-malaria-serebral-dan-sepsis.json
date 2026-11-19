@@ -1,0 +1,15 @@
+{
+  "id": "neuro-infeksi-1-malaria-serebral-dan-sepsis",
+  "block": "neuropsikiatri",
+  "title": "Infeksi 1 (malaria serebral dan sepsis)",
+  "department": "Ilmu Penyakit Dalam",
+  "number": 37,
+  "teachers": [
+    "neuro-dr-nani-zaitun"
+  ],
+  "status": "published",
+  "lecture_date": "2026-09-29",
+  "lecture_start": "10:00",
+  "lecture_end": "12:00",
+  "schedule_week": 1
+}

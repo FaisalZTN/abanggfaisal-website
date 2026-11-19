@@ -1,0 +1,15 @@
+{
+  "id": "neuro-infeksi-ssp-dan-koma",
+  "block": "neuropsikiatri",
+  "title": "Infeksi SSP dan koma",
+  "department": "Ilmu Kesehatan Anak",
+  "number": 15,
+  "teachers": [
+    "neuro-dr-nurul-hidayah"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-02",
+  "lecture_start": "08:00",
+  "lecture_end": "10:00",
+  "schedule_week": 1
+}

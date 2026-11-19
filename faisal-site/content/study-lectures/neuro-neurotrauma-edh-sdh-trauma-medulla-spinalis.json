@@ -1,0 +1,15 @@
+{
+  "id": "neuro-neurotrauma-edh-sdh-trauma-medulla-spinalis",
+  "block": "neuropsikiatri",
+  "title": "Neurotrauma (EDH, SDH, trauma medulla spinalis)",
+  "department": "Ilmu Penyakit Saraf",
+  "number": 30,
+  "teachers": [
+    "neuro-dr-eko-suryo-pujiastono"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-12",
+  "lecture_start": "14:00",
+  "lecture_end": "15:00",
+  "schedule_week": 3
+}

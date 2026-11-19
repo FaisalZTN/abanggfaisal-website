@@ -1,0 +1,15 @@
+{
+  "id": "neuro-anestesi-umum-dan-muscle-relaxant",
+  "block": "neuropsikiatri",
+  "title": "Anestesi umum dan muscle relaxant",
+  "department": "Farmakologi",
+  "number": 10,
+  "teachers": [
+    "neuro-dr-h-pagan-pambudi"
+  ],
+  "status": "published",
+  "lecture_date": "2026-09-29",
+  "lecture_start": "15:00",
+  "lecture_end": "17:00",
+  "schedule_week": 1
+}

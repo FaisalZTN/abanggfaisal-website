@@ -1,0 +1,15 @@
+{
+  "id": "neuro-anestetika-lokal-golongan-ester-dan-amida",
+  "block": "neuropsikiatri",
+  "title": "Anestetika lokal (golongan ester dan amida)",
+  "department": "Farmakologi",
+  "number": 11,
+  "teachers": [
+    "neuro-dr-h-pagan-pambudi"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-12",
+  "lecture_start": "13:00",
+  "lecture_end": "14:00",
+  "schedule_week": 3
+}

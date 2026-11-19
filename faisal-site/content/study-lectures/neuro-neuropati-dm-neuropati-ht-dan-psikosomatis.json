@@ -1,0 +1,15 @@
+{
+  "id": "neuro-neuropati-dm-neuropati-ht-dan-psikosomatis",
+  "block": "neuropsikiatri",
+  "title": "Neuropati DM, neuropati HT dan psikosomatis",
+  "department": "Ilmu Penyakit Dalam",
+  "number": 40,
+  "teachers": [
+    "neuro-dr-nanang-miftah-fajari"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-30",
+  "lecture_start": "14:00",
+  "lecture_end": "16:00",
+  "schedule_week": 5
+}

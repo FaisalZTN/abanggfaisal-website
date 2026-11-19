@@ -1,0 +1,15 @@
+{
+  "id": "neuro-tumor-cns-primer-sekunder",
+  "block": "neuropsikiatri",
+  "title": "Tumor CNS (primer/sekunder)",
+  "department": "Radiologi",
+  "number": 51,
+  "teachers": [
+    "neuro-dr-mashuri"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-14",
+  "lecture_start": "15:00",
+  "lecture_end": "17:00",
+  "schedule_week": 3
+}

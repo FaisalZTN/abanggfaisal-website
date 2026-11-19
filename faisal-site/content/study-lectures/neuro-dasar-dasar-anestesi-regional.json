@@ -1,0 +1,16 @@
+{
+  "id": "neuro-dasar-dasar-anestesi-regional",
+  "block": "neuropsikiatri",
+  "title": "Dasar-dasar anestesi regional",
+  "department": "Anestesiologi",
+  "number": 35,
+  "teachers": [
+    "dr-andri-l-tobing"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-23",
+  "lecture_start": "10:00",
+  "lecture_end": "12:00",
+  "schedule_week": 4,
+  "lecture_location": "Daring"
+}

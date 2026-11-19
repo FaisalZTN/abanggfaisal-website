@@ -68,6 +68,15 @@ async function checkStudyFlow(page, width) {
   assert.ok(await page.locator('#jadwal-kuliah').isVisible());
   await checkWidth(page, 'Kembali ke blok KSI', width);
 
+  await blocks.getByRole('link', { name: 'Keluhan Neuropsikiatri Arsip' }).click();
+  assert.equal(await page.locator('#study-agenda-data').count(), 0);
+  const archive = page.locator('#jadwal-kuliah');
+  await archive.locator('summary').click();
+  await checkWidth(page, 'Arsip Neuropsikiatri terbuka', width);
+  await archive.getByRole('link', { name: 'Anatomi otak, hubungan dengan peningkatan TIK' }).press('Enter');
+  await page.waitForFunction(() => document.activeElement.matches('#neuro-anatomi-otak-hubungan-dengan-peningkatan-tik h3'));
+  assert.ok(await page.getByRole('link', { name: 'Anakku kejang', exact: true }).isVisible());
+
   await page.goto(base + '/ruang-belajar/pengajar/');
   await checkWidth(page, 'Direktori pengajar', width);
   await page.goto(base + '/ruang-belajar/tutorial/kusta/');

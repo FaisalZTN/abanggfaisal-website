@@ -1,0 +1,15 @@
+{
+  "id": "neuro-gangguan-somatoform",
+  "block": "neuropsikiatri",
+  "title": "Gangguan somatoform",
+  "department": "Ilmu Kesehatan Jiwa",
+  "number": 44,
+  "teachers": [
+    "neuro-dr-robiatul-zakiah"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-12",
+  "lecture_start": "15:00",
+  "lecture_end": "17:00",
+  "schedule_week": 3
+}

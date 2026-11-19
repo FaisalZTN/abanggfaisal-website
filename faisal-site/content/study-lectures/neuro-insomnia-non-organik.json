@@ -1,0 +1,15 @@
+{
+  "id": "neuro-insomnia-non-organik",
+  "block": "neuropsikiatri",
+  "title": "Insomnia non organik",
+  "department": "Ilmu Kesehatan Jiwa",
+  "number": 46,
+  "teachers": [
+    "neuro-dr-yanti-fitria"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-21",
+  "lecture_start": "13:00",
+  "lecture_end": "15:00",
+  "schedule_week": 4
+}

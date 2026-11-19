@@ -1,0 +1,21 @@
+{
+  "id": "neuro-anakku-kejang",
+  "block": "neuropsikiatri",
+  "title": "Anakku kejang",
+  "number": 2,
+  "status": "published",
+  "short": "Kejang pada anak dengan riwayat demam dan sakit kepala.",
+  "article": "## Ringkasan skenario\n\nAnak laki-laki 8 tahun dibawa ke IGD satu jam setelah kejang sekitar 2–3 menit. Tangan dan kaki awalnya kaku, lalu bergerak ritmis. Setelah episode, ia mengantuk dan sulit dibangunkan. Sejak tiga hari sebelumnya, ia demam, sakit kepala, kurang nafsu makan, dan sempat muntah tiga kali. Riwayat kejang sebelumnya disangkal dan imunisasi dasar belum lengkap.\n\n*Sumber: Modul Keluhan Neuropsikiatri, bagian Skenario Tutorial 2.*",
+  "topics": [
+    {
+      "title": "Pertanyaan diskusi",
+      "body": "- Karakterisasi episode kejang dan keadaan anak setelah episode.\n- Apa informasi yang membantu membedakan kemungkinan penyebab dari riwayat dan pemeriksaan?\n- Susun prioritas penilaian awal dan alasan memilih pemeriksaan lanjutan."
+    }
+  ],
+  "related": [
+    "neuro-kejang-demam-dan-epilepsi",
+    "neuro-infeksi-ssp-dan-koma",
+    "neuro-epilepsi-dan-status-epileptikus-penyakit-tulang-belakang-dan-spin",
+    "neuro-infeksi-ssp-meningitis-encephalitis-abses-otak-malaria-serebral-p"
+  ]
+}

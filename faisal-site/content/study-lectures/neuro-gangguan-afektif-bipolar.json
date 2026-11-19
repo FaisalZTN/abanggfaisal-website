@@ -1,0 +1,16 @@
+{
+  "id": "neuro-gangguan-afektif-bipolar",
+  "block": "neuropsikiatri",
+  "title": "Gangguan afektif bipolar",
+  "department": "Ilmu Kesehatan Jiwa",
+  "number": 42,
+  "teachers": [
+    "neuro-dr-syaiful-fadilah"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-23",
+  "lecture_start": "14:00",
+  "lecture_end": "16:00",
+  "schedule_week": 4,
+  "lecture_location": "Daring"
+}

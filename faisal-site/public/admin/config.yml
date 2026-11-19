@@ -114,6 +114,7 @@ collections:
         options:
           - {label: Segera hadir, value: coming-soon}
           - {label: Aktif, value: active}
+          - {label: Arsip, value: archived}
 
   - name: study_teachers
     label: Pengajar Ruang Belajar
@@ -162,9 +163,10 @@ collections:
         required: false
         hint: 'Kosong berarti KSI.'
       - {label: Nomor di modul, name: number, widget: number, value_type: int, min: 1}
-      - {label: Halaman cetak di modul, name: source_page, widget: string}
-      - {label: Tanggal kuliah terverifikasi, name: lecture_date, widget: string, required: false, hint: 'Isi YYYY-MM-DD dan halaman PDF jika topik dan dosen cocok dengan jadwal.', pattern: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}$', 'Gunakan YYYY-MM-DD']}
+      - {label: Halaman cetak di modul, name: source_page, widget: string, required: false}
+      - {label: Tanggal kuliah terverifikasi, name: lecture_date, widget: string, required: false, hint: 'Isi YYYY-MM-DD dan halaman PDF atau minggu jadwal jika topik dan dosen cocok dengan jadwal.', pattern: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}$', 'Gunakan YYYY-MM-DD']}
       - {label: Halaman PDF jadwal, name: schedule_page, widget: number, value_type: int, min: 1, required: false}
+      - {label: Minggu dalam jadwal modul, name: schedule_week, widget: number, value_type: int, min: 1, required: false}
       - {label: Jam mulai kuliah (WITA), name: lecture_start, widget: string, required: false, pattern: ['^(?:[01][0-9]|2[0-3]):[0-5][0-9]$', 'Gunakan HH:MM, misalnya 08:00']}
       - {label: Jam selesai kuliah (WITA), name: lecture_end, widget: string, required: false, pattern: ['^(?:[01][0-9]|2[0-3]):[0-5][0-9]$', 'Gunakan HH:MM, misalnya 10:00']}
       - {label: Tempat kuliah, name: lecture_location, widget: string, required: false}

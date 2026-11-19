@@ -1,0 +1,15 @@
+{
+  "id": "neuro-lumpuh-layu-akut-acute-flaccid-paralysis",
+  "block": "neuropsikiatri",
+  "title": "Lumpuh layu akut (acute flaccid paralysis)",
+  "department": "Ilmu Kesehatan Anak",
+  "number": 14,
+  "teachers": [
+    "neuro-dr-nurul-hidayah"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-19",
+  "lecture_start": "10:00",
+  "lecture_end": "12:00",
+  "schedule_week": 4
+}

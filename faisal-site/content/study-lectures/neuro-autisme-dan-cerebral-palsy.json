@@ -1,0 +1,15 @@
+{
+  "id": "neuro-autisme-dan-cerebral-palsy",
+  "block": "neuropsikiatri",
+  "title": "Autisme dan cerebral palsy",
+  "department": "Ilmu Kesehatan Anak",
+  "number": 13,
+  "teachers": [
+    "neuro-dr-nurul-hidayah"
+  ],
+  "status": "published",
+  "lecture_date": "2026-10-16",
+  "lecture_start": "14:00",
+  "lecture_end": "16:00",
+  "schedule_week": 3
+}
