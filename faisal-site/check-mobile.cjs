@@ -85,6 +85,44 @@ async function checkStudyFlow(page, width) {
   assert.deepEqual(errors, []);
 }
 
+async function checkExamPriorities(page, width) {
+  await page.goto(base + '/ruang-belajar/');
+  await page.getByRole('link', { name: 'Prioritas ujian', exact: true }).click();
+  const priorities = page.locator('#prioritas-ujian');
+  assert.equal(await priorities.locator('summary').count(), 9);
+  assert.match(await priorities.textContent(), /84 dari 150 soal \(56%\)/);
+  const skin = priorities.locator('details').first();
+  assert.match(await skin.locator('summary').textContent(), /Kulit dan Kelamin.*40 soal/);
+  await skin.locator('summary').press('Enter');
+  await checkWidth(page, 'Prioritas ujian KSI', width);
+  const dermatitis = skin.locator('li').filter({ hasText: 'Dermatitis eksematosa' });
+  const teacher = dermatitis.getByRole('link', { name: 'dr. Sani Widjaja, Sp.KK, FINSDV', exact: true });
+  assert.equal(await teacher.getAttribute('href'), '/ruang-belajar/pengajar/dr-sani-widjaja/');
+  await skin.getByRole('link', { name: 'Dermatitis eksematosa', exact: true }).press('Enter');
+  await page.waitForFunction(() => document.activeElement.matches('#dermatitis-eksematosa h3'));
+  assert.ok(await page.locator('#study-catalogue').evaluate(element => element.open));
+}
+
+async function checkCurrentBlockArchive(page, width) {
+  await page.goto(base + '/ruang-belajar/#jadwal-kuliah');
+  const archive = page.locator('#arsip-kelas');
+  await archive.locator('summary').click();
+  assert.equal(await archive.locator('h3 time').first().getAttribute('datetime'), '2026-11-18');
+  assert.ok(await archive.getByRole('link', { name: 'Radang telinga luar', exact: true }).isHidden());
+
+  await page.clock.setFixedTime(new Date('2026-11-19T03:00:00Z'));
+  await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
+  assert.ok(await archive.getByRole('link', { name: 'Radang telinga luar', exact: true }).isVisible());
+  assert.ok(await archive.getByRole('link', { name: 'Insect bites', exact: true }).isHidden());
+
+  await page.clock.setFixedTime(new Date('2026-11-19T04:00:00Z'));
+  await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
+  assert.ok(await archive.getByRole('link', { name: 'Insect bites', exact: true }).isVisible());
+  assert.ok(await archive.getByRole('link', { name: 'Arthropoda beracun', exact: true }).isHidden());
+  assert.equal(await archive.locator('.study-slot[data-day="2026-11-19"]').count(), 2);
+  await checkWidth(page, 'Arsip kelas blok berjalan', width);
+}
+
 async function checkKmsAndResearch(page, width) {
   await page.goto(base + '/ruang-belajar/');
   const choices = page.getByRole('navigation', { name: 'Pilih blok belajar' });
@@ -182,7 +220,11 @@ async function main() {
       try {
         await checkHeader(page, width);
         await checkStudyFlow(page, width);
-        if (width === 320) await checkKmsAndResearch(page, width);
+        if (width === 320) {
+          await checkExamPriorities(page, width);
+          await checkCurrentBlockArchive(page, width);
+          await checkKmsAndResearch(page, width);
+        }
         console.log('PASS ' + width + ' px: beranda, agenda, fokus, katalog, pengajar, dan tutorial');
       } finally {
         await page.close();
