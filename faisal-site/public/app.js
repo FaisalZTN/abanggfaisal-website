@@ -43,20 +43,48 @@ backToTop.addEventListener('click', () => {
 });
 updateBackToTop();
 
+function studySearchWords(value) {
+  return value.toLocaleLowerCase('id').normalize('NFD')
+    .replace(/\p{M}/gu, '').match(/[\p{L}\p{N}]+/gu) ?? [];
+}
+
+function oneStudyTypo(query, word) {
+  if (query.length < 3 || Math.max(query.length, word.length) < 4
+      || Math.abs(query.length - word.length) > 1
+      || /\d/.test(query + word)) return false;
+
+  const shorter = query.length <= word.length ? query : word;
+  const longer = query.length <= word.length ? word : query;
+  let index = 0;
+  while (index < shorter.length && shorter[index] === longer[index]) index++;
+  if (shorter.length !== longer.length) {
+    return shorter.slice(index) === longer.slice(index + 1);
+  }
+  return shorter.slice(index + 1) === longer.slice(index + 1)
+    || (shorter[index] === longer[index + 1] && shorter[index + 1] === longer[index]
+        && shorter.slice(index + 2) === longer.slice(index + 2));
+}
+
 const search=document.querySelector('#search'),category=document.querySelector('#category');if (search) {
   const results = document.querySelector('#results');
   const cards = [...results.querySelectorAll('.card')];
   const sort = document.querySelector('#study-sort');
   const catalogue = document.querySelector('#study-catalogue');
   const more = document.querySelector('#study-more');
+  const studyWords = sort || more
+    ? new Map(cards.map(card => [card, studySearchWords(card.dataset.search + ' ' + card.dataset.category)]))
+    : null;
   const step = Number(results.dataset.pageSize) || cards.length || 1;
   let limit = step;
   function filter() {
     const query = search.value.trim().toLocaleLowerCase('id');
+    const terms = studyWords ? studySearchWords(query) : [];
     let count = 0;
     for (const card of cards) {
       const matches = (!category.value || card.dataset.category === category.value)
-        && (card.dataset.search + ' ' + card.dataset.category).toLocaleLowerCase('id').includes(query);
+        && (studyWords
+          ? terms.every(term => studyWords.get(card).some(word => word.includes(term) || oneStudyTypo(term, word)))
+          : (card.dataset.search + ' ' + card.dataset.category).toLocaleLowerCase('id').includes(query));
       card.hidden = !matches || ++count > limit;
     }
     document.querySelector('#empty').hidden = count > 0;

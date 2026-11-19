@@ -66,6 +66,8 @@ async function checkStudyFlow(page, width) {
   });
   const { openMs, filterMs } = await timings.jsonValue();
   console.log(width + ' px, synthetic catalogue interaction: open ' + openMs + ' ms, filter ' + filterMs + ' ms');
+  await search.fill('gigtan serangga');
+  assert.ok(await card.isVisible());
   await search.fill('bukan-sesi');
   assert.ok(await page.locator('#empty').isVisible());
 
@@ -90,6 +92,13 @@ async function checkStudyFlow(page, width) {
 
   await page.goto(base + '/ruang-belajar/pengajar/');
   await checkWidth(page, 'Direktori pengajar', width);
+  const teacherSearch = page.getByRole('searchbox', { name: 'Cari dosen' });
+  for (const query of ['dr agung', 'Agung, dr.', 'agng', 'agugn']) {
+    await teacherSearch.fill(query);
+    assert.ok(await page.getByRole('link', { name: /Agung Biworo/ }).isVisible(), query);
+  }
+  await teacherSearch.fill('agus');
+  assert.ok(await page.getByRole('link', { name: /Agus Fitrian Noor/ }).isVisible());
   await page.goto(base + '/ruang-belajar/tutorial/kusta/');
   await page.getByText('Definisi', { exact: true }).first().click();
   await checkWidth(page, 'Tutorial terbuka', width);
