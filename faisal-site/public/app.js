@@ -257,8 +257,9 @@ if (agenda?.querySelector('[data-agenda-clock]')) {
       details.textContent = [day === today ? '' : dateLabel.format(new Date(day)),
         start ? hours + ' WITA' : hours, room || 'Lokasi belum tercantum'].filter(Boolean).join(' · ');
       people.textContent = teachers || 'Dosen belum tercantum';
-      material.href = session.href;
-      const lecture = document.getElementById(session.hash.slice(1));
+      const url = new URL(session.getAttribute('href'), location.href);
+      material.href = url.href;
+      const lecture = document.getElementById(url.hash.slice(1));
       material.hidden = !lecture?.querySelector('.study-material');
     }
     nextClass.hidden = false;
