@@ -1,15 +1,15 @@
-"""Build the KSI study catalogue, teacher directory and tutorials."""
+"""Build study dashboards, teacher directories and tutorials by block."""
 import json
 import re
 from collections import Counter
 from datetime import date
 
 from editorial import https_url
-from study_calendar import SCHEDULE_SOURCE, write_calendar
+from study_calendar import write_calendar
 
 BASE = '/ruang-belajar/'
-MODULE = 'Buku Modul KSI, semester V, TA 2026/2027'
-BLOCK_THEME = 'ksi'
+DEFAULT_BLOCK = 'ksi'
+SLUG_PATTERN = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*')
 STUDY_QUOTE = '''
 <figure class="study-quote">
   <blockquote lang="ar" dir="rtl">وَقُلْ رَّبِّ زِدْنِيْ عِلْمًا</blockquote>
@@ -58,15 +58,26 @@ def build_study(root, output, write, head, escape, render_article, preview=False
         for path in sorted((root / 'content' / collection).glob('*.json')):
             entry = json.loads(path.read_text(encoding='utf-8'))
             key = entry['id']
-            if not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', key) or key in items:
+            if not SLUG_PATTERN.fullmatch(key) or key in items:
                 raise ValueError(f'ID Ruang Belajar tidak valid atau ganda: {path}')
             items[key] = entry
         return items
+
+    blocks = records('study-blocks')
+    if DEFAULT_BLOCK not in blocks:
+        raise ValueError('Blok KSI diperlukan untuk tautan Ruang Belajar yang sudah ada.')
+    for block in blocks.values():
+        if not block.get('title', '').strip() or block.get('status') not in ('active', 'coming-soon'):
+            raise ValueError(f'Nama atau status blok tidak valid: {block["id"]}')
 
     teachers = records('study-teachers')
     lectures = records('study-lectures')
     tutorials = records('study-tutorials')
     guidelines = json.loads((root / 'content/study-guidelines.json').read_text(encoding='utf-8')).get('entries') or []
+    for item in (*teachers.values(), *lectures.values(), *tutorials.values()):
+        if entry_block(item) not in blocks:
+            raise ValueError(f'Blok tidak ditemukan: {item["title"]}.')
+
     for item in lectures.values():
         if not item['teachers'] or any(key not in teachers for key in item['teachers']):
             raise ValueError(f'Pengajar tidak ditemukan: {item["title"]}')
@@ -75,36 +86,125 @@ def build_study(root, output, write, head, escape, render_article, preview=False
             if not material.get('label', '').strip() or not https_url(material.get('url', '')):
                 raise ValueError(f'Materi kuliah memerlukan judul dan URL HTTPS: {item["title"]}')
     for item in tutorials.values():
-        if any(key not in lectures for key in item.get('related', [])):
-            raise ValueError(f'Kuliah terkait tidak ditemukan: {item["title"]}')
+        if any(key not in lectures or entry_block(lectures[key]) != entry_block(item)
+               for key in item.get('related') or []):
+            raise ValueError(f'Kuliah terkait harus berasal dari blok yang sama: {item["title"]}')
         for topic in item.get('topics') or []:
             if not topic['title'].strip() or not topic['body'].strip():
                 raise ValueError(f'Judul dan isi topik wajib diisi: {item["title"]}')
     for item in guidelines:
         if not item.get('title', '').strip() or not https_url(item.get('url', '')):
             raise ValueError('Guideline memerlukan judul dan URL HTTPS.')
+        if item.get('kind') not in (None, '', 'document', 'portal'):
+            raise ValueError(f'{item["title"]}: jenis rujukan tidak dikenal.')
         reviewed = item.get('reviewed_on')
         if reviewed and not valid_date(reviewed):
             raise ValueError(f'{item["title"]}: tanggal peninjauan guideline tidak valid.')
         if item.get('review_status') not in (None, '', 'berlaku', 'perlu-dicek', 'digantikan'):
             raise ValueError(f'{item["title"]}: status guideline tidak dikenal.')
 
+    def block_entries(items):
+        grouped = {block_id: {} for block_id in blocks}
+        for key, item in items.items():
+            grouped[entry_block(item)][key] = item
+        return grouped
+
+    lectures_by_block = block_entries(lectures)
+    tutorials_by_block = block_entries(tutorials)
+    teachers_by_block = block_entries(teachers)
+    shared_guidelines = render_guidelines(guidelines, escape)
+    ordered = sorted(blocks.values(), key=lambda b: (b['id'] != DEFAULT_BLOCK,
+                                                     b['status'] != 'active', b['title'].casefold()))
+    for block in ordered:
+        block_id = block['id']
+        selector = block_selector(ordered, block_id, escape)
+        if block['status'] == 'coming-soon':
+            render_pending_block(block, selector, shared_guidelines, write, escape)
+            continue
+        render_block(block, selector, shared_guidelines, lectures_by_block[block_id], tutorials_by_block[block_id],
+                     teachers, teachers_by_block[block_id], output, write, head, escape, render_article, preview)
+
+
+def entry_block(item):
+    return item.get('block') or DEFAULT_BLOCK
+
+
+def block_path(block_id):
+    return BASE if block_id == DEFAULT_BLOCK else f'{BASE}blok/{block_id}/'
+
+
+def block_selector(blocks, current, e):
+    links = []
+    for block in blocks:
+        selected = ' aria-current="page"' if current == block['id'] else ''
+        pending = ' <span>Segera hadir</span>' if block['status'] == 'coming-soon' else ''
+        links.append(f'<a href="{block_path(block["id"])}"{selected}>{e(block["title"])}{pending}</a>')
+    return ('<nav class="study-block-selector" aria-label="Pilih blok belajar">'
+            '<p>Blok belajar</p><div>' + ''.join(links) + '</div></nav>')
+
+
+def render_pending_block(block, selector, guidelines, write, e):
+    title = e(block['title'])
+    body = ('<div class="study-block"><div class="study-heading"><h1>Ruang Belajar</h1></div>'
+            + selector + '<section class="study-section study-guidelines" aria-labelledby="block-pending">'
+            f'<h2 id="block-pending">{title}</h2>'
+            '<p>Dashboard, jadwal kuliah, daftar dosen, dan materi blok ini sedang disiapkan.</p>'
+            '<a class="text-link" href="#guideline">Lihat kumpulan guideline</a></section>'
+            + guidelines + '</div>')
+    write(block_path(block['id']), block['title'] + ' · Ruang Belajar',
+          'Jadwal, dosen, dan materi blok ini sedang disiapkan.', body, 'study')
+
+
+def render_guidelines(guidelines, e):
+    documents = []
+    portals = []
+    statuses = {'berlaku': 'Berlaku', 'perlu-dicek': 'Perlu dicek', 'digantikan': 'Digantikan'}
+    for item in guidelines:
+        issuer = f'<p>{e(item["issuer"])}</p>' if item.get('issuer') else ''
+        status = statuses.get(item.get('review_status'))
+        review_meta = [e(status)] if status else []
+        if item.get('reviewed_on'):
+            day = date.fromisoformat(item['reviewed_on'])
+            review_meta.append(f'Ditinjau <time datetime="{day.isoformat()}">'
+                               f'{day.day} {MONTHS[day.month - 1]} {day.year}</time>')
+        review = f'<p class="meta">{" · ".join(review_meta)}</p>' if review_meta else ''
+        entry = f'<li><a href="{e(item["url"])}">{e(item["title"])}</a>{issuer}{review}</li>'
+        group = portals if item.get('kind') == 'portal' else documents
+        group.append(entry)
+    body = ''
+    if documents:
+        body += '<h3>Pedoman dan dokumen</h3><ul class="study-guideline-list">' + ''.join(documents) + '</ul>'
+    if portals:
+        body += '<h3>Portal rujukan profesi</h3><ul class="study-guideline-list">' + ''.join(portals) + '</ul>'
+    if not body:
+        body = '<p class="study-guideline-empty">Belum ada guideline yang ditambahkan.</p>'
+    return ('<section class="study-section study-guidelines" id="guideline" aria-labelledby="guideline-heading">'
+            '<h2 id="guideline-heading">Kumpulan Guideline</h2>' + body + '</section>')
+
+
+def render_block(block, selector, guidelines, lectures, tutorials, teachers, roster,
+                 output, write, head, e, render_article, preview):
+    block_id = block['id']
+    base = block_path(block_id)
+    block_name = block['title']
+    subtitle = ' · '.join(value for value in (block_name, block.get('semester'), block.get('period')) if value)
+    module = block.get('module_label') or 'Modul ' + block_name
+    schedule_source = block.get('schedule_source') or 'Sumber jadwal'
     active = sorted((x for x in lectures.values() if preview or x['status'] == 'published'),
                     key=lambda x: x['number'])
     published = {x['id'] for x in active}
     sessions = sorted((x for x in tutorials.values() if preview or x['status'] == 'published'),
                       key=lambda x: x['number'])
     counts = Counter(key for item in active for key in item['teachers'])
-    calendar_ids = write_calendar(output, active, teachers)
-
-    e = escape
+    calendar_ids = write_calendar(output, active, teachers, base, block_id, block_name, schedule_source)
+    roster = {**roster, **{key: teachers[key] for key in counts}}
 
     def link(path, title):
-        return f'<a href="{BASE}{path}">{e(title)}</a>'
+        return f'<a href="{base}{path}">{e(title)}</a>'
 
     def page(path, title, intro, body):
-        write(BASE + path, title, intro,
-              f'<div class="study-block study-block--{BLOCK_THEME}">{body}</div>', 'study')
+        write(base + path, title, intro,
+              f'<div class="study-block study-block--{block_id}">{body}</div>', 'study')
 
     def schedule(item):
         location = f' · {e(item["lecture_location"])}' if item.get('lecture_location') else ''
@@ -116,7 +216,7 @@ def build_study(root, output, write, head, escape, render_article, preview=False
         if hours:
             hours = f' · {e(hours)} WITA'
         return (f'<span class="study-date"><time datetime="{day.isoformat()}">{label}</time>{hours}'
-                f'{location}<small class="study-schedule-source"> · {SCHEDULE_SOURCE}, hlm. {e(item["schedule_page"])}</small></span>')
+                f'{location}<small class="study-schedule-source"> · {e(schedule_source)}, hlm. {e(item["schedule_page"])}</small></span>')
 
     def lecture_hours(item):
         start = item.get('lecture_start')
@@ -135,7 +235,7 @@ def build_study(root, output, write, head, escape, render_article, preview=False
                 f'data-start="{e(item.get("lecture_start") or "")}" data-end="{e(item.get("lecture_end") or "")}">'
                 f'<p class="study-slot-time">{e(hours)}<span data-session-state hidden></span></p>'
                 f'<div><h4>{link("#" + item["id"], item["title"])}</h4>'
-                f'<p>{e(people)}</p>{location}<small>{SCHEDULE_SOURCE}, hlm. {e(item["schedule_page"])}</small></div></li>'
+                f'<p>{e(people)}</p>{location}<small>{e(schedule_source)}, hlm. {e(item["schedule_page"])}</small></div></li>'
             )
         days = ''.join(
             f'<section class="study-agenda-day"><div class="study-agenda-day-head">'
@@ -144,8 +244,8 @@ def build_study(root, output, write, head, escape, render_article, preview=False
             f'Tidak ada kuliah terverifikasi pada tanggal ini.</p></section>'
             for title in ('Hari ini', 'Besok')
         )
-        calendar_link = ('<a href="/ruang-belajar/kalender/ksi.ics" download>Unduh kalender KSI (.ics)</a>'
-                         if calendar_ids else '')
+        calendar_link = (f'<a href="{base}kalender/{block_id}.ics" download>'
+                         f'Unduh kalender {e(block_name)} (.ics)</a>' if calendar_ids else '')
         return f'''
         <section class="study-section study-agenda" id="jadwal-kuliah" aria-labelledby="study-agenda-heading">
           <div class="study-agenda-heading">
@@ -155,31 +255,11 @@ def build_study(root, output, write, head, escape, render_article, preview=False
           <div class="study-agenda-grid" data-agenda-days hidden>{days}</div>
           <noscript><p>Aktifkan JavaScript untuk melihat jadwal hari ini dan besok dalam WITA. Tanggal tiap kuliah tersedia di katalog.</p></noscript>
           <div class="study-agenda-foot">
-            <p>Tanggal dan jam mengikuti jadwal Vorticosa. Lokasi mengikuti pembaruan Ruang Belajar.</p>
+            <p>Tanggal dan jam mengikuti {e(schedule_source)}. Lokasi mengikuti pembaruan Ruang Belajar.</p>
             <div class="study-agenda-links">{calendar_link}{link('#kuliah', 'Lihat katalog kuliah ↓')}</div>
           </div>
           <template id="study-agenda-data">{''.join(entries)}</template>
         </section>'''
-
-    def guideline_section():
-        body = '<p class="study-guideline-empty"><strong>Segera hadir</strong> · Belum ada guideline yang ditambahkan.</p>'
-        if guidelines:
-            entries = []
-            for item in guidelines:
-                issuer = f'<p>{e(item["issuer"])}</p>' if item.get('issuer') else ''
-                reviewed = item.get('reviewed_on')
-                status = {'berlaku': 'Berlaku', 'perlu-dicek': 'Perlu dicek',
-                          'digantikan': 'Digantikan'}.get(item.get('review_status'))
-                review_meta = [e(status)] if status else []
-                if reviewed:
-                    day = date.fromisoformat(reviewed)
-                    review_meta.append(f'Ditinjau <time datetime="{e(reviewed)}">'
-                                       f'{day.day} {MONTHS[day.month - 1]} {day.year}</time>')
-                review = f'<p class="meta">{" · ".join(review_meta)}</p>' if review_meta else ''
-                entries.append(f'<li><a href="{e(item["url"])}">{e(item["title"])}</a>{issuer}{review}</li>')
-            body = '<ul class="study-guideline-list">' + ''.join(entries) + '</ul>'
-        return ('<section class="study-section study-guidelines" id="guideline" aria-labelledby="guideline-heading">'
-                '<h2 id="guideline-heading">Kumpulan Guideline</h2>' + body + '</section>')
 
     def back():
         return '<p>' + link('', '← Ruang Belajar') + '</p>'
@@ -249,7 +329,7 @@ def build_study(root, output, write, head, escape, render_article, preview=False
         people = [teachers[key] for key in item['teachers']]
         names = ', '.join(person['title'] for person in people)
         links = ', '.join(link('pengajar/' + person['id'] + '/', person['title']) for person in people)
-        calendar_link = (f'<a class="study-calendar-link" href="/ruang-belajar/kalender/kuliah-{e(item["id"])}.ics" download>'
+        calendar_link = (f'<a class="study-calendar-link" href="{base}kalender/kuliah-{e(item["id"])}.ics" download>'
                          f'Unduh .ics<span class="visually-hidden"> untuk {e(item["title"])}</span></a>'
                          if item['id'] in calendar_ids else '')
         date_key = (item['lecture_date'] + 'T' + (item.get('lecture_start') or '99:99')
@@ -258,9 +338,9 @@ def build_study(root, output, write, head, escape, render_article, preview=False
         cards.append(card(item['department'], query,
                           f'<p class="eyebrow">{e(item["department"])}</p><h3>{e(item["title"])}</h3>'
                           f'{schedule(item)}<p class="study-lecturers">{links}</p>' + lecture_material(item)
-                          + f'<div class="study-card-notes"><p>Modul KSI, hlm. {e(item["source_page"])}</p>'
+                          + f'<div class="study-card-notes"><p>{e(module)}, hlm. {e(item["source_page"])}</p>'
                           + calendar_link + '</div>', item['id'], date_key))
-    intro = 'Katalog kuliah, daftar dosen pengajar, dan catatan tutorial Blok KSI.'
+    intro = f'Katalog kuliah, daftar dosen pengajar, dan catatan tutorial {block_name}.'
     tutorial_cards = ''.join(
         f'<article class="card study-row"><p class="eyebrow">Skenario {e(item["number"])}</p>'
         f'<h3>{link("tutorial/" + item["id"] + "/", item["title"])}</h3><p>{e(item["short"])}</p></article>'
@@ -306,29 +386,30 @@ def build_study(root, output, write, head, escape, render_article, preview=False
         ('#guideline', 'Guideline'),
         ('#sumber-belajar', 'Sumber belajar'),
     )
-    shortcut_links = ''.join(f'<a href="{BASE}{path}">{e(label)}<span aria-hidden="true">{number}</span></a>'
+    shortcut_links = ''.join(f'<a href="{base}{path}">{e(label)}<span aria-hidden="true">{number}</span></a>'
                              for number, (path, label) in enumerate(shortcuts, start=1))
-    page('', 'Ruang Belajar', intro,
-         '<div class="study-heading"><p class="eyebrow">KSI · SEMESTER V · 2026/2027</p>'
-         '<h1>Ruang Belajar</h1><p>' + e(intro) + '</p></div>'
+    page('', 'Ruang Belajar' if block_id == DEFAULT_BLOCK else block_name + ' · Ruang Belajar', intro,
+         f'<div class="study-heading"><p class="eyebrow">{e(subtitle)}</p>'
+         f'<h1>Ruang Belajar</h1><p>{e(intro)}</p></div>' + selector
          + '<div class="study-welcome"><nav class="study-shortcuts" aria-label="Pintasan Ruang Belajar">'
          + shortcut_links + '</nav>' + STUDY_QUOTE + '</div>' + schedule_dashboard()
          + '<section class="study-section" id="kuliah"><h2>Katalog Kuliah</h2>'
          + '<details id="study-catalogue" class="study-catalogue"><summary>'
          + f'<span class="catalogue-show">Tampilkan katalog · {len(active)} kuliah</span>'
          + '<span class="catalogue-hide">Sembunyikan katalog</span></summary>'
-         + '<p class="meta">Topik mengacu pada modul. Jadwal dan pengajar sesi mengikuti PDF Vorticosa.</p>'
+         + f'<p class="meta">Topik mengacu pada modul. Jadwal dan pengajar sesi mengikuti {e(schedule_source)}.</p>'
          + listing(''.join(cards), {x['department'] for x in active}, 'Cari materi atau dosen', catalogue=True)
          + '</details></section>'
-         + '<section class="study-section" id="tutorial"><h2>Tutorial KSI</h2><div class="grid">'
-         + tutorial_cards + '</div></section>' + guideline_section() + resources)
+         + f'<section class="study-section" id="tutorial"><h2>Tutorial {e(block_name)}</h2>'
+         + (f'<div class="grid">{tutorial_cards}</div>' if tutorial_cards else '<p>Belum ada tutorial.</p>')
+         + '</section>' + guidelines + resources)
 
     directory = []
-    visible_teachers = [x for x in teachers.values() if counts[x['id']]]
-    for person in sorted(teachers.values(), key=lambda x: x['title'].casefold()):
+    visible_teachers = [x for x in roster.values() if block_id != DEFAULT_BLOCK or counts[x['id']]]
+    for person in sorted(roster.values(), key=lambda x: x['title'].casefold()):
         key = person['id']
         url = 'pengajar/' + key + '/'
-        if counts[key]:
+        if block_id != DEFAULT_BLOCK or counts[key]:
             directory.append(card(person['department'], person['title'],
                                   f'<h2>{link(url, person["title"])}</h2>'
                                   f'<p>{e(person["department"])} · {counts[key]} topik</p>'))
@@ -337,19 +418,20 @@ def build_study(root, output, write, head, escape, render_article, preview=False
         note = f'<p class="meta">{e(person["note"])}</p>' if person.get('note') else ''
         topic_list = (f'<ul class="study-topics">{topics}</ul>' if topics
                       else '<p>Belum ada sesi yang tercantum untuk pengajar ini.</p>')
-        page(url, person['title'], 'Daftar kuliah Blok KSI.',
-             back() + head(e(person['department']), e(person['title']), 'Blok KSI · Semester V') + note
+        page(url, person['title'], f'Daftar kuliah {block_name}.',
+             back() + head(e(person['department']), e(person['title']), e(subtitle)) + note
              + '<section class="section"><h2>Materi kuliah</h2>' + topic_list + '</section>')
-    page('pengajar/', 'Direktori Pengajar', MODULE, back()
-         + '<div class="study-heading"><h1>Direktori Pengajar</h1><p>' + e(MODULE) + '</p></div>'
-         + listing(''.join(directory), {x['department'] for x in visible_teachers}, 'Cari dosen'))
+    page('pengajar/', 'Direktori Pengajar', subtitle, back()
+         + '<div class="study-heading"><h1>Direktori Pengajar</h1><p>' + e(subtitle) + '</p></div>'
+         + (listing(''.join(directory), {x['department'] for x in visible_teachers}, 'Cari dosen')
+            if directory else '<p>Belum ada pengajar.</p>'))
 
     for item in sessions:
-        related = [lectures[key] for key in item.get('related', []) if key in published]
+        related = [lectures[key] for key in item.get('related') or [] if key in published]
         related_links = ''.join('<li>' + link('#' + x['id'], x['title']) + '</li>' for x in related)
         page('tutorial/' + item['id'] + '/', item['title'], item['short'],
              '<article class="reading study-tutorial">' + back()
-             + head(f'KSI · SKENARIO {e(item["number"])}', e(item['title']), e(item['short']))
+             + head(f'{e(block_name)} · SKENARIO {e(item["number"])}', e(item['title']), e(item['short']))
              + '<p class="meta">Catatan belajar Faisal</p>'
              + '<div class="prose study-tutorial-intro">' + render_article(item) + '</div>'
              + tutorial_topics(item)

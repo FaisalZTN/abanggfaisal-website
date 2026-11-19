@@ -427,3 +427,43 @@ body:has(.study-block--ksi)::before {
     font-size: 1rem;
   }
 }
+
+.study-block-selector {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .45rem 1rem;
+  margin-block: 0 1.25rem;
+}
+.study-block-selector p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .9rem;
+  font-weight: 650;
+}
+.study-block-selector div { display: flex; flex-wrap: wrap; gap: .4rem; min-width: 0; }
+.study-block-selector a {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .25rem .55rem;
+  min-height: 44px;
+  padding: .35rem .8rem;
+  border: 1px solid var(--line);
+  border-radius: .65rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 650;
+  text-decoration: none;
+}
+.study-block-selector a:hover { background: var(--wash); }
+.study-block-selector a[aria-current="page"] {
+  background: var(--wash);
+  border-color: var(--accent);
+}
+.study-block-selector a span {
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+.study-guidelines h3 { margin: 1rem 0 .25rem; font-size: 1.05rem; }

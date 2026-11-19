@@ -6,3 +6,5 @@
   X-Robots-Tag: noindex, nofollow
 /ruang-belajar/kalender/*
   Content-Type: text/calendar; charset=utf-8
+/ruang-belajar/blok/:block/kalender/*
+  Content-Type: text/calendar; charset=utf-8
