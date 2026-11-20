@@ -66,6 +66,16 @@ main{min-height:60vh}h1,h2,h3,p,a{overflow-wrap:anywhere}.hero{position:relative
 .study-next p { margin: 0; font-size: .9rem; line-height: 1.45; }
 .study-next [data-next-status] { margin-top: .25rem; font-weight: 650; }
 .study-next .btn { border-radius: .6rem; }
+.study-next-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem 1rem; }
+.study-next-agenda { display: inline-flex; align-items: center; min-block-size: 44px; }
+.notice { color: var(--ink); }
+.product-layout { grid-template-areas: "visual info"; }
+.product-info { grid-area: info; min-width: 0; }
+.product-info .notice { margin: 1rem 0; }
+.product-layout > :is(.art, .cover) { grid-area: visual; }
+@media (max-width: 600px) {
+  .product-layout { grid-template-areas: "info" "visual"; }
+}
 .study-search { margin-block: 1rem; }
 .study-search label { display: block; margin-bottom: .3rem; font-size: .9rem; font-weight: 650; }
 .study-search input {
@@ -143,7 +153,7 @@ main{min-height:60vh}h1,h2,h3,p,a{overflow-wrap:anywhere}.hero{position:relative
   border-radius: .8rem;
   background: var(--paper);
 }
-.study-catalogue summary { cursor: pointer; padding: .45rem 0; font-weight: 650; }
+.study-catalogue > summary { cursor: pointer; min-block-size: 44px; padding: .45rem 0; font-weight: 650; }
 .study-catalogue summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .study-catalogue .catalogue-hide, .study-catalogue[open] .catalogue-show { display: none; }
 .study-catalogue[open] .catalogue-hide { display: inline; }
@@ -255,9 +265,10 @@ body:has(.study-block--ksi)::before {
 .study-quote blockquote {
   margin: 0;
   color: var(--ink);
-  font: 400 clamp(2rem, 5vw, 3.15rem)/1.5 Amiri, 'Noto Naskh Arabic', 'Traditional Arabic', serif;
+  font: 400 clamp(2rem, 5vw, 3.15rem)/1.5 'Noto Naskh Arabic', 'Traditional Arabic', serif;
   text-wrap: balance;
 }
+.study-quote--near blockquote { font-family: Amiri, 'Noto Naskh Arabic', 'Traditional Arabic', serif; }
 .study-quote-translation { display: block; margin-bottom: .25rem; font-size: .95rem; color: var(--ink); }
 
 .study-agenda {
@@ -393,7 +404,7 @@ body:has(.study-block--ksi)::before {
 .study-topic-body > :first-child { margin-top: .65em; }
 .study-topic-body > :last-child { margin-bottom: 0; }
 
-.study-exam-panel > summary { cursor: pointer; padding-block: .45rem; }
+.study-exam-panel > summary { cursor: pointer; min-block-size: 44px; padding-block: .45rem; }
 .study-exam-panel > summary h2 { display: inline; }
 .study-exam-panel[open] > summary { border-bottom: 1px solid var(--line); }
 .study-exam .study-topic summary {
@@ -682,6 +693,10 @@ body > header {
   border-color: var(--line);
 }
 .study-module-actions .study-module-download:hover { background: var(--wash); }
+.study-module-chapters { margin-top: .75rem; padding: .25rem 1rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--paper); }
+.study-module-chapters > summary { min-block-size: 44px; padding-block: .5rem; cursor: pointer; font-weight: 650; }
+.study-module-chapters ol { margin-block: .25rem .7rem; padding-inline-start: 1.5rem; }
+.study-module-chapters a { display: inline-flex; min-block-size: 44px; align-items: center; }
 #back-to-top {
   position: fixed;
   z-index: 4;

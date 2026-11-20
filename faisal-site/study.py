@@ -334,7 +334,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             day = date.fromisoformat(key)
             schedule_days.append(f'<h3><time datetime="{key}">{date_label(day)}</time></h3>'
                                  f'<ul class="study-agenda-list">{"".join(slots)}</ul>')
-        full_schedule = (f'<details class="study-full-schedule"><summary>Lihat jadwal lengkap '
+        full_schedule = (f'<details class="study-full-schedule" data-full-schedule><summary>Lihat jadwal lengkap '
                          f'({sum(map(len, entries.values()))} sesi)</summary>'
                          + ''.join(schedule_days) + '</details>' if schedule_days else '')
         if archived:
@@ -364,7 +364,6 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             <div class="study-agenda-links">{calendar_link}{link('#kuliah', 'Lihat katalog ' + session_name)}</div>
           </div>
           {full_schedule}{past_classes}
-          <template id="study-agenda-data">{''.join(slot for slots in entries.values() for slot in slots)}</template>
         </section>'''
 
     def exam_section():
@@ -386,8 +385,16 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
                 '<p>Tiga materi, masing-masing terdiri atas dua pertemuan.</p>'
                 '<div class="study-list">' + ''.join(cards) + '</div></section>')
 
-    def skill_lab_module(filename):
+    def skill_lab_module(filename, chapters):
         pdf = f'/dokumen/{e(filename)}'
+        size = (output / 'dokumen' / filename).stat().st_size / 1_000_000
+        file_size = f'{size:.2f}'.replace('.', ',')
+        chapter_links = ''.join(
+            f'<li><a href="{pdf}#page={chapter["pdf_page"]}" target="_blank" rel="noopener">'
+            f'{e(chapter["title"])}<span class="visually-hidden"> (PDF, tab baru)</span></a></li>'
+            for chapter in chapters)
+        chapter_list = ('<details class="study-module-chapters"><summary>Daftar bab</summary>'
+                        f'<ol>{chapter_links}</ol></details>') if chapter_links else ''
         return f'''
         <section class="study-section" id="skill-lab" aria-labelledby="skill-lab-heading">
           <h2 id="skill-lab-heading">Skill Lab 4</h2>
@@ -395,6 +402,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             <div>
               <h3>Modul Skill Lab 4 · Blok {e(block_name)}</h3>
               <p>FKIK Universitas Lambung Mangkurat · 2026</p>
+              <p>PDF · {file_size} MB</p>
             </div>
             <div class="study-module-actions">
               <a class="btn" href="{pdf}" target="_blank" rel="noopener"
@@ -402,6 +410,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
               <a class="btn study-module-download" href="{pdf}" download>Unduh PDF</a>
             </div>
           </div>
+          {chapter_list}
         </section>'''
 
     def back():
@@ -524,8 +533,8 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             <p class="meta">klinikbelajarkedokteran.site</p>
           </div>
           <div class="study-resource-body">
-            <p>Tautan bacaan pendamping untuk meninjau materi kuliah. Situs eksternal tanpa HTTPS.</p>
-            <a class="btn" href="http://klinikbelajarkedokteran.site/" rel="external">Buka Klinik Belajar Kedokteran ↗</a>
+            <p>Bacaan pendamping untuk meninjau materi kuliah.</p>
+            <a class="btn" href="https://klinikbelajarkedokteran.site/" rel="external">Buka Klinik Belajar Kedokteran ↗</a>
           </div>
         </article>
         <article class="card study-resource">
@@ -546,7 +555,8 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
     blueprint = block.get('exam_blueprint')
     skill_labs = block.get('skill_labs') or []
     skill_lab_pdf = block.get('skill_lab_pdf')
-    skill_lab = (skill_lab_module(skill_lab_pdf) if skill_lab_pdf
+    skill_lab_chapters = block.get('skill_lab_chapters') or []
+    skill_lab = (skill_lab_module(skill_lab_pdf, skill_lab_chapters) if skill_lab_pdf
                  else skill_lab_section(skill_labs) if skill_labs else '')
     primary_shortcuts = (
         ('#jadwal-kuliah', 'Jadwal'),
@@ -562,15 +572,18 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         ('#sumber-belajar', 'Sumber belajar'),
     )
     upcoming = """
-    <section class="study-next" data-study-next aria-labelledby="study-next-heading" hidden>
+    <section class="study-next" id="ringkasan-jadwal" data-study-next aria-labelledby="study-next-heading">
       <div>
-        <h2 id="study-next-heading">Hari Ini</h2>
+        <h2 id="study-next-heading">Ringkasan Jadwal</h2>
         <p data-next-status></p>
         <h3 data-next-title hidden></h3>
         <p data-next-details hidden></p>
         <p data-next-people hidden></p>
       </div>
-      <a class="btn" data-next-material hidden>Buka materi</a>
+      <div class="study-next-actions">
+        <a class="btn" data-next-material hidden>Buka materi</a>
+        <a class="text-link study-next-agenda" href="#jadwal-kuliah">Jadwal lengkap</a>
+      </div>
     </section>""" if block['status'] == 'active' else ''
     shortcuts = ('<nav class="study-shortcuts" aria-label="Pintasan Ruang Belajar">'
                  '<div class="study-shortcuts-primary">'
@@ -583,7 +596,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
                       for item in sessions]
     if skill_lab_pdf:
         module_results.append((f'Modul Skill Lab 4 · Blok {block_name}', 'PDF', '', base + '#skill-lab'))
-        for chapter in block.get('skill_lab_chapters') or []:
+        for chapter in skill_lab_chapters:
             module_results.append((chapter['title'], 'Modul Skill Lab 4 · PDF', chapter.get('keywords', ''),
                                    f'/dokumen/{skill_lab_pdf}#page={chapter["pdf_page"]}'))
     else:

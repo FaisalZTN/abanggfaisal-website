@@ -78,56 +78,6 @@ function studyMatchScore(terms, words, context = []) {
   return score;
 }
 
-const unifiedSearch = document.querySelector('#study-search');
-if (unifiedSearch) {
-  const panel = unifiedSearch.closest('[role="search"]');
-  const results = panel.querySelector('#study-search-results');
-  const status = panel.querySelector('[role="status"]');
-  const groups = [...results.querySelectorAll('[data-search-group]')].map(section => ({
-    section,
-    entries: [...section.querySelector('template').content.children].map(item => ({
-      item,
-      words: studySearchWords(item.querySelector('strong').textContent),
-      context: studySearchWords(item.dataset.terms),
-    })),
-  }));
-
-  function updateSearch() {
-    const terms = studySearchWords(unifiedSearch.value);
-    let count = 0;
-    for (const { section, entries } of groups) {
-      const matches = terms.length ? entries
-        .map(({ item, words, context }) => ({ item, score: studyMatchScore(terms, words, context) }))
-        .filter(result => Number.isFinite(result.score))
-        .sort((a, b) => a.score - b.score)
-        .map(({ item }) => item.cloneNode(true)) : [];
-      const more = section.querySelector('details');
-      section.querySelector(':scope > ul').replaceChildren(...matches.slice(0, 5));
-      more.querySelector('ul').replaceChildren(...matches.slice(5));
-      more.querySelector('summary').textContent = `Tampilkan ${matches.length - 5} hasil lainnya`;
-      more.open = false;
-      more.hidden = matches.length <= 5;
-      section.hidden = matches.length === 0;
-      count += matches.length;
-    }
-    results.hidden = count === 0;
-    status.textContent = count ? `${count} hasil`
-      : unifiedSearch.value.trim() ? 'Tidak ada hasil. Coba nama atau kata kunci lain.' : '';
-  }
-
-  unifiedSearch.addEventListener('input', updateSearch);
-  panel.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && unifiedSearch.value) {
-      event.preventDefault();
-      unifiedSearch.value = '';
-      unifiedSearch.focus();
-      updateSearch();
-    }
-  });
-  panel.hidden = false;
-  updateSearch();
-}
-
 const search=document.querySelector('#search'),category=document.querySelector('#category');if (search) {
   const results = document.querySelector('#results');
   const cards = [...results.querySelectorAll('.card')];
@@ -230,7 +180,7 @@ if (agenda?.querySelector('[data-agenda-clock]')) {
   const pastClasses = agenda.querySelector('#arsip-kelas');
   const nextClass = document.querySelector('[data-study-next]');
   const slots = new Map();
-  for (const slot of agenda.querySelector('template').content.children) {
+  for (const slot of agenda.querySelectorAll('[data-full-schedule] .study-slot')) {
     const day = slot.dataset.day;
     if (!slots.has(day)) slots.set(day, []);
     slots.get(day).push(slot);
@@ -272,7 +222,6 @@ if (agenda?.querySelector('[data-agenda-clock]')) {
       const lecture = document.getElementById(url.hash.slice(1));
       material.hidden = !lecture?.querySelector('.study-material');
     }
-    nextClass.hidden = false;
   }
 
   function showDay(panel, day) {
@@ -330,6 +279,8 @@ if (agenda?.querySelector('[data-agenda-clock]')) {
     clockTime.dateTime = `${key}T${localTime}:00+08:00`;
     clockTime.textContent = localTime;
 
+    if (nextClass) showNextClass(key, localTime);
+
     if (key !== shownDay) {
       // UTC here represents calendar dates after converting the timestamp to WITA.
       const today = new Date(Date.UTC(+year, +month - 1, +day));
@@ -341,7 +292,6 @@ if (agenda?.querySelector('[data-agenda-clock]')) {
     }
 
     if (pastClasses) showPastClasses(key, localTime);
-    if (nextClass) showNextClass(key, localTime);
 
     for (const slot of panels[0].querySelectorAll('.study-slot[data-start]:not([data-start=""])')) {
       const status = slot.querySelector('[data-session-state]');
@@ -373,6 +323,71 @@ if (agenda?.querySelector('[data-agenda-clock]')) {
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) tickAgenda();
   });
+}
+
+const unifiedSearch = document.querySelector('#study-search');
+if (unifiedSearch) {
+  const panel = unifiedSearch.closest('[role="search"]');
+  const results = panel.querySelector('#study-search-results');
+  const status = panel.querySelector('[role="status"]');
+  let groups;
+  function indexSearchGroups() {
+    return [...results.querySelectorAll('[data-search-group]')].map(section => ({
+      section,
+      entries: [...section.querySelector('template').content.children].map(item => ({
+        item,
+        words: studySearchWords(item.querySelector('strong').textContent),
+        context: studySearchWords(item.dataset.terms),
+      })),
+    }));
+  }
+
+  function updateSearch() {
+    const terms = studySearchWords(unifiedSearch.value);
+    if (terms.length) groups ??= indexSearchGroups();
+    let count = 0;
+    for (const { section, entries } of groups ?? []) {
+      const matches = terms.length ? entries
+        .map(({ item, words, context }) => ({ item, score: studyMatchScore(terms, words, context) }))
+        .filter(result => Number.isFinite(result.score))
+        .sort((a, b) => a.score - b.score)
+        .map(({ item }) => item.cloneNode(true)) : [];
+      const more = section.querySelector('details');
+      section.querySelector(':scope > ul').replaceChildren(...matches.slice(0, 5));
+      more.querySelector('ul').replaceChildren(...matches.slice(5));
+      more.querySelector('summary').textContent = `Tampilkan ${matches.length - 5} hasil lainnya`;
+      more.open = false;
+      more.hidden = matches.length <= 5;
+      section.hidden = matches.length === 0;
+      count += matches.length;
+    }
+    results.hidden = count === 0;
+    status.textContent = count ? `${count} hasil`
+      : unifiedSearch.value.trim() ? 'Tidak ada hasil. Coba nama atau kata kunci lain.' : '';
+  }
+
+  unifiedSearch.addEventListener('input', updateSearch);
+  panel.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && unifiedSearch.value) {
+      event.preventDefault();
+      unifiedSearch.value = '';
+      unifiedSearch.focus();
+      updateSearch();
+    }
+  });
+  panel.hidden = false;
+  updateSearch();
+}
+
+const studyQuote = document.querySelector('.study-quote');
+if (studyQuote && 'IntersectionObserver' in window) {
+  const quoteObserver = new IntersectionObserver(entries => {
+    if (entries.some(entry => entry.isIntersecting)) {
+      studyQuote.classList.add('study-quote--near');
+      quoteObserver.disconnect();
+    }
+  }, { rootMargin: '300px' });
+  quoteObserver.observe(studyQuote);
 }
 
 // Compatibility for old bookmarks, with a strict allowlist.
