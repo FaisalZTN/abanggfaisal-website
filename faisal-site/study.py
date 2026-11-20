@@ -245,8 +245,10 @@ def render_exam_priorities(blueprint, lectures, teachers, base, e):
         )
     share = f'{combined / total:.0%}'
     return ('<section class="study-section study-agenda study-exam" id="prioritas-ujian" '
-            'aria-labelledby="study-exam-heading"><details class="study-exam-panel">'
-            '<summary><h2 id="study-exam-heading">Prioritas Ujian CBT KSI</h2></summary>'
+            'aria-labelledby="study-exam-heading"><h2 id="study-exam-heading">Prioritas Ujian CBT KSI</h2>'
+            '<details class="study-exam-panel"><summary>'
+            '<span class="exam-panel-show">Tampilkan daftar prioritas</span>'
+            '<span class="exam-panel-hide">Sembunyikan daftar prioritas</span></summary>'
             f'<p><strong>{combined} dari {total} soal ({share})</strong> dialokasikan untuk {e(names)}.'
             ' Buka departemen untuk melihat fokus latihan, topik kuliah, dan dosennya.</p>'
             + ''.join(rows)

@@ -118,10 +118,12 @@ async function checkExamPriorities(page, width) {
   await page.goto(base + '/ruang-belajar/');
   const panel = page.locator('.study-exam-panel');
   const heading = panel.locator(':scope > summary');
-  assert.equal(await heading.textContent(), 'Prioritas Ujian CBT KSI');
+  assert.equal(await page.locator('#study-exam-heading').textContent(), 'Prioritas Ujian CBT KSI');
+  assert.equal(await heading.innerText(), 'Tampilkan daftar prioritas');
   assert.equal(await panel.evaluate(element => element.open), false);
   await heading.press('Enter');
   assert.equal(await panel.evaluate(element => element.open), true);
+  assert.equal(await heading.innerText(), 'Sembunyikan daftar prioritas');
   await heading.press('Enter');
   assert.equal(await panel.evaluate(element => element.open), false);
   await page.getByRole('link', { name: 'Prioritas Ujian', exact: true }).click();
