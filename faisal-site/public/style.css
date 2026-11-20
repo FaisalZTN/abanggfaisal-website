@@ -404,9 +404,20 @@ body:has(.study-block--ksi)::before {
 .study-topic-body > :first-child { margin-top: .65em; }
 .study-topic-body > :last-child { margin-bottom: 0; }
 
-.study-exam-panel > summary { cursor: pointer; min-block-size: 44px; padding-block: .45rem; }
-.study-exam-panel > summary h2 { display: inline; }
-.study-exam-panel[open] > summary { border-bottom: 1px solid var(--line); }
+.study-exam-panel > summary {
+  cursor: pointer;
+  min-block-size: 44px;
+  padding: .5rem .85rem;
+  border: 1px solid var(--line);
+  border-radius: .65rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 650;
+}
+.study-exam-panel > summary:hover { background: var(--wash); }
+.study-exam-panel > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.study-exam-panel .exam-panel-hide, .study-exam-panel[open] .exam-panel-show { display: none; }
+.study-exam-panel[open] .exam-panel-hide { display: inline; }
 .study-exam .study-topic summary {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
