@@ -27,6 +27,10 @@ async function checkStudyFlow(page, width) {
   await page.goto(base);
   await checkWidth(page, 'Beranda', width);
   await page.getByRole('link', { name: 'Jadwal kuliah hari ini', exact: true }).click();
+  assert.match(page.url(), /\/ruang-belajar\/#ringkasan-jadwal$/);
+  const overview = page.locator('#ringkasan-jadwal');
+  assert.ok(await overview.getByRole('link', { name: 'Buka materi' }).isVisible());
+  await overview.getByRole('link', { name: 'Jadwal lengkap', exact: true }).click();
   assert.match(page.url(), /\/ruang-belajar\/#jadwal-kuliah$/);
   await checkWidth(page, 'Agenda', width);
   const tomorrow = page.locator('[data-agenda-days] section').nth(1);
@@ -87,7 +91,7 @@ async function checkStudyFlow(page, width) {
   await checkWidth(page, 'Kembali ke blok KSI', width);
 
   await chooseBlock(page, 'Keluhan Neuropsikiatri Arsip');
-  assert.equal(await page.locator('#study-agenda-data').count(), 0);
+  assert.equal(await page.locator('[data-agenda-clock]').count(), 0);
   const archive = page.locator('#jadwal-kuliah');
   await archive.locator('summary').click();
   await checkWidth(page, 'Arsip Neuropsikiatri terbuka', width);
