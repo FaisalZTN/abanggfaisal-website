@@ -930,3 +930,22 @@ details[open] > summary::after {
 
 /* Suppress the browser tap overlay on links and buttons. */
 a[href], button { -webkit-tap-highlight-color: transparent; }
+
+.study-feedback-form {
+  display: grid;
+  gap: .5rem;
+  max-inline-size: 36rem;
+}
+.study-feedback-form label { font-weight: 650; }
+.study-feedback-form input,
+.study-feedback-form textarea {
+  min-inline-size: 0;
+  padding: .65rem .8rem;
+  border: 1px solid var(--line);
+  border-radius: .55rem;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+.study-feedback-form textarea { resize: vertical; }
+.study-feedback-form .btn { justify-self: start; min-block-size: 44px; }

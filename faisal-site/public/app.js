@@ -79,6 +79,15 @@ function studyMatchScore(terms, words, context = []) {
 }
 
 function initializePage(signal) {
+  const feedback = document.querySelector('[data-study-feedback]');
+  feedback?.addEventListener('submit', event => {
+    event.preventDefault();
+    const fields = new FormData(feedback);
+    const subject = encodeURIComponent(fields.get('subject'));
+    const body = encodeURIComponent(fields.get('body').replace(/\r?\n/g, '\r\n'));
+    location.href = `${feedback.action}?subject=${subject}&body=${body}`;
+  }, { signal });
+
   const search=document.querySelector('#search'),category=document.querySelector('#category');if (search) {
     const results = document.querySelector('#results');
     const cards = [...results.querySelectorAll('.card')];

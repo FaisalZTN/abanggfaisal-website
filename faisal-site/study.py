@@ -616,14 +616,20 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
     tutorial_section = (f'<section class="study-section" id="tutorial"><h2>Tutorial {e(block_name)}</h2>'
                         + (f'<div class="grid">{tutorial_cards}</div>' if tutorial_cards else '<p>Belum ada tutorial.</p>')
                         + '</section>')
-    feedback = (
-        '<section class="study-section" id="beri-masukan" aria-labelledby="study-feedback-heading">'
-        '<h2 id="study-feedback-heading">Beri masukan</h2>'
-        '<p>Ada jadwal yang perlu dikoreksi, tautan yang rusak, atau usulan materi? '
-        'Kirim pesan pribadi ke @abanggfaisal dan sebutkan bagian Ruang Belajar yang kamu maksud.</p>'
-        '<a class="btn" href="https://www.instagram.com/abanggfaisal/" rel="external">Buka Instagram ↗</a>'
-        '</section>'
-    )
+    feedback = """
+    <section class="study-section" id="beri-masukan" aria-labelledby="study-feedback-heading">
+      <h2 id="study-feedback-heading">Beri masukan</h2>
+      <p>Ada jadwal yang perlu dikoreksi, tautan yang rusak, atau usulan materi?</p>
+      <form class="study-feedback-form" action="mailto:abanggfaisal@gmail.com" method="post" enctype="text/plain" data-study-feedback>
+        <label for="study-feedback-subject">Subjek</label>
+        <input id="study-feedback-subject" name="subject" value="Masukan Ruang Belajar" required maxlength="100">
+        <label for="study-feedback-message">Pesan</label>
+        <textarea id="study-feedback-message" name="body" rows="5" required maxlength="1200"></textarea>
+        <p>Setelah draf terbuka di aplikasi email, tekan Kirim di sana.</p>
+        <button class="btn" type="submit">Buka draf email</button>
+      </form>
+      <p>Alamat tujuan <a href="mailto:abanggfaisal@gmail.com">abanggfaisal@gmail.com</a></p>
+    </section>"""
     page('', 'Ruang Belajar' if block_id == DEFAULT_BLOCK else block_name + ' · Ruang Belajar', intro,
          f'<div class="study-heading"><p class="eyebrow">{e(subtitle)}</p>'
          '<h1>Ruang Belajar</h1></div>' + selector + upcoming + unified_search + shortcuts
