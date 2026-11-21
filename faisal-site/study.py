@@ -620,13 +620,13 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
     <section class="study-section" id="beri-masukan" aria-labelledby="study-feedback-heading">
       <h2 id="study-feedback-heading">Beri masukan</h2>
       <p>Ada jadwal yang perlu dikoreksi, tautan yang rusak, atau usulan materi?</p>
-      <form class="study-feedback-form" action="mailto:abanggfaisal@gmail.com" method="post" enctype="text/plain" data-study-feedback>
+      <form class="study-feedback-form" action="https://formspree.io/f/xrpqaorq" method="post" data-study-feedback>
         <label for="study-feedback-subject">Subjek</label>
         <input id="study-feedback-subject" name="subject" value="Masukan Ruang Belajar" required maxlength="100">
         <label for="study-feedback-message">Pesan</label>
-        <textarea id="study-feedback-message" name="body" rows="5" required maxlength="1200"></textarea>
-        <p>Setelah draf terbuka di aplikasi email, tekan Kirim di sana.</p>
-        <button class="btn" type="submit">Buka draf email</button>
+        <textarea id="study-feedback-message" name="message" rows="5" required maxlength="1200"></textarea>
+        <button class="btn" type="submit">Kirim masukan</button>
+        <p data-feedback-status role="status"></p>
       </form>
       <p>Alamat tujuan <a href="mailto:abanggfaisal@gmail.com">abanggfaisal@gmail.com</a></p>
     </section>"""
