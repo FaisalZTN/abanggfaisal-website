@@ -91,20 +91,28 @@ def write(path,title,desc,body,section='home',item=None):
         if not (D/html.unescape(src).lstrip('/')).is_file():raise ValueError('Missing rendered image: '+src)
     out=D/('404.html' if path=='/404.html' else path.strip('/')+'/index.html' if path!='/' else 'index.html');out.parent.mkdir(parents=True,exist_ok=True);out.write_text(page)
     if path!='/404.html':paths.append(path)
+journal_cover = next((item['cover'] for item in articles if item.get('cover')), '')
+shop_cover = next((item['thumbnail'] for item in products if item.get('thumbnail')), '')
 home_destinations = (
-    ('Ruang Belajar', '/ruang-belajar/', 'Jadwal, materi, dan tutorial kuliah.'),
-    ('Journal', '/journal/', 'Tulisan dan refleksi personal.'),
-    ('Shop', '/shop/', 'Karya digital dan materi belajar.'),
-    ('About', '/about/', 'Kenali Faisal dan cerita di balik situs ini.'),
+    ('Ruang Belajar', '/ruang-belajar/', 'Jadwal, materi, dan tutorial kuliah.', ''),
+    ('Journal', '/journal/', 'Tulisan dan refleksi personal.', journal_cover),
+    ('Shop', '/shop/', 'Karya digital dan materi belajar.', shop_cover),
+    ('About', '/about/', 'Kenali Faisal dan cerita di balik situs ini.', ''),
+    ('Jadwal Kuliah', '/ruang-belajar/#ringkasan-jadwal', 'Lihat agenda perkuliahan terdekat.', ''),
 )
-carousel_cards = ''.join(
-    f'<li><a href="{url}"><strong>{label}</strong><span>{summary}</span></a></li>'
-    for label, url, summary in home_destinations
-)
+carousel_cards = []
+for label, url, summary, cover in home_destinations:
+    image = f'<img src="{e(cover)}" alt="" loading="lazy" decoding="async">' if cover else ''
+    carousel_cards.append(
+        f'<li><a href="{url}" class="{"has-cover" if image else "solid-panel"}">{image}'
+        f'<strong>{label}</strong><span>{summary}</span></a></li>'
+    )
 home_carousel = f"""
 <section class="section home-carousel" aria-labelledby="home-carousel-title">
   <h2 id="home-carousel-title">Jelajahi situs</h2>
-  <ul class="home-carousel-cards">{carousel_cards}</ul>
+  <div class="home-carousel-window">
+    <ul class="home-carousel-cards">{''.join(carousel_cards)}</ul>
+  </div>
   <div class="home-carousel-controls" hidden>
     <button type="button" data-step="-1" aria-label="Kartu sebelumnya">‹</button>
     <span class="home-carousel-status" aria-live="polite"></span>

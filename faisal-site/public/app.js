@@ -394,18 +394,19 @@ if (studyQuote && 'IntersectionObserver' in window) {
 const old=location.hash.slice(1);if(['home','journal','shop','about'].includes(old))location.replace(old==='home'?'/':'/'+old+'/');else if(/^(article|product)\/[a-z0-9-]+$/.test(old)){const [kind,id]=old.split('/');location.replace('/'+(kind==='article'?'journal':'shop')+'/'+id+'/')}
 
 const homeCarousel = document.querySelector('.home-carousel');
-if (homeCarousel) {
+if (homeCarousel && 'registerProperty' in CSS && CSS.supports('width', 'calc(sin(22deg) * 1px)') && CSS.supports('opacity', 'mod(1, 2)')) {
   const cards = [...homeCarousel.querySelectorAll('li')];
   const track = homeCarousel.querySelector('.home-carousel-cards');
   const controls = homeCarousel.querySelector('.home-carousel-controls');
   const status = controls.querySelector('.home-carousel-status');
   let turn = 0;
   let gesture;
+  cards.forEach((card, i) => card.style.setProperty('--slot', i));
 
   function showDestination(nextIndex) {
     turn = nextIndex;
     const index = ((turn % cards.length) + cards.length) % cards.length;
-    track.style.setProperty('--turn', (turn * -90) + 'deg');
+    track.style.setProperty('--panorama-turn', -turn);
     status.textContent = (index + 1) + ' / ' + cards.length;
     return cards[index];
   }
@@ -418,6 +419,12 @@ if (homeCarousel) {
     event.preventDefault();
     const active = showDestination(turn + (event.key === 'ArrowLeft' ? -1 : 1));
     if (track.contains(event.target)) active.querySelector('a').focus({preventScroll: true});
+  });
+  track.addEventListener('focusin', event => {
+    const target = cards.indexOf(event.target.closest('li'));
+    if (target < 0) return;
+    const distance = ((target - turn) % cards.length + cards.length) % cards.length;
+    if (distance) showDestination(turn + (distance > 2 ? distance - cards.length : distance));
   });
   track.addEventListener('touchstart', event => {
     gesture = event.touches.length === 1 ? event.touches[0] : null;
