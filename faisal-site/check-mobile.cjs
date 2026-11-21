@@ -338,7 +338,7 @@ async function checkPageTransition(browser) {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.locator('.home-carousel a[href="/ruang-belajar/"]').tap();
     await page.waitForURL('**/ruang-belajar/');
-    const search = page.getByRole('searchbox', { name: 'Cari materi atau dosen' });
+    const search = page.getByRole('searchbox', { name: 'Cari di Ruang Belajar' });
     await search.fill('agng');
     assert.match(await page.locator('#study-search-results').textContent(), /Agung Biworo/i);
     assert.ok(await page.evaluate(() => window.originalHeader === document.querySelector('header')));
