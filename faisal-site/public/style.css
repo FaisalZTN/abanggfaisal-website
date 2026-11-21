@@ -928,5 +928,5 @@ details[open] > summary::after {
   details > summary::after { transition: background-size 180ms ease; }
 }
 
-/* Suppress the browser tap overlay on links and buttons. */
-a[href], button { -webkit-tap-highlight-color: transparent; }
+/* Let all controls inherit a transparent browser tap overlay. */
+:root { -webkit-tap-highlight-color: transparent; }
