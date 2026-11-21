@@ -978,3 +978,22 @@ details[open] > summary::after {
   .study-feedback-panel { grid-template-columns: minmax(0, 1fr); }
   .study-feedback-form .btn { inline-size: 100%; }
 }
+
+.study-feedback-consent { display: flex; align-items: start; gap: .65rem; font-size: .875rem; }
+.study-feedback-form input[type="checkbox"] {
+  flex: none;
+  inline-size: 1.15rem;
+  block-size: 1.15rem;
+  min-block-size: 0;
+  margin: .2rem 0 0;
+  accent-color: var(--accent);
+}
+.study-comments { margin-block-start: 1.5rem; }
+.study-comments ul { display: grid; gap: .75rem; list-style: none; padding: 0; }
+.study-comments li {
+  padding: .85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: .85rem;
+  overflow-wrap: anywhere;
+}
+.study-comments li p { margin: .3rem 0 0; white-space: pre-wrap; }

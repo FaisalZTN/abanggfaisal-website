@@ -80,6 +80,31 @@ function studyMatchScore(terms, words, context = []) {
 
 function initializePage(signal) {
   const feedback = document.querySelector('[data-study-feedback]');
+  const commentsEndpoint = '/api/study-comments';
+  const comments = document.querySelector('[data-study-comments]');
+  const commentList = comments?.querySelector('[data-new-comments]');
+  function showComment(comment, prepend = false) {
+    const item = document.createElement('li');
+    const name = document.createElement('strong');
+    const message = document.createElement('p');
+    name.textContent = comment.name;
+    message.textContent = comment.message;
+    item.append(name, message);
+    if (prepend) commentList.prepend(item);
+    else commentList.append(item);
+    commentList.hidden = false;
+    comments.querySelector('[data-no-comments]')?.remove();
+  }
+  if (feedback && commentList) {
+    fetch(commentsEndpoint, { signal })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => {
+        if (!Array.isArray(data?.comments) || signal.aborted) return;
+        for (const comment of data.comments) showComment(comment);
+        feedback.querySelector('[data-public-comment-option]').hidden = false;
+      })
+      .catch(() => {});
+  }
   feedback?.addEventListener('submit', async event => {
     event.preventDefault();
     const button = feedback.querySelector('button[type="submit"]');
@@ -89,14 +114,19 @@ function initializePage(signal) {
     button.disabled = true;
     status.textContent = 'Mengirim masukan…';
     try {
-      const response = await fetch(feedback.action, {
+      const publish = fields.get('public_comment') === 'yes';
+      const response = await fetch(publish ? commentsEndpoint : feedback.action, {
         method: 'POST',
         body: fields,
         headers: { Accept: 'application/json' },
       });
       if (!response.ok) throw new Error('Feedback submission failed');
+      const result = publish ? await response.json() : null;
+      if (result?.published) showComment(result.comment, true);
       feedback.reset();
-      status.textContent = 'Masukan berhasil dikirim. Terima kasih!';
+      status.textContent = result?.published === false
+        ? 'Masukan terkirim, tetapi komentar belum bisa ditampilkan.'
+        : 'Masukan berhasil dikirim. Terima kasih!';
     } catch {
       status.textContent = 'Masukan belum bisa dikirim. Coba lagi atau hubungi alamat email di bawah.';
     } finally {
