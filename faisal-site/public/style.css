@@ -163,30 +163,33 @@ main{min-height:60vh}h1,h2,h3,p,a{overflow-wrap:anywhere}.hero{position:relative
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .study-more { margin-top: 1rem; }
-/* Motif KSI mengikuti latar halaman di luar panel baca. */
+/* Motif blok mengikuti latar halaman di luar panel baca. */
 .study-date { display: block; margin-block: .35rem; font-size: .78rem; color: var(--muted); }
-body:has(.study-block--ksi) {
+body:has(.study-block--ksi) { --study-pattern: url('/patterns/ksi.svg'); }
+body:has(.study-block--neuropsikiatri) { --study-pattern: url('/patterns/neuropsikiatri.svg'); }
+body:has(.study-block--kms) { --study-pattern: url('/patterns/kms.svg'); }
+body:has(:is(.study-block--ksi, .study-block--neuropsikiatri, .study-block--kms)) {
   position: relative;
   isolation: isolate;
 }
-body:has(.study-block--ksi)::before {
+body:has(:is(.study-block--ksi, .study-block--neuropsikiatri, .study-block--kms))::before {
   content: '';
   position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
   background-color: var(--accent);
-  mask: url('/patterns/ksi.svg') center top / 480px 356px repeat;
+  mask: var(--study-pattern) center top / 480px 356px repeat;
   opacity: .19;
 }
 .study-tutorial.reading {
   padding: clamp(.85rem, 3vw, 1.8rem);
 }
-.study-block--ksi #tutorial .study-row {
+:is(.study-block--ksi, .study-block--neuropsikiatri, .study-block--kms) #tutorial .study-row {
   background: var(--paper);
 }
 @media (max-width: 760px) {
-  body:has(.study-block--ksi)::before {
+  body:has(:is(.study-block--ksi, .study-block--neuropsikiatri, .study-block--kms))::before {
     mask-size: 340px 252px;
     opacity: .15;
   }
