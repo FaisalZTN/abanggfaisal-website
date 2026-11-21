@@ -633,8 +633,8 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         for comment in reversed(comments)
     )
     comment_history = (
-        '<div class="study-comments"><h3>Komentar publik</h3>'
-        + (f'<ul>{comment_items}</ul>' if comment_items else '<p>Belum ada komentar yang diterbitkan.</p>')
+        '<div class="study-comments" data-study-comments><h3>Komentar publik</h3><ul data-new-comments hidden></ul>'
+        + (f'<ul>{comment_items}</ul>' if comment_items else '<p data-no-comments>Belum ada komentar yang diterbitkan.</p>')
         + '</div>'
     )
     feedback = """
@@ -667,9 +667,9 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             <label for="study-feedback-email">Gmail atau email balasan <span>(opsional)</span></label>
             <input id="study-feedback-email" name="email" type="email" autocomplete="email" maxlength="254">
           </div>
-          <label class="study-feedback-consent">
+          <label class="study-feedback-consent" data-public-comment-option hidden>
             <input type="checkbox" name="public_comment" value="yes">
-            <span>Izinkan nama dan pesan saya tampil sebagai komentar setelah ditinjau. Email tetap pribadi.</span>
+            <span>Izinkan nama dan pesan saya langsung tampil sebagai komentar publik. Email tetap pribadi.</span>
           </label>
           <input type="hidden" name="subject" value="Masukan Ruang Belajar">
           <div class="study-feedback-actions">
