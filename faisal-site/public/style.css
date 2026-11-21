@@ -772,11 +772,13 @@ body > header {
 .home-carousel-cards span { color: var(--muted); line-height: 1.4; }
 .home-carousel-cards a:hover strong { text-decoration: underline; }
 .home-carousel.is-interactive .home-carousel-cards {
-  --orbit-offset: min(32cqw, 17rem);
+  --orbit-radius: min(31cqw, 15rem);
+  --orbit-tilt: -32deg;
   display: grid;
   place-items: center;
-  min-height: 14rem;
-  perspective: 700px;
+  min-height: clamp(15rem, 37cqw, 26rem);
+  perspective: 850px;
+  transform-style: preserve-3d;
   touch-action: pan-y;
   margin-block-end: 1.25rem;
   border-radius: 2rem;
@@ -785,30 +787,32 @@ body > header {
     radial-gradient(ellipse at 76% 67%, color-mix(in srgb, #c9a468 28%, transparent), transparent 52%),
     color-mix(in srgb, var(--wash) 54%, transparent);
 }
+@property --turn {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
 .home-carousel.is-interactive li {
   grid-area: 1 / 1;
-  width: min(37%, 15rem);
-  transform: translateX(calc(var(--side, 0) * var(--orbit-offset)))
-    rotateY(calc(var(--side, 0) * 40deg)) translateZ(var(--depth, 0px)) scale(var(--card-scale, .84));
+  width: min(32%, 14rem);
+  transform-style: preserve-3d;
+  --card-angle: calc(var(--turn) + var(--slot, 0deg));
+  transform: rotateX(var(--orbit-tilt)) rotateY(var(--card-angle))
+    translateZ(var(--orbit-radius)) rotateY(calc(-1 * var(--card-angle)))
+    rotateX(calc(-1 * var(--orbit-tilt)));
 }
-.home-carousel li[data-position="previous"] { --side: -1; }
-.home-carousel li[data-position="next"] { --side: 1; }
-.home-carousel li[data-position="front"] { --depth: 35px; --card-scale: 1; z-index: 1; }
-.home-carousel li[data-position="front"] a {
-  border-color: color-mix(in srgb, var(--accent) 44%, var(--line));
-  border-top-color: color-mix(in srgb, white 85%, var(--line));
-  background: radial-gradient(ellipse at top left, rgb(255 255 255 / .34), transparent 65%),
-    color-mix(in srgb, var(--wash) 80%, transparent);
-}
+.home-carousel li:nth-child(2) { --slot: 90deg; }
+.home-carousel li:nth-child(3) { --slot: 180deg; }
+.home-carousel li:nth-child(4) { --slot: 270deg; }
 @media (max-width: 600px) {
-  .home-carousel.is-interactive .home-carousel-cards { min-height: 12rem; }
-  .home-carousel.is-interactive a { min-height: 8rem; }
-  .home-carousel.is-interactive li:not([data-position="front"]) span { display: none; }
+  .home-carousel.is-interactive .home-carousel-cards { min-height: 15rem; }
+  .home-carousel.is-interactive a { min-height: 5.5rem; }
+  .home-carousel.is-interactive li span { display: none; }
   .home-carousel.is-interactive .home-carousel-cards span { font-size: .875rem; }
 }
 .home-carousel-controls { display: flex; gap: 1rem; align-items: center; justify-content: center; }
 .home-carousel-controls button { font-size: 1.5rem; line-height: 1; }
 .home-carousel-status { min-width: 5ch; text-align: center; color: var(--muted); }
 @media (prefers-reduced-motion: no-preference) {
-  .home-carousel.is-interactive li { transition: transform .36s ease; }
+  .home-carousel.is-interactive .home-carousel-cards { transition: --turn .62s cubic-bezier(.25, .8, .25, 1); }
 }

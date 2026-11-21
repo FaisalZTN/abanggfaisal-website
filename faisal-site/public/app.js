@@ -399,28 +399,25 @@ if (homeCarousel) {
   const track = homeCarousel.querySelector('.home-carousel-cards');
   const controls = homeCarousel.querySelector('.home-carousel-controls');
   const status = controls.querySelector('.home-carousel-status');
-  let index = 0;
+  let turn = 0;
   let gesture;
 
   function showDestination(nextIndex) {
-    index = (nextIndex + cards.length) % cards.length;
-    const positions = ['front', 'next', 'back', 'previous'];
-    cards.forEach((card, i) => {
-      const position = positions[(i - index + cards.length) % cards.length];
-      card.dataset.position = position;
-      card.hidden = position === 'back';
-    });
+    turn = nextIndex;
+    const index = ((turn % cards.length) + cards.length) % cards.length;
+    track.style.setProperty('--turn', (turn * -90) + 'deg');
     status.textContent = (index + 1) + ' / ' + cards.length;
+    return cards[index];
   }
 
   controls.querySelectorAll('button').forEach(button => {
-    button.addEventListener('click', () => showDestination(index + Number(button.dataset.step)));
+    button.addEventListener('click', () => showDestination(turn + Number(button.dataset.step)));
   });
   homeCarousel.addEventListener('keydown', event => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
-    showDestination(index + (event.key === 'ArrowLeft' ? -1 : 1));
-    if (track.contains(event.target)) cards[index].querySelector('a').focus();
+    const active = showDestination(turn + (event.key === 'ArrowLeft' ? -1 : 1));
+    if (track.contains(event.target)) active.querySelector('a').focus({preventScroll: true});
   });
   track.addEventListener('touchstart', event => {
     gesture = event.touches.length === 1 ? event.touches[0] : null;
@@ -433,7 +430,7 @@ if (homeCarousel) {
     gesture = null;
     if (Math.abs(dx) < 45 || Math.abs(dx) <= Math.abs(dy) * 1.25) return;
     event.preventDefault();
-    showDestination(index + (dx > 0 ? -1 : 1));
+    showDestination(turn + (dx > 0 ? -1 : 1));
   }, { passive: false });
 
   homeCarousel.classList.add('is-interactive');
