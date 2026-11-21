@@ -635,11 +635,15 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             </select>
           </div>
           <div class="study-feedback-field">
-            <label for="study-feedback-message">Pesan</label>
+            <label for="study-feedback-name">Nama <span>(wajib)</span></label>
+            <input id="study-feedback-name" name="name" autocomplete="name" required maxlength="100">
+          </div>
+          <div class="study-feedback-field">
+            <label for="study-feedback-message">Pesan <span>(wajib)</span></label>
             <textarea id="study-feedback-message" name="message" rows="5" required maxlength="1200" placeholder="Ceritakan bagian yang ingin diperbaiki atau ditambahkan."></textarea>
           </div>
           <div class="study-feedback-field">
-            <label for="study-feedback-email">Email balasan <span>(opsional)</span></label>
+            <label for="study-feedback-email">Gmail atau email balasan <span>(opsional)</span></label>
             <input id="study-feedback-email" name="email" type="email" autocomplete="email" maxlength="254">
           </div>
           <input type="hidden" name="subject" value="Masukan Ruang Belajar">
