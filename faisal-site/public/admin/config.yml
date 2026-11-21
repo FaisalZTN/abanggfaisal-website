@@ -192,6 +192,22 @@ collections:
           - {label: URL HTTPS, name: url, widget: string, pattern: ['^https://\S+$', 'Masukkan tautan HTTPS']}
       - {label: Status, name: status, widget: select, options: [draft, published], default: draft}
 
+  - name: study_comments
+    label: Komentar Ruang Belajar
+    files:
+      - name: study_comment_list
+        label: Komentar publik
+        file: faisal-site/content/study-comments.json
+        fields:
+          - label: Komentar yang disetujui
+            name: entries
+            widget: list
+            required: false
+            hint: Tambahkan hanya kiriman yang mengizinkan publikasi. Salin nama dan komentar tanpa alamat email atau data pribadi.
+            fields:
+              - {label: Nama tampilan, name: name, widget: string}
+              - {label: Komentar, name: message, widget: text}
+
   - name: study_guidelines
     label: Kumpulan Guideline
     files:

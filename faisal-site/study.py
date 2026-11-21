@@ -117,6 +117,7 @@ def build_study(root, output, write, head, escape, render_article, preview=False
     tutorials_by_block = block_entries(tutorials)
     teachers_by_block = block_entries(teachers)
     shared_guidelines = render_guidelines(guidelines, escape)
+    comments = json.loads((root / 'content/study-comments.json').read_text(encoding='utf-8')).get('entries') or []
     ordered = sorted(blocks.values(), key=lambda b: (b['id'] != DEFAULT_BLOCK,
                                                      b['status'] == 'coming-soon', b['title'].casefold()))
     for block in ordered:
@@ -126,7 +127,8 @@ def build_study(root, output, write, head, escape, render_article, preview=False
             render_pending_block(block, selector, shared_guidelines, write, escape)
             continue
         render_block(block, selector, shared_guidelines, lectures_by_block[block_id], tutorials_by_block[block_id],
-                     teachers, teachers_by_block[block_id], output, write, head, escape, render_article, preview)
+                     teachers, teachers_by_block[block_id], output, write, head, escape, render_article, preview,
+                     comments=comments)
 
 
 def entry_block(item):
@@ -264,7 +266,7 @@ def render_exam_priorities(blueprint, lectures, teachers, base, e):
 
 
 def render_block(block, selector, guidelines, lectures, tutorials, teachers, roster,
-                 output, write, head, e, render_article, preview):
+                 output, write, head, e, render_article, preview, *, comments=()):
     block_id = block['id']
     base = block_path(block_id)
     block_name = block['title']
@@ -623,6 +625,15 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
     tutorial_section = (f'<section class="study-section" id="tutorial"><h2>Tutorial {e(block_name)}</h2>'
                         + (f'<div class="grid">{tutorial_cards}</div>' if tutorial_cards else '<p>Belum ada tutorial.</p>')
                         + '</section>')
+    comment_items = ''.join(
+        f'<li><strong>{e(comment["name"])}</strong><p>{e(comment["message"])}</p></li>'
+        for comment in reversed(comments)
+    )
+    comment_history = (
+        '<div class="study-comments"><h3>Komentar publik</h3>'
+        + (f'<ul>{comment_items}</ul>' if comment_items else '<p>Belum ada komentar yang diterbitkan.</p>')
+        + '</div>'
+    )
     feedback = """
     <section class="study-section" id="beri-masukan" aria-labelledby="study-feedback-heading">
       <div class="study-feedback-panel">
@@ -653,6 +664,10 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             <label for="study-feedback-email">Gmail atau email balasan <span>(opsional)</span></label>
             <input id="study-feedback-email" name="email" type="email" autocomplete="email" maxlength="254">
           </div>
+          <label class="study-feedback-consent">
+            <input type="checkbox" name="public_comment" value="yes">
+            <span>Izinkan nama dan pesan saya tampil sebagai komentar setelah ditinjau. Email tetap pribadi.</span>
+          </label>
           <input type="hidden" name="subject" value="Masukan Ruang Belajar">
           <div class="study-feedback-actions">
             <button class="btn" type="submit">Kirim masukan</button>
@@ -661,7 +676,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
           <p class="study-feedback-contact">Atau kirim lewat <a href="mailto:abanggfaisal@gmail.com">email</a>.</p>
         </form>
       </div>
-    </section>"""
+    """ + comment_history + "</section>"
     page('', 'Ruang Belajar' if block_id == DEFAULT_BLOCK else block_name + ' · Ruang Belajar', intro,
          f'<div class="study-heading"><p class="eyebrow">{e(subtitle)}</p>'
          '<h1>Ruang Belajar</h1></div>' + selector + upcoming + unified_search + shortcuts

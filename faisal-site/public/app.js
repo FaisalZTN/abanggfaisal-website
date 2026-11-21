@@ -96,7 +96,9 @@ function initializePage(signal) {
       });
       if (!response.ok) throw new Error('Feedback submission failed');
       feedback.reset();
-      status.textContent = 'Masukan berhasil dikirim. Terima kasih!';
+      status.textContent = fields.has('public_comment')
+        ? 'Masukan berhasil dikirim. Komentar bisa tampil setelah ditinjau.'
+        : 'Masukan berhasil dikirim. Terima kasih!';
     } catch {
       status.textContent = 'Masukan belum bisa dikirim. Coba lagi atau hubungi alamat email di bawah.';
     } finally {
