@@ -9,5 +9,23 @@
     "kms-pengantar-ortopedi",
     "kms-radiologi-fraktur"
   ],
-  "status": "published"
+  "status": "published",
+  "topics": [
+    {
+      "title": "Mekanisme trauma dan hipotesis awal",
+      "body": "Tanyakan arah benturan, apakah tungkai terjepit atau terpuntir, lokasi nyeri pertama, dan kemampuan menapak. Periksa luka, deformitas, nyeri tekan tulang, serta sendi di atas dan bawahnya. Fraktur, dislokasi, dan cedera jaringan lunak masuk diagnosis banding. Konfirmasi sisi cedera dari pemeriksaan dan skenario asli karena ringkasan modul menyebut kedua sisi."
+    },
+    {
+      "title": "Pemeriksaan neurovaskular serial",
+      "body": "Catat waktu, sisi, warna, suhu, pengisian kapiler, serta nadi dorsalis pedis dan tibialis posterior. Bandingkan dengan sisi lain. Periksa dorsifleksi dan ekstensi ibu jari, plantarfleksi, serta sensasi sela jari pertama, punggung, dan telapak kaki. Dokumentasikan ulang setelah imobilisasi atau reduksi dan bila gejala berubah (1)."
+    },
+    {
+      "title": "Kapan mencurigai sindrom kompartemen",
+      "body": "Setelah trauma, nyeri yang meningkat di luar perkiraan atau nyeri saat peregangan pasif otot kompartemen harus segera meningkatkan kecurigaan. Nadi distal dapat tetap teraba. Lakukan evaluasi ortopedi segera dan pemeriksaan serial. Pengukuran tekanan kompartemen dapat membantu bila temuan meragukan atau pemeriksaan klinis tidak andal. Sindrom kompartemen akut yang terdiagnosis memerlukan dekompresi bedah segera (1)."
+    },
+    {
+      "title": "Referensi",
+      "body": "1. British Orthopaedic Association dan BAPRAS. [Diagnosis and Management of Compartment Syndrome of the Extremities](https://www.boa.ac.uk/static/d0432d40-5d99-4b64-9952f6eb1b60c166/BOASTCompartmentSyndromeSeptember-2025.pdf). BOA Standard. Revisi 2025."
+    }
+  ]
 }

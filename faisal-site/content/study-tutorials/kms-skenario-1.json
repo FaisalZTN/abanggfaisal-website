@@ -9,5 +9,23 @@
     "kms-ilmu-luka",
     "kms-peroneal-palsy"
   ],
-  "status": "published"
+  "status": "published",
+  "topics": [
+    {
+      "title": "Arti pola nyeri saat berjalan, istirahat, dan perubahan posisi",
+      "body": "Nyeri tungkai yang konsisten muncul saat berjalan lalu reda setelah berhenti mendukung klaudikasio. Nyeri jari atau kaki depan saat istirahat yang memberat ketika tungkai diangkat dan membaik saat dijuntai meningkatkan kecurigaan iskemia. Bila nyeri reda terutama dengan duduk atau membungkuk, pertimbangkan klaudikasio neurogenik. Tanyakan durasi luka, penyembuhan, dan apakah pola tersebut benar terjadi pada pasien (1)."
+    },
+    {
+      "title": "Pemeriksaan vaskular dan neurologis",
+      "body": "Bandingkan suhu, warna, dan nadi dorsalis pedis serta tibialis posterior kedua kaki. Periksa lokasi, kedalaman, dan tanda infeksi luka. Uji sensorik dan kekuatan, termasuk dorsifleksi dan eversi bila dicurigai neuropati fibular. Gangguan sensorik dapat menyertai penyakit arteri dan neuropati, sehingga petakan distribusinya bersama temuan perfusi (1)."
+    },
+    {
+      "title": "Pemeriksaan lanjutan dan urgensi",
+      "body": "Indeks pergelangan kaki–lengan (ABI) membantu menilai penyakit arteri perifer. Bila arteri tidak bisa dikompresi atau dicurigai iskemia kronis yang mengancam tungkai, tambahkan penilaian perfusi jari sesuai fasilitas. Luka yang tidak sembuh disertai temuan iskemia perlu evaluasi vaskular segera. Nyeri mendadak dengan kaki dingin, nadi hilang, atau defisit sensorik atau motorik memerlukan penilaian darurat untuk iskemia akut (1)."
+    },
+    {
+      "title": "Referensi",
+      "body": "1. Gornik HL, dkk. [2024 ACC/AHA Guideline for the Management of Lower Extremity Peripheral Artery Disease](https://pmc.ncbi.nlm.nih.gov/articles/12728805/). 2024."
+    }
+  ]
 }

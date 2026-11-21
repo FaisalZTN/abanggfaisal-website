@@ -10,5 +10,23 @@
     "kms-spine-2",
     "kms-gout-osteoporosis"
   ],
-  "status": "published"
+  "status": "published",
+  "topics": [
+    {
+      "title": "Pisahkan nyeri sebelum dan sesudah jatuh",
+      "body": "Sebelum jatuh, gali hubungan nyeri dengan beban, gerakan, dan penjalaran ke tungkai. Pola tersebut membantu membedakan nyeri mekanik dari radikulopati. Setelah jatuh terduduk, tentukan lokasi nyeri baru. Nyeri tekan tepat di koksigis atau sakrum dapat mengarah ke cedera setempat, sedangkan nyeri tekan garis tengah vertebra, terutama dengan riwayat osteoporosis atau steroid, meningkatkan kecurigaan fraktur vertebra (1)."
+    },
+    {
+      "title": "Temuan yang mengubah prioritas",
+      "body": "Tanyakan mekanisme jatuh, usia, riwayat fraktur kerapuhan, kanker, demam, dan berat badan turun. Nilai nyeri tekan tulang, kekuatan, refleks, dan sensorik kedua tungkai. Retensi urin baru, anestesia sadel, dan kelemahan progresif mengarahkan penilaian segera untuk sindrom kauda ekuina. Tidak perlu menunggu semua tanda muncul sebelum eskalasi (1)."
+    },
+    {
+      "title": "Pemilihan pencitraan",
+      "body": "Nyeri punggung tanpa tanda bahaya umumnya tidak membutuhkan pencitraan awal. Trauma atau risiko fraktur mengubah keputusan tersebut. Radiografi, CT tanpa kontras, dan MRI dipilih menurut temuan, lokasi, dan pertanyaan klinis. MRI menjadi pencitraan utama bila dicurigai kompresi kauda ekuina (1)."
+    },
+    {
+      "title": "Referensi",
+      "body": "1. American College of Radiology dan Radiological Society of North America. [ACR Appropriateness Criteria: Low Back Pain](https://www.radiologyinfo.org/en/info/acs-low-back-pain). RadiologyInfo.org."
+    }
+  ]
 }

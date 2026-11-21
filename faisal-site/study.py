@@ -426,8 +426,9 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         )
         if not entries:
             return ''
+        heading = 'Pembahasan tutorial' if block_id in {'neuropsikiatri', 'kms'} else 'Persiapan Tutorial 2'
         return ('<section class="study-tutorial-topics" aria-labelledby="tutorial-topics">'
-                '<h2 id="tutorial-topics">Persiapan Tutorial 2</h2>'
+                f'<h2 id="tutorial-topics">{heading}</h2>'
                 '<p>Pilih judul untuk membuka atau menutup topik.</p>'
                 + entries + '</section>')
 
