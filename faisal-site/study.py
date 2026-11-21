@@ -580,6 +580,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         *([] if course else [('#tutorial', 'Tutorial')]),
         ('#guideline', 'Guideline'),
         ('#sumber-belajar', 'Sumber belajar'),
+        ('#beri-masukan', 'Beri masukan'),
     )
     upcoming = """
     <section class="study-next" id="ringkasan-jadwal" data-study-next aria-labelledby="study-next-heading">
@@ -622,6 +623,45 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
     tutorial_section = (f'<section class="study-section" id="tutorial"><h2>Tutorial {e(block_name)}</h2>'
                         + (f'<div class="grid">{tutorial_cards}</div>' if tutorial_cards else '<p>Belum ada tutorial.</p>')
                         + '</section>')
+    feedback = """
+    <section class="study-section" id="beri-masukan" aria-labelledby="study-feedback-heading">
+      <div class="study-feedback-panel">
+        <div class="study-feedback-intro">
+          <h2 id="study-feedback-heading">Beri masukan</h2>
+          <p>Bantu saya memperbaiki Ruang Belajar. Laporkan jadwal yang keliru, tautan yang rusak, atau usulkan materi yang kamu butuhkan.</p>
+        </div>
+        <form class="study-feedback-form" action="https://formspree.io/f/xrpqaorq" method="post" data-study-feedback>
+          <div class="study-feedback-field">
+            <label for="study-feedback-category">Topik masukan</label>
+            <select id="study-feedback-category" name="category" required>
+              <option value="" disabled selected>Pilih topik</option>
+              <option>Jadwal dan ujian</option>
+              <option>Materi belajar</option>
+              <option>Tautan atau fitur bermasalah</option>
+              <option>Saran lainnya</option>
+            </select>
+          </div>
+          <div class="study-feedback-field">
+            <label for="study-feedback-name">Nama <span>(wajib)</span></label>
+            <input id="study-feedback-name" name="name" autocomplete="name" required maxlength="100">
+          </div>
+          <div class="study-feedback-field">
+            <label for="study-feedback-message">Pesan <span>(wajib)</span></label>
+            <textarea id="study-feedback-message" name="message" rows="5" required maxlength="1200" placeholder="Ceritakan bagian yang ingin diperbaiki atau ditambahkan."></textarea>
+          </div>
+          <div class="study-feedback-field">
+            <label for="study-feedback-email">Gmail atau email balasan <span>(opsional)</span></label>
+            <input id="study-feedback-email" name="email" type="email" autocomplete="email" maxlength="254">
+          </div>
+          <input type="hidden" name="subject" value="Masukan Ruang Belajar">
+          <div class="study-feedback-actions">
+            <button class="btn" type="submit">Kirim masukan</button>
+            <p data-feedback-status role="status"></p>
+          </div>
+          <p class="study-feedback-contact">Atau kirim lewat <a href="mailto:abanggfaisal@gmail.com">email</a>.</p>
+        </form>
+      </div>
+    </section>"""
     page('', 'Ruang Belajar' if block_id == DEFAULT_BLOCK else block_name + ' · Ruang Belajar', intro,
          f'<div class="study-heading"><p class="eyebrow">{e(subtitle)}</p>'
          '<h1>Ruang Belajar</h1></div>' + selector + upcoming + unified_search + shortcuts
@@ -636,7 +676,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
          + listing(''.join(cards), {x['department'] for x in active}, 'Cari materi atau dosen', catalogue=True)
          + '</details></section>'
          + ('' if course else tutorial_section)
-         + skill_lab + guidelines + resources + STUDY_QUOTE)
+         + skill_lab + guidelines + resources + feedback + STUDY_QUOTE)
 
     directory = []
     for person in sorted(roster.values(), key=lambda x: x['title'].casefold()):

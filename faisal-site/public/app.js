@@ -79,6 +79,31 @@ function studyMatchScore(terms, words, context = []) {
 }
 
 function initializePage(signal) {
+  const feedback = document.querySelector('[data-study-feedback]');
+  feedback?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = feedback.querySelector('button[type="submit"]');
+    if (button.disabled) return;
+    const status = feedback.querySelector('[data-feedback-status]');
+    const fields = new FormData(feedback);
+    button.disabled = true;
+    status.textContent = 'Mengirim masukan…';
+    try {
+      const response = await fetch(feedback.action, {
+        method: 'POST',
+        body: fields,
+        headers: { Accept: 'application/json' },
+      });
+      if (!response.ok) throw new Error('Feedback submission failed');
+      feedback.reset();
+      status.textContent = 'Masukan berhasil dikirim. Terima kasih!';
+    } catch {
+      status.textContent = 'Masukan belum bisa dikirim. Coba lagi atau hubungi alamat email di bawah.';
+    } finally {
+      button.disabled = false;
+    }
+  }, { signal });
+
   const search=document.querySelector('#search'),category=document.querySelector('#category');if (search) {
     const results = document.querySelector('#results');
     const cards = [...results.querySelectorAll('.card')];
