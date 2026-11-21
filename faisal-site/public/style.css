@@ -878,3 +878,25 @@ body > header {
     to { opacity: 1; }
   }
 }
+
+/* Animate the content at its natural height, including nested accordions. */
+@supports selector(details::details-content) and (interpolate-size: allow-keywords) and (transition-behavior: allow-discrete) {
+  @media (prefers-reduced-motion: no-preference) {
+    details::details-content {
+      interpolate-size: allow-keywords;
+      block-size: 0;
+      opacity: 0;
+      overflow: clip;
+      overflow-clip-margin: 4px;
+      transition:
+        block-size 360ms cubic-bezier(.22, 1, .36, 1),
+        opacity 260ms ease,
+        content-visibility 360ms allow-discrete;
+    }
+
+    details[open]::details-content {
+      block-size: auto;
+      opacity: 1;
+    }
+  }
+}
