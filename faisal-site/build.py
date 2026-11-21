@@ -101,11 +101,11 @@ home_destinations = (
     ('Jadwal Kuliah', '/ruang-belajar/#ringkasan-jadwal', 'Lihat agenda perkuliahan terdekat.', ''),
 )
 carousel_cards = []
-for label, url, summary, cover in home_destinations:
+for destination_title, url, summary, cover in home_destinations:
     image = f'<img src="{e(cover)}" alt="" loading="lazy" decoding="async">' if cover else ''
     carousel_cards.append(
         f'<li><a href="{url}" class="{"has-cover" if image else "solid-panel"}">{image}'
-        f'<strong>{label}</strong><span>{summary}</span></a></li>'
+        f'<strong>{destination_title}</strong><span>{summary}</span></a></li>'
     )
 home_carousel = f"""
 <section class="section home-carousel" aria-labelledby="home-carousel-title">
