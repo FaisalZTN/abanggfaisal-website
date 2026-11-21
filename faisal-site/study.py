@@ -117,7 +117,10 @@ def build_study(root, output, write, head, escape, render_article, preview=False
     tutorials_by_block = block_entries(tutorials)
     teachers_by_block = block_entries(teachers)
     shared_guidelines = render_guidelines(guidelines, escape)
-    comments = json.loads((root / 'content/study-comments.json').read_text(encoding='utf-8')).get('entries') or []
+    comments_path = root / 'content/study-comments.json'
+    comments = []
+    if comments_path.is_file():
+        comments = json.loads(comments_path.read_text(encoding='utf-8')).get('entries') or []
     ordered = sorted(blocks.values(), key=lambda b: (b['id'] != DEFAULT_BLOCK,
                                                      b['status'] == 'coming-soon', b['title'].casefold()))
     for block in ordered:
