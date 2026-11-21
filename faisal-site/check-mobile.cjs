@@ -301,10 +301,44 @@ async function checkHeader(page, width) {
   assert.ok(target.y >= sticky.y + sticky.height, 'Agenda is covered by the sticky header');
 }
 
+async function checkPageTransition(browser) {
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 800 },
+    isMobile: true,
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+  try {
+    await page.addInitScript(() => {
+      addEventListener('pagereveal', event => {
+        const transition = event.viewTransition;
+        if (!transition) return;
+
+        transition.ready.then(() => {
+          const incoming = document.getAnimations().find(animation => animation.animationName === 'page-cover');
+          document.documentElement.dataset.pageCoverDuration = incoming?.effect.getTiming().duration ?? '';
+        }, () => {
+          document.documentElement.dataset.pageCoverDuration = 'skipped';
+        });
+      });
+    });
+
+    await page.goto(base);
+    await page.getByRole('link', { name: 'Jelajahi Journal', exact: false }).first().tap();
+    await page.waitForURL('**/journal/');
+    await page.waitForFunction(() => document.documentElement.hasAttribute('data-page-cover-duration'));
+    assert.equal(await page.locator('html').getAttribute('data-page-cover-duration'), '1150');
+    console.log('PASS mobile navigation: 1150 ms overlap transition');
+  } finally {
+    await page.close();
+  }
+}
+
 async function main() {
   const chromiumPath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
   const browser = await chromium.launch(chromiumPath ? { executablePath: chromiumPath } : { channel: 'chrome' });
   try {
+    await checkPageTransition(browser);
     for (const width of widths) {
       const page = await browser.newPage({ viewport: { width, height: 800 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
       try {

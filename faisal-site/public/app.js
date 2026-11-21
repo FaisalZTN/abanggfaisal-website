@@ -392,3 +392,79 @@ if (studyQuote && 'IntersectionObserver' in window) {
 
 // Compatibility for old bookmarks, with a strict allowlist.
 const old=location.hash.slice(1);if(['home','journal','shop','about'].includes(old))location.replace(old==='home'?'/':'/'+old+'/');else if(/^(article|product)\/[a-z0-9-]+$/.test(old)){const [kind,id]=old.split('/');location.replace('/'+(kind==='article'?'journal':'shop')+'/'+id+'/')}
+
+const homeCarousel = document.querySelector('.home-carousel');
+if (homeCarousel && 'registerProperty' in CSS && CSS.supports('width', 'calc(sin(22deg) * 1px)') && CSS.supports('opacity', 'mod(1, 2)')) {
+  const cards = [...homeCarousel.querySelectorAll('li')];
+  const track = homeCarousel.querySelector('.home-carousel-cards');
+  const controls = homeCarousel.querySelector('.home-carousel-controls');
+  const status = controls.querySelector('.home-carousel-status');
+  let turn = 0;
+  let gesture;
+  cards.forEach((card, i) => card.style.setProperty('--slot', i));
+
+  function showDestination(nextIndex) {
+    turn = nextIndex;
+    const index = ((turn % cards.length) + cards.length) % cards.length;
+    track.style.setProperty('--panorama-turn', -turn);
+    status.textContent = (index + 1) + ' / ' + cards.length;
+    return cards[index];
+  }
+
+  controls.querySelectorAll('button').forEach(button => {
+    button.addEventListener('click', () => showDestination(turn + Number(button.dataset.step)));
+  });
+  homeCarousel.addEventListener('keydown', event => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    const active = showDestination(turn + (event.key === 'ArrowLeft' ? -1 : 1));
+    if (track.contains(event.target)) active.querySelector('a').focus({preventScroll: true});
+  });
+  track.addEventListener('focusin', event => {
+    const target = cards.indexOf(event.target.closest('li'));
+    if (target < 0) return;
+    const distance = ((target - turn) % cards.length + cards.length) % cards.length;
+    if (distance) showDestination(turn + (distance > cards.length / 2 ? distance - cards.length : distance));
+  });
+  track.addEventListener('touchstart', event => {
+    gesture = event.touches.length === 1 ? event.touches[0] : null;
+  }, { passive: true });
+  track.addEventListener('touchcancel', () => { gesture = null; });
+  track.addEventListener('touchend', event => {
+    if (!gesture) return;
+    const dx = event.changedTouches[0].clientX - gesture.clientX;
+    const dy = event.changedTouches[0].clientY - gesture.clientY;
+    gesture = null;
+    if (Math.abs(dx) < 45 || Math.abs(dx) <= Math.abs(dy) * 1.25) return;
+    event.preventDefault();
+    showDestination(turn + (dx > 0 ? -1 : 1));
+  }, { passive: false });
+
+  homeCarousel.classList.add('is-interactive');
+  showDestination(0);
+  controls.hidden = false;
+}
+
+// Warm internal destinations when visitors show intent to follow a link.
+const prefetchedPages = new Set();
+function prefetchNavigation(event) {
+  const link = event.target.closest('header nav a[href], .home-carousel-cards a[href]');
+  if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+
+  const destination = new URL(link.href);
+  if (destination.origin !== location.origin ||
+      (destination.pathname === location.pathname && destination.search === location.search)) return;
+
+  destination.hash = '';
+  if (prefetchedPages.has(destination.href)) return;
+
+  const prefetch = document.createElement('link');
+  prefetch.rel = 'prefetch';
+  prefetch.href = destination.href;
+  prefetchedPages.add(destination.href);
+  document.head.append(prefetch);
+}
+
+document.addEventListener('pointerover', prefetchNavigation);
+document.addEventListener('pointerdown', prefetchNavigation, { passive: true });
+document.addEventListener('focusin', prefetchNavigation);
