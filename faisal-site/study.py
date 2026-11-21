@@ -573,6 +573,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         *([] if course else [('#tutorial', 'Tutorial')]),
         ('#guideline', 'Guideline'),
         ('#sumber-belajar', 'Sumber belajar'),
+        ('#beri-masukan', 'Beri masukan'),
     )
     upcoming = """
     <section class="study-next" id="ringkasan-jadwal" data-study-next aria-labelledby="study-next-heading">
@@ -615,6 +616,14 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
     tutorial_section = (f'<section class="study-section" id="tutorial"><h2>Tutorial {e(block_name)}</h2>'
                         + (f'<div class="grid">{tutorial_cards}</div>' if tutorial_cards else '<p>Belum ada tutorial.</p>')
                         + '</section>')
+    feedback = (
+        '<section class="study-section" id="beri-masukan" aria-labelledby="study-feedback-heading">'
+        '<h2 id="study-feedback-heading">Beri masukan</h2>'
+        '<p>Ada jadwal yang perlu dikoreksi, tautan yang rusak, atau usulan materi? '
+        'Kirim pesan pribadi ke @abanggfaisal dan sebutkan bagian Ruang Belajar yang kamu maksud.</p>'
+        '<a class="btn" href="https://www.instagram.com/abanggfaisal/" rel="external">Buka Instagram ↗</a>'
+        '</section>'
+    )
     page('', 'Ruang Belajar' if block_id == DEFAULT_BLOCK else block_name + ' · Ruang Belajar', intro,
          f'<div class="study-heading"><p class="eyebrow">{e(subtitle)}</p>'
          '<h1>Ruang Belajar</h1></div>' + selector + upcoming + unified_search + shortcuts
@@ -629,7 +638,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
          + listing(''.join(cards), {x['department'] for x in active}, 'Cari materi atau dosen', catalogue=True)
          + '</details></section>'
          + ('' if course else tutorial_section)
-         + skill_lab + guidelines + resources + STUDY_QUOTE)
+         + skill_lab + guidelines + resources + feedback + STUDY_QUOTE)
 
     directory = []
     for person in sorted(roster.values(), key=lambda x: x['title'].casefold()):
