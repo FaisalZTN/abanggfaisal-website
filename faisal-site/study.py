@@ -618,17 +618,38 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
                         + '</section>')
     feedback = """
     <section class="study-section" id="beri-masukan" aria-labelledby="study-feedback-heading">
-      <h2 id="study-feedback-heading">Beri masukan</h2>
-      <p>Ada jadwal yang perlu dikoreksi, tautan yang rusak, atau usulan materi?</p>
-      <form class="study-feedback-form" action="https://formspree.io/f/xrpqaorq" method="post" data-study-feedback>
-        <label for="study-feedback-subject">Subjek</label>
-        <input id="study-feedback-subject" name="subject" value="Masukan Ruang Belajar" required maxlength="100">
-        <label for="study-feedback-message">Pesan</label>
-        <textarea id="study-feedback-message" name="message" rows="5" required maxlength="1200"></textarea>
-        <button class="btn" type="submit">Kirim masukan</button>
-        <p data-feedback-status role="status"></p>
-      </form>
-      <p>Alamat tujuan <a href="mailto:abanggfaisal@gmail.com">abanggfaisal@gmail.com</a></p>
+      <div class="study-feedback-panel">
+        <div class="study-feedback-intro">
+          <h2 id="study-feedback-heading">Beri masukan</h2>
+          <p>Bantu saya memperbaiki Ruang Belajar. Laporkan jadwal yang keliru, tautan yang rusak, atau usulkan materi yang kamu butuhkan.</p>
+        </div>
+        <form class="study-feedback-form" action="https://formspree.io/f/xrpqaorq" method="post" data-study-feedback>
+          <div class="study-feedback-field">
+            <label for="study-feedback-category">Topik masukan</label>
+            <select id="study-feedback-category" name="category" required>
+              <option value="" disabled selected>Pilih topik</option>
+              <option>Jadwal dan ujian</option>
+              <option>Materi belajar</option>
+              <option>Tautan atau fitur bermasalah</option>
+              <option>Saran lainnya</option>
+            </select>
+          </div>
+          <div class="study-feedback-field">
+            <label for="study-feedback-message">Pesan</label>
+            <textarea id="study-feedback-message" name="message" rows="5" required maxlength="1200" placeholder="Ceritakan bagian yang ingin diperbaiki atau ditambahkan."></textarea>
+          </div>
+          <div class="study-feedback-field">
+            <label for="study-feedback-email">Email balasan <span>(opsional)</span></label>
+            <input id="study-feedback-email" name="email" type="email" autocomplete="email" maxlength="254">
+          </div>
+          <input type="hidden" name="subject" value="Masukan Ruang Belajar">
+          <div class="study-feedback-actions">
+            <button class="btn" type="submit">Kirim masukan</button>
+            <p data-feedback-status role="status"></p>
+          </div>
+          <p class="study-feedback-contact">Atau kirim lewat <a href="mailto:abanggfaisal@gmail.com">email</a>.</p>
+        </form>
+      </div>
     </section>"""
     page('', 'Ruang Belajar' if block_id == DEFAULT_BLOCK else block_name + ' · Ruang Belajar', intro,
          f'<div class="study-heading"><p class="eyebrow">{e(subtitle)}</p>'
