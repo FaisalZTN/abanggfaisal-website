@@ -863,7 +863,7 @@ html.is-navigating::before {
   }
 
   ::view-transition-new(root) {
-    animation: page-enter 280ms cubic-bezier(.2, .7, .25, 1) both;
+    animation: page-enter 1s cubic-bezier(.25, .6, .3, 1) both;
   }
 
   @keyframes page-navigation-progress {
@@ -876,6 +876,6 @@ html.is-navigating::before {
   }
 
   @keyframes page-enter {
-    from { opacity: 0; transform: translateY(7px); }
+    from { opacity: 0; }
   }
 }
