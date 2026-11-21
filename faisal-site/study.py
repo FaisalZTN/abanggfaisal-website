@@ -229,13 +229,20 @@ def render_exam_priorities(blueprint, lectures, teachers, base, e):
             for key in (lecture.get('teachers') or [])
         )
         materials[lecture['department']].append(
-            f'<li><a href="{base}#{e(lecture["id"])}">{e(lecture["title"])}</a>'
-            f' <span class="study-exam-lecturers">· {people or "Dosen belum tercantum"}</span></li>')
+            f'<a href="{base}#{e(lecture["id"])}">{e(lecture["title"])}</a>'
+            f' <span class="study-exam-lecturers">· {people or "Dosen belum tercantum"}</span>')
     rows = []
     for item in departments:
         count = item['questions']
         percent = f'{count / total:.1%}'.replace('.', ',')
-        links = ''.join(materials[item['name']])
+        topics = materials[item['name']]
+        links = ''
+        if topics:
+            average = f'{count / len(topics):.2f}'.rstrip('0').rstrip('.').replace('.', ',')
+            links = ''.join(
+                f'<li>{topic} <span class="study-exam-weight">≈ {average} soal</span></li>'
+                for topic in topics
+            )
         rows.append(
             '<details class="study-topic">'
             f'<summary><span>{e(item.get("label", item["name"]))}</span>'
@@ -250,10 +257,10 @@ def render_exam_priorities(blueprint, lectures, teachers, base, e):
             '<span class="exam-panel-show">Tampilkan daftar prioritas</span>'
             '<span class="exam-panel-hide">Sembunyikan daftar prioritas</span></summary>'
             f'<p><strong>{combined} dari {total} soal ({share})</strong> dialokasikan untuk {e(names)}.'
-            ' Buka departemen untuk melihat fokus latihan, topik kuliah, dan dosennya.</p>'
+            ' Buka departemen untuk melihat fokus latihan, topik kuliah, dan estimasi soal tiap materi.</p>'
             + ''.join(rows)
             + f'<p class="meta">Alokasi soal per departemen mengikuti {e(blueprint["source"])}. '
-            'Fokus latihan adalah saran belajar. Cetak biru merinci sasaran belajar per departemen.</p></details></section>')
+            'Estimasi tiap materi dihitung dengan membagi jumlah soal departemen dengan jumlah materi yang tercantum. Pembagian soal sebenarnya bisa berbeda.</p></details></section>')
 
 
 def render_block(block, selector, guidelines, lectures, tutorials, teachers, roster,
