@@ -98,7 +98,6 @@ home_destinations = (
     ('Journal', '/journal/', 'Tulisan dan refleksi personal.', journal_cover),
     ('Shop', '/shop/', 'Karya digital dan materi belajar.', shop_cover),
     ('About', '/about/', 'Kenali Faisal dan cerita di balik situs ini.', ''),
-    ('Jadwal Kuliah', '/ruang-belajar/#ringkasan-jadwal', 'Lihat agenda perkuliahan terdekat.', ''),
 )
 carousel_cards = []
 for destination_title, url, summary, cover in home_destinations:

@@ -774,10 +774,6 @@ body > header {
   color: #24392f;
   background: linear-gradient(155deg, #f3ead4, #cebb90);
 }
-.home-carousel-cards li:nth-child(5) .solid-panel {
-  color: #20392f;
-  background: linear-gradient(155deg, #d9ecdc, #a9c6b4);
-}
 .home-carousel-cards .has-cover img,
 .home-carousel-cards .has-cover::before {
   position: absolute;
@@ -802,7 +798,7 @@ body > header {
   background: radial-gradient(ellipse at 50% 50%, #26372e, #151d18 75%);
 }
 .home-carousel.is-interactive .home-carousel-cards {
-  --radius: 66cqw;
+  --radius: 78cqw;
   display: grid;
   grid-template-columns: 1fr;
   place-items: center;
@@ -819,7 +815,7 @@ body > header {
 .home-carousel.is-interactive li {
   grid-area: 1 / 1;
   width: 23%;
-  --phase: calc(mod(var(--slot) + var(--panorama-turn) + 2.5, 5) - 2.5);
+  --phase: calc(mod(var(--slot) + var(--panorama-turn) + 2, 4) - 2);
   --angle: calc(var(--phase) * 22deg);
   transform: translate3d(calc(sin(var(--angle)) * var(--radius)), 0,
     calc((1 - cos(var(--angle))) * var(--radius))) rotateY(calc(-1 * var(--angle)));
@@ -840,4 +836,46 @@ body > header {
 }
 @media (prefers-reduced-motion: no-preference) {
   .home-carousel.is-interactive .home-carousel-cards { transition: --panorama-turn .65s cubic-bezier(.35, .05, .2, 1); }
+}
+
+/* Keep ordinary links while adding feedback during full-page navigation. */
+html.is-navigating::before {
+  content: '';
+  position: fixed;
+  z-index: 10000;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--accent);
+  pointer-events: none;
+  transform: scaleX(.34);
+  transform-origin: left;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+
+  html.is-navigating::before {
+    animation: page-navigation-progress 1.25s ease-out both;
+  }
+
+  ::view-transition-old(root) {
+    animation: page-exit 160ms ease-in both;
+  }
+
+  ::view-transition-new(root) {
+    animation: page-enter 280ms cubic-bezier(.2, .7, .25, 1) both;
+  }
+
+  @keyframes page-navigation-progress {
+    from { transform: scaleX(.08); }
+    to { transform: scaleX(.85); }
+  }
+
+  @keyframes page-exit {
+    to { opacity: 0; }
+  }
+
+  @keyframes page-enter {
+    from { opacity: 0; transform: translateY(7px); }
+  }
 }

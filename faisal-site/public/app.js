@@ -424,7 +424,7 @@ if (homeCarousel && 'registerProperty' in CSS && CSS.supports('width', 'calc(sin
     const target = cards.indexOf(event.target.closest('li'));
     if (target < 0) return;
     const distance = ((target - turn) % cards.length + cards.length) % cards.length;
-    if (distance) showDestination(turn + (distance > 2 ? distance - cards.length : distance));
+    if (distance) showDestination(turn + (distance > cards.length / 2 ? distance - cards.length : distance));
   });
   track.addEventListener('touchstart', event => {
     gesture = event.touches.length === 1 ? event.touches[0] : null;
@@ -444,3 +444,27 @@ if (homeCarousel && 'registerProperty' in CSS && CSS.supports('width', 'calc(sin
   showDestination(0);
   controls.hidden = false;
 }
+
+let navigationTimer;
+function clearNavigationProgress() {
+  document.documentElement.classList.remove('is-navigating');
+  clearTimeout(navigationTimer);
+}
+
+window.addEventListener('pageshow', clearNavigationProgress);
+document.addEventListener('click', event => {
+  if (event.defaultPrevented || event.button !== 0 ||
+      event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+  const link = event.target.closest('a[href]');
+  if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+
+  const destination = new URL(link.href, location.href);
+  if (destination.origin !== location.origin ||
+      !['http:', 'https:'].includes(destination.protocol) ||
+      (destination.pathname === location.pathname && destination.search === location.search)) return;
+
+  document.documentElement.classList.add('is-navigating');
+  clearTimeout(navigationTimer);
+  navigationTimer = setTimeout(clearNavigationProgress, 10000);
+});
