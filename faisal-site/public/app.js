@@ -445,26 +445,26 @@ if (homeCarousel && 'registerProperty' in CSS && CSS.supports('width', 'calc(sin
   controls.hidden = false;
 }
 
-let navigationTimer;
-function clearNavigationProgress() {
-  document.documentElement.classList.remove('is-navigating');
-  clearTimeout(navigationTimer);
-}
-
-window.addEventListener('pageshow', clearNavigationProgress);
-document.addEventListener('click', event => {
-  if (event.defaultPrevented || event.button !== 0 ||
-      event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-
-  const link = event.target.closest('a[href]');
+// Warm internal destinations when visitors show intent to follow a link.
+const prefetchedPages = new Set();
+function prefetchNavigation(event) {
+  const link = event.target.closest('header nav a[href], .home-carousel-cards a[href]');
   if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
 
-  const destination = new URL(link.href, location.href);
+  const destination = new URL(link.href);
   if (destination.origin !== location.origin ||
-      !['http:', 'https:'].includes(destination.protocol) ||
       (destination.pathname === location.pathname && destination.search === location.search)) return;
 
-  document.documentElement.classList.add('is-navigating');
-  clearTimeout(navigationTimer);
-  navigationTimer = setTimeout(clearNavigationProgress, 10000);
-});
+  destination.hash = '';
+  if (prefetchedPages.has(destination.href)) return;
+
+  const prefetch = document.createElement('link');
+  prefetch.rel = 'prefetch';
+  prefetch.href = destination.href;
+  prefetchedPages.add(destination.href);
+  document.head.append(prefetch);
+}
+
+document.addEventListener('pointerover', prefetchNavigation);
+document.addEventListener('pointerdown', prefetchNavigation, { passive: true });
+document.addEventListener('focusin', prefetchNavigation);

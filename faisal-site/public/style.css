@@ -838,44 +838,28 @@ body > header {
   .home-carousel.is-interactive .home-carousel-cards { transition: --panorama-turn .65s cubic-bezier(.35, .05, .2, 1); }
 }
 
-/* Keep ordinary links while adding feedback during full-page navigation. */
-html.is-navigating::before {
-  content: '';
-  position: fixed;
-  z-index: 10000;
-  inset: 0 0 auto;
-  height: 3px;
-  background: var(--accent);
-  pointer-events: none;
-  transform: scaleX(.34);
-  transform-origin: left;
-}
-
+/* The incoming page slides over the outgoing snapshot. */
 @media (prefers-reduced-motion: no-preference) {
   @view-transition { navigation: auto; }
 
-  html.is-navigating::before {
-    animation: page-navigation-progress 1.25s ease-out both;
-  }
+  ::view-transition-group(root) { animation-duration: .85s; }
 
-  ::view-transition-old(root) {
-    animation: page-exit 160ms ease-in both;
-  }
-
+  ::view-transition-old(root),
   ::view-transition-new(root) {
-    animation: page-enter 1s cubic-bezier(.25, .6, .3, 1) both;
+    mix-blend-mode: normal;
+    animation-duration: .85s;
+    animation-timing-function: cubic-bezier(.76, 0, .24, 1);
+    animation-fill-mode: both;
   }
 
-  @keyframes page-navigation-progress {
-    from { transform: scaleX(.08); }
-    to { transform: scaleX(.85); }
+  ::view-transition-old(root) { animation-name: page-recede; }
+  ::view-transition-new(root) { animation-name: page-cover; }
+
+  @keyframes page-recede {
+    to { transform: translateY(-12%); }
   }
 
-  @keyframes page-exit {
-    to { opacity: 0; }
-  }
-
-  @keyframes page-enter {
-    from { opacity: 0; }
+  @keyframes page-cover {
+    from { transform: translateY(100%); }
   }
 }
