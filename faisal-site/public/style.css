@@ -897,6 +897,7 @@ details > summary {
 details > summary::-webkit-details-marker { display: none; }
 
 details > summary,
+.study-catalogue > summary,
 .study-block-picker > summary,
 .study-shortcuts-more > summary,
 .study-search details > summary,
