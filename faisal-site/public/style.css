@@ -878,3 +878,6 @@ body > header {
     to { opacity: 1; }
   }
 }
+
+/* Suppress the browser tap overlay on links and buttons. */
+a[href], button { -webkit-tap-highlight-color: transparent; }
