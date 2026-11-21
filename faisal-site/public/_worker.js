@@ -6,7 +6,7 @@ function json(data, status = 200) {
 }
 
 async function comments(request, db) {
-  if (!db) return json({ error: 'Preview database binding COMMENTS_DB is missing' }, 503);
+  if (!db) return json({ error: 'Database binding COMMENTS_DB is missing' }, 503);
   await db.prepare(`CREATE TABLE IF NOT EXISTS study_comments (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
