@@ -838,7 +838,7 @@ body > header {
   .home-carousel.is-interactive .home-carousel-cards { transition: --panorama-turn .65s cubic-bezier(.35, .05, .2, 1); }
 }
 
-/* The incoming page slides over the outgoing snapshot. */
+/* Keep the page in place while the active navigation capsule travels. */
 @view-transition { navigation: auto; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -846,24 +846,35 @@ body > header {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  ::view-transition-group(root) { animation-duration: 1.15s; }
+  #nav a[aria-current="page"] { view-transition-name: active-destination; }
 
-  ::view-transition-old(root),
+  /* When the compact menu closes, carry the highlight back to its trigger. */
+  @media (max-width: 740px) {
+    #menu[aria-expanded="false"] { view-transition-name: active-destination; }
+  }
+
+  ::view-transition-group(active-destination) {
+    z-index: 1;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    animation-duration: .48s;
+    animation-timing-function: cubic-bezier(.22, 1, .36, 1);
+  }
+  ::view-transition-old(active-destination),
+  ::view-transition-new(active-destination) {
+    height: 100%;
+    object-fit: none;
+    animation-duration: .24s;
+  }
+
+  ::view-transition-group(root) { animation-duration: 1.15s; }
+  ::view-transition-old(root) { animation: none; }
   ::view-transition-new(root) {
     mix-blend-mode: normal;
-    animation-duration: 1.15s;
-    animation-timing-function: cubic-bezier(.76, 0, .24, 1);
-    animation-fill-mode: both;
+    animation: page-cover 1.15s cubic-bezier(.22, 1, .36, 1) both;
   }
-
-  ::view-transition-old(root) { animation-name: page-recede; }
-  ::view-transition-new(root) { animation-name: page-cover; }
-
-  @keyframes page-recede {
-    to { transform: translateY(-12%); }
-  }
-
   @keyframes page-cover {
-    from { transform: translateY(100%); }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 }

@@ -270,6 +270,7 @@ async function checkHeader(page, width) {
   assert.notEqual(light, 'rgba(0, 0, 0, 0)');
   assert.notEqual(dark, light);
   await header.getByRole('link', { name: 'About', exact: true }).click();
+  await page.waitForURL(base + '/about/');
   if (isMobile) await menu.click();
   assert.equal(await header.locator('a[aria-current="page"]').textContent(), 'About');
   await checkWidth(page, 'Navigasi halaman About', width);
@@ -309,26 +310,40 @@ async function checkPageTransition(browser) {
     reducedMotion: 'no-preference',
   });
   try {
-    await page.addInitScript(() => {
-      addEventListener('pagereveal', event => {
-        const transition = event.viewTransition;
-        if (!transition) return;
-
+    await page.goto(base);
+    await page.evaluate(() => {
+      window.originalHeader = document.querySelector('header');
+      const nativeTransition = document.startViewTransition.bind(document);
+      document.startViewTransition = update => {
+        const transition = nativeTransition(update);
         transition.ready.then(() => {
           const incoming = document.getAnimations().find(animation => animation.animationName === 'page-cover');
           document.documentElement.dataset.pageCoverDuration = incoming?.effect.getTiming().duration ?? '';
         }, () => {
           document.documentElement.dataset.pageCoverDuration = 'skipped';
         });
-      });
+        return transition;
+      };
     });
-
-    await page.goto(base);
     await page.getByRole('link', { name: 'Jelajahi Journal', exact: false }).first().tap();
     await page.waitForURL('**/journal/');
     await page.waitForFunction(() => document.documentElement.hasAttribute('data-page-cover-duration'));
     assert.equal(await page.locator('html').getAttribute('data-page-cover-duration'), '1150');
-    console.log('PASS mobile navigation: 1150 ms overlap transition');
+    assert.ok(await page.evaluate(() => window.originalHeader === document.querySelector('header')));
+
+    await page.goBack();
+    await page.waitForURL(base + '/');
+    await page.locator('.home-carousel.is-interactive').waitFor();
+    assert.ok(await page.evaluate(() => window.originalHeader === document.querySelector('header')));
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.locator('.home-carousel a[href="/ruang-belajar/"]').tap();
+    await page.waitForURL('**/ruang-belajar/');
+    const search = page.getByRole('searchbox', { name: 'Cari di Ruang Belajar' });
+    await search.fill('agng');
+    assert.match(await page.locator('#study-search-results').textContent(), /Agung Biworo/i);
+    assert.ok(await page.evaluate(() => window.originalHeader === document.querySelector('header')));
+    console.log('PASS mobile navigation: document retained, overlap, history, and study search');
   } finally {
     await page.close();
   }
