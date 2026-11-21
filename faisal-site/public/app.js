@@ -392,3 +392,51 @@ if (studyQuote && 'IntersectionObserver' in window) {
 
 // Compatibility for old bookmarks, with a strict allowlist.
 const old=location.hash.slice(1);if(['home','journal','shop','about'].includes(old))location.replace(old==='home'?'/':'/'+old+'/');else if(/^(article|product)\/[a-z0-9-]+$/.test(old)){const [kind,id]=old.split('/');location.replace('/'+(kind==='article'?'journal':'shop')+'/'+id+'/')}
+
+const homeCarousel = document.querySelector('.home-carousel');
+if (homeCarousel) {
+  const cards = [...homeCarousel.querySelectorAll('li')];
+  const track = homeCarousel.querySelector('.home-carousel-cards');
+  const controls = homeCarousel.querySelector('.home-carousel-controls');
+  const status = controls.querySelector('.home-carousel-status');
+  let index = 0;
+  let gesture;
+
+  function showDestination(nextIndex) {
+    index = (nextIndex + cards.length) % cards.length;
+    const positions = ['front', 'next', 'back', 'previous'];
+    cards.forEach((card, i) => {
+      const position = positions[(i - index + cards.length) % cards.length];
+      card.dataset.position = position;
+      card.hidden = position === 'back';
+    });
+    status.textContent = (index + 1) + ' / ' + cards.length;
+  }
+
+  controls.querySelectorAll('button').forEach(button => {
+    button.addEventListener('click', () => showDestination(index + Number(button.dataset.step)));
+  });
+  homeCarousel.addEventListener('keydown', event => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    showDestination(index + (event.key === 'ArrowLeft' ? -1 : 1));
+    if (track.contains(event.target)) cards[index].querySelector('a').focus();
+  });
+  track.addEventListener('touchstart', event => {
+    gesture = event.touches.length === 1 ? event.touches[0] : null;
+  }, { passive: true });
+  track.addEventListener('touchcancel', () => { gesture = null; });
+  track.addEventListener('touchend', event => {
+    if (!gesture) return;
+    const dx = event.changedTouches[0].clientX - gesture.clientX;
+    const dy = event.changedTouches[0].clientY - gesture.clientY;
+    gesture = null;
+    if (Math.abs(dx) < 45 || Math.abs(dx) <= Math.abs(dy) * 1.25) return;
+    event.preventDefault();
+    showDestination(index + (dx > 0 ? -1 : 1));
+  }, { passive: false });
+
+  homeCarousel.classList.add('is-interactive');
+  showDestination(0);
+  controls.hidden = false;
+}

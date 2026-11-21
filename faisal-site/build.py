@@ -91,7 +91,28 @@ def write(path,title,desc,body,section='home',item=None):
         if not (D/html.unescape(src).lstrip('/')).is_file():raise ValueError('Missing rendered image: '+src)
     out=D/('404.html' if path=='/404.html' else path.strip('/')+'/index.html' if path!='/' else 'index.html');out.parent.mkdir(parents=True,exist_ok=True);out.write_text(page)
     if path!='/404.html':paths.append(path)
-write('/','Ruang untuk berpikir, menulis, dan berkarya','Journal personal dan karya digital Faisal.',f'''<section class="hero"><div><div class="eyebrow">A PERSONAL SPACE · EST. 2026</div><h1>Thoughts to keep.<br><em>Stories to share.</em></h1><p class="intro">Ruang kecil untuk merawat rasa ingin tahu, menuliskan pengalaman, dan membagikan karya yang berguna.</p><div class="actions"><a class="btn" href="/journal/">Jelajahi Journal ↗</a><a class="text-link" href="/shop/">Temukan karya saya ↗</a><a class="text-link" href="/ruang-belajar/#ringkasan-jadwal">Jadwal kuliah hari ini</a></div></div>{art(1,'a quiet place to begin')}</section><section class="section"><div class="section-head"><div><div class="eyebrow">01 / WORDS & REFLECTIONS</div><h2>From the journal.</h2></div><a href="/journal/">Semua tulisan ↗</a></div>{grid(articles[:3],'journal')}</section><section class="section"><div class="section-head"><div><div class="eyebrow">02 / DIGITAL CREATIONS</div><h2>Made with intention.</h2></div><a href="/shop/">Kunjungi Shop ↗</a></div>{grid(products[:3],'shop')}</section><section class="section split"><div><div class="eyebrow">03 / THE PERSON BEHIND IT</div><h2>Belajar. Mencatat.<br><em>Berbagi.</em></h2></div><div><p class="intro">Saya Faisal, mahasiswa kedokteran yang tertarik pada proses belajar, tulisan reflektif, dan desain. Website ini menjadi ruang untuk mempertemukan ketiganya.</p><a href="/about/">Kenali saya lebih dekat ↗</a></div></section>''')
+home_destinations = (
+    ('Ruang Belajar', '/ruang-belajar/', 'Jadwal, materi, dan tutorial kuliah.'),
+    ('Journal', '/journal/', 'Tulisan dan refleksi personal.'),
+    ('Shop', '/shop/', 'Karya digital dan materi belajar.'),
+    ('About', '/about/', 'Kenali Faisal dan cerita di balik situs ini.'),
+)
+carousel_cards = ''.join(
+    f'<li><a href="{url}"><strong>{label}</strong><span>{summary}</span></a></li>'
+    for label, url, summary in home_destinations
+)
+home_carousel = f"""
+<section class="section home-carousel" aria-labelledby="home-carousel-title">
+  <h2 id="home-carousel-title">Jelajahi situs</h2>
+  <ul class="home-carousel-cards">{carousel_cards}</ul>
+  <div class="home-carousel-controls" hidden>
+    <button type="button" data-step="-1" aria-label="Kartu sebelumnya">‹</button>
+    <span class="home-carousel-status" aria-live="polite"></span>
+    <button type="button" data-step="1" aria-label="Kartu berikutnya">›</button>
+  </div>
+</section>
+"""
+write('/','Ruang untuk berpikir, menulis, dan berkarya','Journal personal dan karya digital Faisal.',f'''<section class="hero"><div><div class="eyebrow">A PERSONAL SPACE · EST. 2026</div><h1>Thoughts to keep.<br><em>Stories to share.</em></h1><p class="intro">Ruang kecil untuk merawat rasa ingin tahu, menuliskan pengalaman, dan membagikan karya yang berguna.</p><div class="actions"><a class="btn" href="/journal/">Jelajahi Journal ↗</a><a class="text-link" href="/shop/">Temukan karya saya ↗</a><a class="text-link" href="/ruang-belajar/#ringkasan-jadwal">Jadwal kuliah hari ini</a></div></div>{art(1,'a quiet place to begin')}</section>{home_carousel}<section class="section"><div class="section-head"><div><div class="eyebrow">01 / WORDS & REFLECTIONS</div><h2>From the journal.</h2></div><a href="/journal/">Semua tulisan ↗</a></div>{grid(articles[:3],'journal')}</section><section class="section"><div class="section-head"><div><div class="eyebrow">02 / DIGITAL CREATIONS</div><h2>Made with intention.</h2></div><a href="/shop/">Kunjungi Shop ↗</a></div>{grid(products[:3],'shop')}</section><section class="section split"><div><div class="eyebrow">03 / THE PERSON BEHIND IT</div><h2>Belajar. Mencatat.<br><em>Berbagi.</em></h2></div><div><p class="intro">Saya Faisal, mahasiswa kedokteran yang tertarik pada proses belajar, tulisan reflektif, dan desain. Website ini menjadi ruang untuk mempertemukan ketiganya.</p><a href="/about/">Kenali saya lebih dekat ↗</a></div></section>''')
 for kind,items,title,desc in [('journal',articles,'A collection of thoughts.','Refleksi, opini, dan catatan personal. Satu tulisan, satu cara baru melihat pengalaman.'),('shop',products,'Useful things, thoughtfully made.','E-book, template, desain, dan materi pembelajaran untuk menemani proses Anda.')]:
     cats=sorted({x['category'] for x in items})
     toolbar='<div class="toolbar"><label for="search">Cari '+('tulisan' if kind=='journal' else 'produk')+'</label><input id="search" type="search" placeholder="Ketik kata kunci…"><label for="category">Kategori</label><select id="category"><option value="">Semua kategori</option>'+''.join(f'<option>{e(c)}</option>' for c in cats)+'</select></div><p id="count" role="status"></p>' if items else ''
