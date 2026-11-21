@@ -270,6 +270,7 @@ async function checkHeader(page, width) {
   assert.notEqual(light, 'rgba(0, 0, 0, 0)');
   assert.notEqual(dark, light);
   await header.getByRole('link', { name: 'About', exact: true }).click();
+  await page.waitForURL(base + '/about/');
   if (isMobile) await menu.click();
   assert.equal(await header.locator('a[aria-current="page"]').textContent(), 'About');
   await checkWidth(page, 'Navigasi halaman About', width);
