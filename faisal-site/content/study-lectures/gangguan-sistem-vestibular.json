@@ -1,1 +1,16 @@
-ewogICJpZCI6ICJnYW5nZ3Vhbi1zaXN0ZW0tdmVzdGlidWxhciIsCiAgInRpdGxlIjogIkdhbmdndWFuIHNpc3RlbSB2ZXN0aWJ1bGFyIiwKICAiZGVwYXJ0bWVudCI6ICJJbG11IFBlbnlha2l0IFRIVC1CS0wiLAogICJ0ZWFjaGVycyI6IFsKICAgICJkci1zaGludGEtZGV2aS1hZ3VzbGlhIgogIF0sCiAgIm51bWJlciI6IDIxLAogICJzb3VyY2VfcGFnZSI6ICIxMCIsCiAgInN0YXR1cyI6ICJwdWJsaXNoZWQiLAogICJsZWN0dXJlX2RhdGUiOiAiMjAyNi0xMS0yMyIsCiAgInNjaGVkdWxlX3BhZ2UiOiAzLAogICJsZWN0dXJlX3N0YXJ0IjogIjEzOjAwIiwKICAibGVjdHVyZV9lbmQiOiAiMTU6MDAiLAogICJsZWN0dXJlX2xvY2F0aW9uIjogIlJLQiA0Igp9Cg==
+{
+  "id": "gangguan-sistem-vestibular",
+  "title": "Gangguan sistem vestibular",
+  "department": "Ilmu Penyakit THT-BKL",
+  "teachers": [
+    "dr-shinta-devi-aguslia"
+  ],
+  "number": 21,
+  "source_page": "10",
+  "status": "published",
+  "lecture_date": "2026-11-23",
+  "schedule_page": 3,
+  "lecture_start": "13:00",
+  "lecture_end": "15:00",
+  "lecture_location": "RKB 4"
+}
