@@ -1,1 +1,16 @@
-ewogICJpZCI6ICJyYWRhbmctdGVsaW5nYS10ZW5nYWgiLAogICJ0aXRsZSI6ICJSYWRhbmcgdGVsaW5nYSB0ZW5nYWgiLAogICJkZXBhcnRtZW50IjogIklsbXUgUGVueWFraXQgVEhULUJLTCIsCiAgInRlYWNoZXJzIjogWwogICAgImRyLW1haGZ1emFoIgogIF0sCiAgIm51bWJlciI6IDIwLAogICJzb3VyY2VfcGFnZSI6ICIxMCIsCiAgInN0YXR1cyI6ICJwdWJsaXNoZWQiLAogICJsZWN0dXJlX2RhdGUiOiAiMjAyNi0xMS0yNSIsCiAgInNjaGVkdWxlX3BhZ2UiOiAzLAogICJsZWN0dXJlX3N0YXJ0IjogIjEwOjAwIiwKICAibGVjdHVyZV9lbmQiOiAiMTI6MDAiLAogICJsZWN0dXJlX2xvY2F0aW9uIjogIlJLQiA0Igp9Cg==
+{
+  "id": "radang-telinga-tengah",
+  "title": "Radang telinga tengah",
+  "department": "Ilmu Penyakit THT-BKL",
+  "teachers": [
+    "dr-mahfuzah"
+  ],
+  "number": 20,
+  "source_page": "10",
+  "status": "published",
+  "lecture_date": "2026-11-25",
+  "schedule_page": 3,
+  "lecture_start": "10:00",
+  "lecture_end": "12:00",
+  "lecture_location": "RKB 4"
+}
