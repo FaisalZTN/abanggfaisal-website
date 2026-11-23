@@ -186,7 +186,6 @@ async function renderWorkroom(db, page, url) {
   const selected = entries.find(entry => String(entry.id) === params.get('edit'));
   if (selected) return workroomRedirect(url, workroomEntryLink(selected));
   if (params.get('add') === 'task') return workroomRedirect(url, workroomPages.task.path + '?add=task#add-task');
-  const q = (params.get('q') || '').trim().slice(0, 160);
   const selectedDay = params.get('day');
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Makassar' }).format(new Date());
   const validDay = /^(19|20)\d{2}-\d{2}-\d{2}$/.test(selectedDay) && Number.isFinite(Date.parse(selectedDay)) && new Date(selectedDay).toISOString().startsWith(selectedDay);
@@ -197,14 +196,12 @@ async function renderWorkroom(db, page, url) {
   const activeProjects = projects.filter(project => project.status === 'active').length;
   const activeGoals = entries.filter(entry => entry.kind === 'goal' && entry.status === 'active').length;
   const dateLabel = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full', timeZone: 'Asia/Makassar' }).format(new Date());
-  const search = q ? `<section class="collection"><h2>Hasil pencarian</h2><ul>
-    ${entries.filter(entry => (entry.title + ' ' + entry.body).toLocaleLowerCase('id').includes(q.toLocaleLowerCase('id')))
-      .map(entry => `<li><a href="${workroomEntryLink(entry)}">${e(entry.title)}</a> · ${workroomKinds[entry.kind].title}</li>`).join('') || '<li>Tidak ada hasil.</li>'}</ul></section>` : '';
   return workroomPage(`<div class="dashboard-content">
-      <h1>Workroom</h1>
-      <form class="workspace-search" method="get" action="${WORKROOM}#workspace"><label>Cari di Workroom<input name="q" type="search" maxlength="160" value="${e(q)}"></label><button>Cari</button></form>
+      <div class="workroom-hero">
+        <img src="/workroom-hero.webp" width="1600" height="870" alt="" fetchpriority="high">
+        <h1>Workroom</h1>
+      </div>
       ${notice}
-      ${search ? '<div id="workspace">' + search + '</div>' : ''}
       <section class="today-panel" id="hari-ini">
         <div class="today-heading"><div><p>${e(dateLabel)} · WITA</p><h2>Agenda Faisal</h2></div></div>
         <form class="capture" method="post" action="${WORKROOM}">
