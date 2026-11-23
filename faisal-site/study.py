@@ -565,6 +565,17 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             <a class="btn" href="https://gizmo.ai/" rel="external">Buka Gizmo ↗</a>
           </div>
         </article>
+        <article class="card study-resource">
+          <div class="study-resource-preview study-resource-materi">
+            <p class="eyebrow">Permainan medis harian</p>
+            <h3>Zebra</h3>
+            <p class="meta">playzebra.io</p>
+          </div>
+          <div class="study-resource-body">
+            <p>Jawab tujuh pertanyaan medis setiap hari. Jawaban benar yang lebih jarang mendapat poin lebih tinggi.</p>
+            <a class="btn" href="https://www.playzebra.io/" rel="external">Main Zebra ↗</a>
+          </div>
+        </article>
       </div>
     </section>'''
     blueprint = block.get('exam_blueprint')
