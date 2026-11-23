@@ -85,11 +85,29 @@ function workroomForm(kind, entry, projects) {
   </form>`;
 }
 
-async function renderWorkroom(db, notice, addTask) {
+function workroomCalendar(day, tasks, today) {
+  const date = new Date(day + 'T12:00:00Z');
+  const year = date.getUTCFullYear(), month = date.getUTCMonth();
+  const first = new Date(Date.UTC(year, month, 1));
+  const days = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const iso = value => value.toISOString().slice(0, 10);
+  const href = value => `${WORKROOM}?day=${value}#agenda`;
+  const monthLink = (offset, label, symbol) => `<a aria-label="${label}" href="${href(iso(new Date(Date.UTC(year, month + offset, 1))))}">${symbol}</a>`;
+  const dated = new Set(tasks.map(task => task.due));
+  const cells = Array.from({length: days}, (_, i) => {
+    const value = day.slice(0, 8) + String(i + 1).padStart(2, '0');
+    return `<a href="${href(value)}" class="${value === day ? 'selected ' : ''}${dated.has(value) ? 'marked' : ''}" aria-label="${value}${dated.has(value) ? ', ada tugas' : ''}"${value === today ? ' aria-current="date"' : ''}>${i + 1}</a>`;
+  });
+  return `<section class="collection calendar"><div class="calendar-heading"><h2>${date.toLocaleDateString('id-ID', {month:'long', year:'numeric', timeZone:'UTC'})}</h2><div>${monthLink(-1,'Bulan sebelumnya','‹')}${monthLink(1,'Bulan berikutnya','›')}</div></div><div class="days">${['Sn','Sl','Rb','Km','Jm','Sb','Mg'].map(d => `<small>${d}</small>`).join('')}${'<span></span>'.repeat((first.getUTCDay()+6)%7)}${cells.join('')}</div></section>`;
+}
+
+async function renderWorkroom(db, notice, addTask, selectedDay) {
   const e = escapeWorkroom;
   const { results: entries } = await db.prepare('SELECT * FROM workroom_entries ORDER BY id DESC').all();
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Makassar' }).format(new Date());
-  const due = entries.filter(entry => entry.kind === 'task' && entry.status === 'active' && entry.due && entry.due <= today)
+  const validDay = /^(19|20)\d{2}-\d{2}-\d{2}$/.test(selectedDay) && Number.isFinite(Date.parse(selectedDay)) && new Date(selectedDay).toISOString().startsWith(selectedDay);
+  const day = validDay ? selectedDay : today;
+  const due = entries.filter(entry => entry.kind === 'task' && entry.status === 'active' && entry.due && (day === today ? entry.due <= today : entry.due === day))
     .sort((a, b) => a.due.localeCompare(b.due));
   const projects = entries.filter(entry => entry.kind === 'project');
   const openTasks = entries.filter(entry => entry.kind === 'task' && entry.status === 'active').length;
@@ -112,17 +130,32 @@ async function renderWorkroom(db, notice, addTask) {
     <div class="dashboard-content">
       ${notice ? '<p class="save-notice" role="status">Perubahan tersimpan.</p>' : ''}
       <section class="today-panel" id="hari-ini">
-        <div class="today-heading"><div><p>${e(dateLabel)}</p><h2>Hari ini</h2></div>
-          <a class="quick-add" href="/workroom/?add=task#add-task">+ Tambah tugas</a>
-        </div>
-        ${due.length ? '<ul class="due-list">' + due.map(entry =>
-          `<li><a href="#entry-${entry.id}">${e(entry.title)}</a> <time datetime="${e(entry.due)}">${e(entry.due)}</time></li>`).join('') + '</ul>'
-          : '<p class="agenda-empty">Tidak ada tugas yang jatuh tempo hari ini atau sudah lewat.</p>'}
+        <div class="today-heading"><div><p>${e(dateLabel)} · WITA</p><h2>Agenda Faisal</h2></div></div>
+        <form class="capture" method="post" action="${WORKROOM}">
+          <input type="hidden" name="action" value="save"><input type="hidden" name="priority" value="normal">
+          <select aria-label="Jenis entri" name="kind"><option value="task">Tugas</option><option value="note">Catatan</option></select>
+          <input name="title" aria-label="Judul entri baru" placeholder="Apa yang ingin kamu catat?" required maxlength="160">
+          <button>Simpan</button>
+        </form>
       </section>
       <div class="dashboard-stats">
-        <a href="#task"><strong>${openTasks}</strong> Tugas terbuka</a>
-        <a href="#project"><strong>${activeProjects}</strong> Proyek aktif</a>
-        <a href="#goal"><strong>${activeGoals}</strong> Goals aktif</a>
+        <a href="#task">Tugas terbuka<strong>${openTasks}</strong></a>
+        <a href="#project">Proyek aktif<strong>${activeProjects}</strong></a>
+        <a href="#note">Catatan<strong>${entries.filter(entry => entry.kind === 'note').length}</strong></a>
+        <a href="#goal">Goals aktif<strong>${activeGoals}</strong></a>
+      </div>
+      <div class="overview" id="agenda">
+        <section class="collection agenda"><h2>${day === today ? 'Hari ini' : new Date(day+'T12:00:00Z').toLocaleDateString('id-ID',{day:'numeric',month:'long',timeZone:'UTC'})}</h2>
+          ${due.length ? '<ul class="due-list">' + due.map(entry => `<li><form method="post" action="${WORKROOM}"><input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${entry.id}"><button name="action" value="complete" aria-label="Tandai selesai: ${e(entry.title)}">✓</button></form><div><a href="#entry-${entry.id}">${e(entry.title)}</a><small>${entry.due < today ? 'Lewat tenggat · ' : ''}${e(entry.due)}</small></div></li>`).join('') + '</ul>' : '<p class="agenda-empty">Tidak ada tugas jatuh tempo.</p>'}
+          <a class="quick-add" href="/workroom/?add=task#add-task">+ Tambah tugas</a>
+          ${day !== today ? '<a class="reset-day" href="/workroom/#agenda">Kembali ke hari ini</a>' : ''}
+        </section>
+        ${workroomCalendar(day, entries.filter(entry => entry.kind === 'task' && entry.status === 'active'), today)}
+        <section class="collection recent-notes"><h2>Catatan terbaru</h2>
+          ${entries.some(entry => entry.kind === 'note') ? '<ul>' + entries.filter(entry => entry.kind === 'note').slice(0,3).map(note =>
+            `<li><a href="#entry-${note.id}"><strong>${e(note.title)}</strong>${note.body ? '<small>' + e(note.body.slice(0,120)) + '</small>' : ''}</a></li>`).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
+          <a href="#note">Semua catatan</a>
+        </section>
       </div>
       <div class="dashboard-collections">${sections}</div>
     </div></div>`);
@@ -154,7 +187,7 @@ async function handleWorkroom(request, env, url) {
     priority TEXT NOT NULL,
     project_id INTEGER REFERENCES workroom_entries(id) ON DELETE SET NULL
   )`).run();
-  if (request.method === 'GET') return renderWorkroom(db, url.searchParams.has('saved'), url.searchParams.get('add') === 'task');
+  if (request.method === 'GET') return renderWorkroom(db, url.searchParams.has('saved'), url.searchParams.get('add') === 'task', url.searchParams.get('day'));
 
   const data = await request.formData();
   const get = key => String(data.get(key) ?? '').trim();
@@ -163,7 +196,9 @@ async function handleWorkroom(request, env, url) {
   const invalid = () => workroomPage('<h1>Data belum valid</h1><p>Kembali ke formulir untuk memeriksa isian.</p>', 400);
   if (!Object.hasOwn(workroomKinds, kind) || (id !== null && (!Number.isSafeInteger(id) || id < 1))) return invalid();
 
-  if (get('action') === 'delete' && id) {
+  if (get('action') === 'complete' && kind === 'task' && id) {
+    await db.prepare("UPDATE workroom_entries SET status = 'done' WHERE id = ? AND kind = 'task'").bind(id).run();
+  } else if (get('action') === 'delete' && id) {
     await db.prepare('DELETE FROM workroom_entries WHERE id = ? AND kind = ?').bind(id, kind).run();
   } else if (get('action') === 'save') {
     const title = get('title');
