@@ -102,6 +102,15 @@ function workroomForm(kind, entry, projects, standalone = false) {
     <input type="hidden" name="id" value="${entry?.id ?? ''}">
     <label>Judul<input name="title" required maxlength="160" value="${e(entry?.title)}"></label>
     <label>${kind === 'note' ? 'Isi catatan (Markdown)' : 'Detail'}<textarea name="body" rows="${standalone ? 12 : 3}" maxlength="10000">${e(entry?.body)}</textarea></label>
+    ${kind === 'task' ? `<div class="task-detail-tools" hidden>
+      <button type="button" class="task-image-toggle" aria-expanded="false">+ Tambah gambar lewat URL</button>
+      <div class="task-image-fields" hidden>
+        <label>URL gambar HTTPS<input type="text" inputmode="url" class="task-image-url" placeholder="https://…" autocomplete="off"></label>
+        <button type="button" class="task-image-add">Sisipkan gambar</button>
+      </div>
+      <p class="task-detail-status" role="status"></p>
+      <div class="task-detail-preview" aria-label="Pratinjau detail tugas" hidden></div>
+    </div>` : ''}
     <div class="fields">
     ${kind !== 'note' ? `<label>Status<select name="status">${statuses}</select></label>
       <label>Tenggat<input type="date" name="due" value="${e(entry?.due)}"></label>` : ''}
@@ -566,7 +575,7 @@ async function renderWorkroom(db, page, url, env) {
   };
   if (page !== 'home') {
     return workroomPage(`<div class="dashboard-content"><h1>${workroomPages[page].title}</h1>
-      ${notice}${collection(page)}${page === 'task' ? workroomWorkspace(entries, params) : ''}</div>`, 200, page);
+      ${notice}${collection(page)}${page === 'task' ? workroomWorkspace(entries, params) + '<script src="/workroom-task-detail.js" defer></script>' : ''}</div>`, 200, page);
   }
 
   const selectedDay = params.get('day');
