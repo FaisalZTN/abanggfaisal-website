@@ -675,3 +675,5 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .daily-task-card .is-done .daily-task-title { color: var(--muted); text-decoration: line-through; }
 .daily-task-meta { display: flex; flex-wrap: wrap; gap: .25rem .6rem; color: var(--muted); }
 .daily-task-card p { margin: 0; padding: .35rem .9rem .85rem; color: var(--muted); }
+
+#workspace [hidden] { display: none; }
