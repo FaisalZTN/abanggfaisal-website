@@ -33,10 +33,11 @@ function escapeWorkroom(value) {
 
 function workroomPage(content, status = 200, page = null) {
   const wordmark = '<a class="workroom-wordmark" href="/">abanggfaisal.</a>';
+  const currentPage = page === 'privateNotes' ? 'note' : page;
   const sidebar = page ? `<nav class="workroom-nav" aria-label="Navigasi Workroom">
     ${wordmark}
-    ${Object.entries(workroomPages).map(([key, {path, title, icon}]) =>
-      `<a href="${path}" aria-label="${title}"${page === key ? ' aria-current="page"' : ''}>
+    ${Object.entries(workroomPages).filter(([key]) => key !== 'privateNotes').map(([key, {path, title, icon}]) =>
+      `<a href="${path}" aria-label="${title}"${currentPage === key ? ' aria-current="page"' : ''}>
         <svg viewBox="0 0 24 24" fill="none" stroke="${key === 'review' ? '#fff' : 'currentColor'}" stroke-width="1.6"
           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icon}"/></svg>
         <span aria-hidden="true">${title}</span>
@@ -50,7 +51,9 @@ function workroomPage(content, status = 200, page = null) {
       ${wordmark}
       <nav aria-label="Navigasi situs"><a href="/">Menu Utama</a><a href="/ruang-belajar/">Ruang Belajar</a></nav>
     </header>
-    <main>${content}</main>
+    <main>${page === 'note' ? `<div class="notes-private-entry">
+      <a href="${workroomPages.privateNotes.path}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="${workroomPages.privateNotes.icon}"/></svg>Catatan Rahasia</a>
+    </div>` : ''}${content}</main>
     ${page === 'task' || page === 'note' ? '<script src="/workroom-link-options.js" defer></script>' : ''}
     ${page === 'task' || page === 'note' ? '<script src="/workroom-image-upload.js" defer></script>' : ''}
     ${page ? `<footer class="workroom-footer" aria-label="Teknologi Workroom">
@@ -951,7 +954,7 @@ const privateNotesLifetime = 300;
 const privateNotesEncoder = new TextEncoder();
 
 function privateNotesReply(content, status = 200) {
-  return workroomPage(`<div class="dashboard-content"><h1>Catatan Rahasia</h1>${content}</div>`, status, 'privateNotes');
+  return workroomPage(`<div class="dashboard-content"><a class="private-notes-back" href="${workroomPages.note.path}">← Catatan</a><h1>Catatan Rahasia</h1>${content}</div>`, status, 'privateNotes');
 }
 
 function privateNotesHex(bytes) {
