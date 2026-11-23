@@ -1,6 +1,15 @@
 const escapeNoteHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 export function noteInline(text, plain = false) {
+  // Only these editor-generated tags and strictly validated attributes are rendered.
+  const style = /<(u|font (?:color="#[a-f0-9]{6}"|size="[1-7]"))>([\s\S]*?)<\/(?:u|font)>/i.exec(text);
+  if (style) {
+    const inner = noteInline(style[2], plain);
+    const tag = style[1].toLowerCase();
+    return noteInline(text.slice(0, style.index), plain) +
+      (plain ? inner : '<' + tag + '>' + inner + '</' + tag.split(' ')[0] + '>') +
+      noteInline(text.slice(style.index + style[0].length), plain);
+  }
   const emit = plain ? value => value : escapeNoteHtml;
   const tokens = /(!?)\[([^\]]*)\]\((https:\/\/[^\s)]+)\)|\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*([^*]+)\*|\^([^^]+)\^|~([^~]+)~|(https?:\/\/[^\s<>"'\[\]{}]+)/g;
   let html = '', offset = 0;
@@ -37,7 +46,7 @@ export function noteLines(body) {
 
 export function notePreview(body, limit = 120) {
   const text = noteLines(body)
-    .map(line => noteInline(line.replace(/^(?:## |- (?:\[[ xX]\] )?)/, ''), true))
+    .map(line => noteInline(line.replace(/^(?:#{1,6} |- (?:\[[ xX]\] )?)/, ''), true))
     .join(' ').replace(/\s+/g, ' ').trim();
   const characters = Array.from(text);
   return characters.length > limit ? characters.slice(0, limit).join('').trimEnd() + '…' : text;
