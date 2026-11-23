@@ -5,6 +5,13 @@ const workroomKinds = {
   note: { title: 'Catatan', statuses: { active: 'Tersimpan' } },
   goal: { title: 'Goals', statuses: { active: 'Sedang berjalan', done: 'Tercapai' } },
 };
+const workroomPages = {
+  home: { path: WORKROOM, title: 'Ringkasan', icon: 'M3 10l9-7 9 7v10H3z M9 20v-7h6v7' },
+  task: { path: WORKROOM + 'tasks/', title: 'Tugas', icon: 'M20 12v8H4V4h12 M8 11l4 4 9-10' },
+  note: { path: WORKROOM + 'notes/', title: 'Catatan', icon: 'M6 3h8l4 4v14H6z M14 3v5h4 M9 12h6 M9 16h6' },
+  project: { path: WORKROOM + 'projects/', title: 'Proyek', icon: 'M3 6h7l2 3h9v11H3z' },
+  goal: { path: WORKROOM + 'goals/', title: 'Goals', icon: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0z M12 12h.01' },
+};
 const privateHeaders = {
   'Content-Type': 'text/html; charset=utf-8',
   'Cache-Control': 'private, no-store',
@@ -19,11 +26,20 @@ function escapeWorkroom(value) {
   })[character]);
 }
 
-function workroomPage(content, status = 200) {
+function workroomPage(content, status = 200, page = null) {
+  const sidebar = page ? `<nav class="workroom-nav" aria-label="Navigasi Workroom">
+    ${Object.entries(workroomPages).map(([key, {path, title, icon}]) =>
+      `<a href="${path}" aria-label="${title}"${page === key ? ' aria-current="page"' : ''}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icon}"/></svg>
+        <span aria-hidden="true">${title}</span>
+      </a>`).join('')}
+  </nav>` : '';
   return new Response(`<!doctype html><html lang="id"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Workroom · abangfaisal</title><link rel="stylesheet" href="/workroom.css"></head>
-    <body><header><a href="/">abangfaisal.</a><a href="/ruang-belajar/">Ruang Belajar</a></header>
+    <title>${page && page !== 'home' ? workroomPages[page].title + ' · ' : ''}Workroom · abangfaisal</title><link rel="stylesheet" href="/workroom.css"></head>
+    <body${page ? ' class="workroom-layout"' : ''}>${sidebar}
+    <header><a href="/">abangfaisal.</a><a href="/ruang-belajar/">Ruang Belajar</a></header>
     <main>${content}</main></body></html>`, { status, headers: privateHeaders });
 }
 
@@ -68,8 +84,7 @@ function workroomForm(kind, entry, projects, standalone = false) {
     `<option value="${key}"${entry?.status === key ? ' selected' : ''}>${label}</option>`).join('');
   const projectOptions = projects.map(project =>
     `<option value="${project.id}"${entry?.project_id === project.id ? ' selected' : ''}>${e(project.title)}</option>`).join('');
-  return `<form method="post" action="${WORKROOM}">
-    ${standalone ? '<input type="hidden" name="return" value="editor">' : ''}
+  return `<form method="post" action="${workroomPages[kind].path}">
     <input type="hidden" name="kind" value="${kind}">
     <input type="hidden" name="id" value="${entry?.id ?? ''}">
     <label>Judul<input name="title" required maxlength="160" value="${e(entry?.title)}"></label>
@@ -104,14 +119,14 @@ function workroomCalendar(day, tasks, today) {
 
 function workroomWorkspace(entries, params) {
   const e = escapeWorkroom;
-  const editLink = entry => `<a href="${WORKROOM}?edit=${entry.id}#workspace">${e(entry.title)}</a>`;
+  const path = workroomPages.task.path;
+  const editLink = entry => `<a href="${workroomEntryLink(entry)}#workspace">${e(entry.title)}</a>${entry.priority === 'high' ? ' <small>Prioritas tinggi</small>' : ''}`;
   const view = params.get('view') === 'board' ? 'board' : 'table';
-  const q = (params.get('q') || '').trim().slice(0, 160);
   const filter = params.get('status');
-  const selected = entries.find(entry => String(entry.id) === params.get('edit'));
+  const selected = entries.find(entry => entry.kind === 'task' && String(entry.id) === params.get('edit'));
   const tasks = entries.filter(entry => entry.kind === 'task' && (!Object.hasOwn(workroomKinds.task.statuses, filter) || entry.status === filter));
   const statuses = Object.entries(workroomKinds.task.statuses);
-  const statusForm = entry => `<form class="task-status" method="post" action="${WORKROOM}">
+  const statusForm = entry => `<form class="task-status" method="post" action="${path}">
     <input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${entry.id}">
     <input type="hidden" name="view" value="${view}">
     <input type="hidden" name="filter" value="${Object.hasOwn(workroomKinds.task.statuses, filter) ? filter : ''}">
@@ -125,16 +140,13 @@ function workroomWorkspace(entries, params) {
   const views = Object.entries({table: 'Tabel', board: 'Papan'}).map(([key, label]) => {
     const query = new URLSearchParams({view: key});
     if (Object.hasOwn(workroomKinds.task.statuses, filter)) query.set('status', filter);
-    return `<a href="${WORKROOM}?${e(query)}#workspace"${view === key ? ' aria-current="true"' : ''}>${label}</a>`;
+    return `<a href="${path}?${e(query)}#workspace"${view === key ? ' aria-current="true"' : ''}>${label}</a>`;
   }).join('');
-  const search = q ? `<section class="collection"><h2>Hasil pencarian</h2><ul>
-    ${entries.filter(entry => (entry.title + ' ' + entry.body).toLocaleLowerCase('id').includes(q.toLocaleLowerCase('id')))
-      .map(entry => `<li>${editLink(entry)} · ${workroomKinds[entry.kind].title}</li>`).join('') || '<li>Tidak ada hasil.</li>'}</ul></section>` : '';
   const editor = selected ? `<section class="collection workspace-editor"><h2>${e(selected.title)}</h2>
     ${workroomForm(selected.kind, selected, entries.filter(entry => entry.kind === 'project'), true)}</section>` : '';
-  return `<div class="workspace" id="workspace">${search}${editor}<section class="collection">
+  return `<div class="workspace" id="workspace">${editor}<section class="collection">
     <h2>Daftar tugas</h2><div class="workspace-tools">${views}
-    <form method="get" action="${WORKROOM}#workspace"><input type="hidden" name="view" value="${view}">
+    <form method="get" action="${path}#workspace"><input type="hidden" name="view" value="${view}">
     <select name="status" aria-label="Filter status"><option value="">Semua status</option>
     ${statuses.map(([value, label]) => `<option value="${value}"${filter === value ? ' selected' : ''}>${label}</option>`).join('')}</select>
     <button>Filter</button></form></div>
@@ -142,35 +154,57 @@ function workroomWorkspace(entries, params) {
     ${view === 'table' && !tasks.length ? '<p>Belum ada tugas untuk filter ini.</p>' : ''}</section></div>`;
 }
 
-async function renderWorkroom(db, notice, addTask, selectedDay, params = new URLSearchParams()) {
+function workroomEntryLink(entry) {
+  const path = workroomPages[entry.kind].path;
+  return path + '?edit=' + entry.id;
+}
+
+async function renderWorkroom(db, page, url) {
   const e = escapeWorkroom;
   const { results: entries } = await db.prepare('SELECT * FROM workroom_entries ORDER BY id DESC').all();
+  const params = url.searchParams;
+  const notice = params.has('saved') ? '<p class="save-notice" role="status">Perubahan tersimpan.</p>' : '';
+  const projects = entries.filter(entry => entry.kind === 'project');
+  const collection = kind => {
+    const { title, statuses } = workroomKinds[kind];
+    return `<section class="collection" id="${kind}">
+      <details class="add-entry" id="add-${kind}"${params.get('add') === kind ? ' open' : ''}>
+        <summary>Tambah ${title.toLowerCase()}</summary>${workroomForm(kind, null, projects)}
+      </details>
+      ${kind === 'task' ? '' : entries.filter(entry => entry.kind === kind).map(entry =>
+        `<details id="entry-${entry.id}"${params.get('edit') === String(entry.id) ? ' open' : ''}>
+          <summary>${e(entry.title)} <small>${statuses[entry.status]}${entry.due ? ' · ' + e(entry.due) : ''}</small></summary>
+          ${workroomForm(kind, entry, projects)}
+        </details>`).join('')}
+    </section>`;
+  };
+  if (page !== 'home') {
+    return workroomPage(`<div class="dashboard-content"><h1>${workroomPages[page].title}</h1>
+      ${notice}${collection(page)}${page === 'task' ? workroomWorkspace(entries, params) : ''}</div>`, 200, page);
+  }
+
+  const selected = entries.find(entry => String(entry.id) === params.get('edit'));
+  if (selected) return workroomRedirect(url, workroomEntryLink(selected));
+  if (params.get('add') === 'task') return workroomRedirect(url, workroomPages.task.path + '?add=task#add-task');
+  const q = (params.get('q') || '').trim().slice(0, 160);
+  const selectedDay = params.get('day');
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Makassar' }).format(new Date());
   const validDay = /^(19|20)\d{2}-\d{2}-\d{2}$/.test(selectedDay) && Number.isFinite(Date.parse(selectedDay)) && new Date(selectedDay).toISOString().startsWith(selectedDay);
   const day = validDay ? selectedDay : today;
   const due = entries.filter(entry => entry.kind === 'task' && entry.status !== 'done' && entry.due && (day === today ? entry.due <= today : entry.due === day))
     .sort((a, b) => a.due.localeCompare(b.due));
-  const projects = entries.filter(entry => entry.kind === 'project');
   const openTasks = entries.filter(entry => entry.kind === 'task' && entry.status !== 'done').length;
   const activeProjects = projects.filter(project => project.status === 'active').length;
   const activeGoals = entries.filter(entry => entry.kind === 'goal' && entry.status === 'active').length;
   const dateLabel = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full', timeZone: 'Asia/Makassar' }).format(new Date());
-  const sections = Object.entries(workroomKinds).map(([kind, settings]) => `<section class="collection" id="${kind}">
-    <h2>${settings.title}</h2>
-    <details class="add-entry" id="add-${kind}"${kind === 'task' && addTask ? ' open' : ''}><summary>Tambah ${settings.title.toLowerCase()}</summary>${workroomForm(kind, null, projects)}</details>
-    ${entries.filter(entry => entry.kind === kind).map(entry => `<details id="entry-${entry.id}">
-      <summary>${e(entry.title)} <small>${settings.statuses[entry.status]}${entry.due ? ' · ' + e(entry.due) : ''}${entry.priority === 'high' ? ' · Prioritas tinggi' : ''}</small></summary>
-      ${workroomForm(kind, entry, projects)}
-    </details>`).join('')}</section>`).join('');
-  return workroomPage(`<div class="dashboard">
-    <aside class="dashboard-sidebar">
+  const search = q ? `<section class="collection"><h2>Hasil pencarian</h2><ul>
+    ${entries.filter(entry => (entry.title + ' ' + entry.body).toLocaleLowerCase('id').includes(q.toLocaleLowerCase('id')))
+      .map(entry => `<li><a href="${workroomEntryLink(entry)}">${e(entry.title)}</a> · ${workroomKinds[entry.kind].title}</li>`).join('') || '<li>Tidak ada hasil.</li>'}</ul></section>` : '';
+  return workroomPage(`<div class="dashboard-content">
       <h1>Workroom</h1>
-      <form class="workspace-search" method="get" action="${WORKROOM}#workspace"><label>Cari di Workroom<input name="q" type="search" maxlength="160" value="${e((params.get('q') || '').slice(0,160))}"></label><button>Cari</button></form>
-      <nav aria-label="Bagian Workroom"><a href="#hari-ini">Hari ini</a><a href="#workspace">Daftar tugas</a>${Object.entries(workroomKinds).map(([kind, settings]) =>
-        `<a href="${kind === 'note' ? WORKROOM + '?notes' : '#' + kind}">${settings.title}</a>`).join('')}</nav>
-    </aside>
-    <div class="dashboard-content">
-      ${notice ? '<p class="save-notice" role="status">Perubahan tersimpan.</p>' : ''}
+      <form class="workspace-search" method="get" action="${WORKROOM}#workspace"><label>Cari di Workroom<input name="q" type="search" maxlength="160" value="${e(q)}"></label><button>Cari</button></form>
+      ${notice}
+      ${search ? '<div id="workspace">' + search + '</div>' : ''}
       <section class="today-panel" id="hari-ini">
         <div class="today-heading"><div><p>${e(dateLabel)} · WITA</p><h2>Agenda Faisal</h2></div></div>
         <form class="capture" method="post" action="${WORKROOM}">
@@ -181,27 +215,25 @@ async function renderWorkroom(db, notice, addTask, selectedDay, params = new URL
         </form>
       </section>
       <div class="dashboard-stats">
-        <a href="#task">Tugas terbuka<strong>${openTasks}</strong></a>
-        <a href="#project">Proyek aktif<strong>${activeProjects}</strong></a>
-        <a href="${WORKROOM}?notes">Catatan<strong>${entries.filter(entry => entry.kind === 'note').length}</strong></a>
-        <a href="#goal">Goals aktif<strong>${activeGoals}</strong></a>
+        <a href="${workroomPages.task.path}">Tugas terbuka<strong>${openTasks}</strong></a>
+        <a href="${workroomPages.project.path}">Proyek aktif<strong>${activeProjects}</strong></a>
+        <a href="${workroomPages.note.path}">Catatan<strong>${entries.filter(entry => entry.kind === 'note').length}</strong></a>
+        <a href="${workroomPages.goal.path}">Goals aktif<strong>${activeGoals}</strong></a>
       </div>
       <div class="overview" id="agenda">
         <section class="collection agenda"><h2>${day === today ? 'Hari ini' : new Date(day+'T12:00:00Z').toLocaleDateString('id-ID',{day:'numeric',month:'long',timeZone:'UTC'})}</h2>
-          ${due.length ? '<ul class="due-list">' + due.map(entry => `<li><form method="post" action="${WORKROOM}"><input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${entry.id}"><button name="action" value="complete" aria-label="Tandai selesai: ${e(entry.title)}">✓</button></form><div><a href="#entry-${entry.id}">${e(entry.title)}</a><small>${entry.due < today ? 'Lewat tenggat · ' : ''}${e(entry.due)}</small></div></li>`).join('') + '</ul>' : '<p class="agenda-empty">Tidak ada tugas jatuh tempo.</p>'}
-          <a class="quick-add" href="/workroom/?add=task#add-task">+ Tambah tugas</a>
+          ${due.length ? '<ul class="due-list">' + due.map(entry => `<li><form method="post" action="${WORKROOM}"><input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${entry.id}"><button name="action" value="complete" aria-label="Tandai selesai: ${e(entry.title)}">✓</button></form><div><a href="${workroomEntryLink(entry)}">${e(entry.title)}</a><small>${entry.due < today ? 'Lewat tenggat · ' : ''}${e(entry.due)}</small></div></li>`).join('') + '</ul>' : '<p class="agenda-empty">Tidak ada tugas jatuh tempo.</p>'}
+          <a class="quick-add" href="${workroomPages.task.path}?add=task#add-task">+ Tambah tugas</a>
           ${day !== today ? '<a class="reset-day" href="/workroom/#agenda">Kembali ke hari ini</a>' : ''}
         </section>
         ${workroomCalendar(day, entries.filter(entry => entry.kind === 'task' && entry.status !== 'done'), today)}
         <section class="collection recent-notes"><h2>Catatan terbaru</h2>
           ${entries.some(entry => entry.kind === 'note') ? '<ul>' + entries.filter(entry => entry.kind === 'note').slice(0,3).map(note =>
-            `<li><a href="${WORKROOM}?notes&edit=${note.id}"><strong>${e(note.title)}</strong>${note.body ? '<small>' + e(note.body.slice(0,120)) + '</small>' : ''}</a></li>`).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
-          <a href="${WORKROOM}?notes">Semua catatan</a>
+            `<li><a href="${workroomEntryLink(note)}"><strong>${e(note.title)}</strong>${note.body ? '<small>' + e(note.body.slice(0,120)) + '</small>' : ''}</a></li>`).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
+          <a href="${workroomPages.note.path}">Semua catatan</a>
         </section>
       </div>
-      ${workroomWorkspace(entries, params)}
-      <div class="dashboard-collections">${sections}</div>
-    </div></div>`);
+    </div>`, 200, page);
 }
 
 const builtInNoteCategories = ['belajar', 'ide', 'pribadi', 'referensi'];
@@ -256,6 +288,10 @@ async function workroomNotesData(request, db) {
   return reply({id: id ?? result.meta.last_row_id, kind:'note', title:title.trim(), body, category, updated});
 }
 
+function workroomRedirect(url, target, status = 302) {
+  return new Response(null, { status, headers: { ...privateHeaders, Location: new URL(target, url).href } });
+}
+
 async function handleWorkroom(request, env, url) {
   if (!env.WORKROOM_ACCESS_AUD || !env.WORKROOM_OWNER_EMAIL ||
       !/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(env.WORKROOM_ACCESS_ISSUER || '') || !env.WORKROOM_DB) {
@@ -264,8 +300,10 @@ async function handleWorkroom(request, env, url) {
   if (!await isWorkroomOwner(request, env)) {
     return workroomPage('<h1>Workroom privat</h1><p>Akses hanya tersedia untuk akun pemilik.</p>', 403);
   }
-  if (url.pathname === '/workroom') return Response.redirect(new URL(WORKROOM, url), 308);
-  if (url.pathname !== WORKROOM) return workroomPage('<h1>Halaman tidak ditemukan</h1>', 404);
+  const path = url.pathname.endsWith('/') ? url.pathname : url.pathname + '/';
+  const page = Object.keys(workroomPages).find(key => workroomPages[key].path === path);
+  if (!page) return workroomPage('<h1>Halaman tidak ditemukan</h1>', 404);
+  if (url.pathname !== path) return workroomRedirect(url, path + url.search, 308);
   if (request.method === 'POST' && request.headers.get('Origin') !== url.origin) {
     return workroomPage('<h1>Permintaan ditolak</h1>', 403);
   }
@@ -284,18 +322,26 @@ async function handleWorkroom(request, env, url) {
     note_category TEXT,
     note_updated INTEGER
   )`).run();
-  if (url.searchParams.has('notes-data')) return workroomNotesData(request, db);
-  if (request.method === 'GET' && url.searchParams.has('notes')) {
-    return workroomPage('<div id="view" aria-busy="true">Memuat catatan…</div><p id="note-status" role="status"></p><noscript>Aktifkan JavaScript untuk membuka editor. <a href="/workroom/#note">Buka daftar catatan dasar</a></noscript><script src="/workroom-notes.js" defer></script>');
+  if ((page === 'home' || page === 'note') && url.searchParams.has('notes-data')) {
+    return workroomNotesData(request, db);
   }
-  if (request.method === 'GET') return renderWorkroom(db, url.searchParams.has('saved'), url.searchParams.get('add') === 'task', url.searchParams.get('day'), url.searchParams);
+  if (request.method === 'GET') {
+    if (page === 'home' && url.searchParams.has('notes')) {
+      url.searchParams.delete('notes');
+      return workroomRedirect(url, workroomPages.note.path + url.search);
+    }
+    if (page === 'note' && !url.searchParams.has('basic')) {
+      return workroomPage('<div id="view" aria-busy="true">Memuat catatan…</div><p id="note-status" role="status"></p><noscript>Aktifkan JavaScript untuk membuka editor. <a href="?basic">Buka daftar catatan dasar</a></noscript><script src="/workroom-notes.js" defer></script>', 200, page);
+    }
+    return renderWorkroom(db, page, url);
+  }
 
   const data = await request.formData();
   const get = key => String(data.get(key) ?? '').trim();
   const id = get('id') ? Number(get('id')) : null;
   const kind = get('kind');
   const invalid = () => workroomPage('<h1>Data belum valid</h1><p>Kembali ke formulir untuk memeriksa isian.</p>', 400);
-  if (!Object.hasOwn(workroomKinds, kind) || (id !== null && (!Number.isSafeInteger(id) || id < 1))) return invalid();
+  if (!Object.hasOwn(workroomKinds, kind) || (page !== 'home' && page !== kind) || (id !== null && (!Number.isSafeInteger(id) || id < 1))) return invalid();
 
   if (get('action') === 'status' && kind === 'task' && id) {
     const status = get('status');
@@ -303,7 +349,7 @@ async function handleWorkroom(request, env, url) {
     await db.prepare("UPDATE workroom_entries SET status = ? WHERE id = ? AND kind = 'task'").bind(status, id).run();
     const query = new URLSearchParams({saved: '', view: get('view') === 'board' ? 'board' : 'table'});
     if (Object.hasOwn(workroomKinds.task.statuses, get('filter'))) query.set('status', get('filter'));
-    return new Response(null, { status: 303, headers: { ...privateHeaders, Location: WORKROOM + '?' + query + '#workspace' } });
+    return new Response(null, { status: 303, headers: { ...privateHeaders, Location: workroomPages.task.path + '?' + query + '#workspace' } });
   } else if (get('action') === 'complete' && kind === 'task' && id) {
     await db.prepare("UPDATE workroom_entries SET status = 'done' WHERE id = ? AND kind = 'task'").bind(id).run();
   } else if (get('action') === 'delete' && id) {
@@ -332,8 +378,11 @@ async function handleWorkroom(request, env, url) {
     }
   } else return invalid();
 
-  return new Response(null, { status: 303, headers: { ...privateHeaders, Location: get('return') === 'editor' && get('action') === 'save' && id
-    ? WORKROOM + '?saved&edit=' + id + '#workspace' : WORKROOM + '?saved#' + kind } });
+  if (page === 'home') return workroomRedirect(url, WORKROOM + '?saved', 303);
+  const query = new URLSearchParams({saved: ''});
+  if (page === 'note') query.set('basic', '');
+  if (id && get('action') === 'save') query.set('edit', id);
+  return workroomRedirect(url, path + '?' + query, 303);
 }
 
 const COMMENTS_PATH = '/api/study-comments';

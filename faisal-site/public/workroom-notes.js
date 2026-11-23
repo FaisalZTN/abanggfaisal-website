@@ -23,7 +23,7 @@ let busy=false;
 const render = () => renderNotes(entries);
 function message(value) { el('note-status').textContent=value; }
 async function request(data) {
-  const response=await fetch('/workroom/?notes-data', data ? {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)} : {});
+  const response=await fetch('/workroom/notes/?notes-data', data ? {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)} : {});
   const result=await response.json().catch(()=>({}));
   if(!response.ok) throw new Error(result.error || 'Workroom tidak bisa menyimpan atau memuat catatan. Coba lagi setelah masuk.');
   return result;
