@@ -1,210 +1,103 @@
-<!doctype html><html lang="id"><head><meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Workroom · abangfaisal</title><link rel="stylesheet" href="/workroom.css"></head>
-    <body><header><a href="/">abangfaisal.</a><a href="/ruang-belajar/">Ruang Belajar</a></header>
-    <main><p class="save-notice">Demo Workroom · Data contoh · Perubahan berlaku sampai halaman dimuat ulang.</p><div class="dashboard">
-    <aside class="dashboard-sidebar">
-      <h1>Workroom</h1>
-      <nav aria-label="Bagian Workroom"><a href="#hari-ini">Hari ini</a><a href="#task">Tugas</a><a href="#project">Proyek</a><a href="#note">Catatan</a><a href="#goal">Goals</a></nav>
-    </aside>
-    <div class="dashboard-content">
-      
-      <section class="today-panel" id="hari-ini">
-        <div class="today-heading"><div><p>Senin, 23 November 2026 · WITA</p><h2>Agenda Faisal</h2></div></div>
-        <form class="capture" method="post" action="/workroom/">
-          <input type="hidden" name="action" value="save"><input type="hidden" name="priority" value="normal">
-          <select aria-label="Jenis entri" name="kind"><option value="task">Tugas</option><option value="note">Catatan</option></select>
-          <input name="title" aria-label="Judul entri baru" placeholder="Apa yang ingin kamu catat?" required maxlength="160">
-          <button>Simpan</button>
-        </form>
-      </section>
-      <div class="dashboard-stats">
-        <a href="#task">Tugas terbuka<strong>2</strong></a>
-        <a href="#project">Proyek aktif<strong>1</strong></a>
-        <a href="#note">Catatan<strong>1</strong></a>
-        <a href="#goal">Goals aktif<strong>1</strong></a>
-      </div>
-      <div class="overview" id="agenda">
-        <section class="collection agenda"><h2>Hari ini</h2>
-          <ul class="due-list"><li><form method="post" action="/workroom/"><input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="1"><button name="action" value="complete" aria-label="Tandai selesai: Siapkan materi praktikum">✓</button></form><div><a href="#entry-1">Siapkan materi praktikum</a><small>2026-11-23</small></div></li><li><form method="post" action="/workroom/"><input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="2"><button name="action" value="complete" aria-label="Tandai selesai: Review catatan kuliah">✓</button></form><div><a href="#entry-2">Review catatan kuliah</a><small>2026-11-23</small></div></li></ul>
-          <a class="quick-add" href="#add-task">+ Tambah tugas</a>
-          
-        </section>
-        <section class="collection calendar"><div class="calendar-heading"><h2>November 2026</h2><div></div></div><div class="days"><small>Sn</small><small>Sl</small><small>Rb</small><small>Km</small><small>Jm</small><small>Sb</small><small>Mg</small><span></span><span></span><span></span><span></span><span></span><span></span><a href="#agenda" data-day="2026-11-01" class="" aria-label="2026-11-01">1</a><a href="#agenda" data-day="2026-11-02" class="" aria-label="2026-11-02">2</a><a href="#agenda" data-day="2026-11-03" class="" aria-label="2026-11-03">3</a><a href="#agenda" data-day="2026-11-04" class="" aria-label="2026-11-04">4</a><a href="#agenda" data-day="2026-11-05" class="" aria-label="2026-11-05">5</a><a href="#agenda" data-day="2026-11-06" class="" aria-label="2026-11-06">6</a><a href="#agenda" data-day="2026-11-07" class="" aria-label="2026-11-07">7</a><a href="#agenda" data-day="2026-11-08" class="" aria-label="2026-11-08">8</a><a href="#agenda" data-day="2026-11-09" class="" aria-label="2026-11-09">9</a><a href="#agenda" data-day="2026-11-10" class="" aria-label="2026-11-10">10</a><a href="#agenda" data-day="2026-11-11" class="" aria-label="2026-11-11">11</a><a href="#agenda" data-day="2026-11-12" class="" aria-label="2026-11-12">12</a><a href="#agenda" data-day="2026-11-13" class="" aria-label="2026-11-13">13</a><a href="#agenda" data-day="2026-11-14" class="" aria-label="2026-11-14">14</a><a href="#agenda" data-day="2026-11-15" class="" aria-label="2026-11-15">15</a><a href="#agenda" data-day="2026-11-16" class="" aria-label="2026-11-16">16</a><a href="#agenda" data-day="2026-11-17" class="" aria-label="2026-11-17">17</a><a href="#agenda" data-day="2026-11-18" class="" aria-label="2026-11-18">18</a><a href="#agenda" data-day="2026-11-19" class="" aria-label="2026-11-19">19</a><a href="#agenda" data-day="2026-11-20" class="" aria-label="2026-11-20">20</a><a href="#agenda" data-day="2026-11-21" class="" aria-label="2026-11-21">21</a><a href="#agenda" data-day="2026-11-22" class="" aria-label="2026-11-22">22</a><a href="#agenda" data-day="2026-11-23" class="selected marked" aria-label="2026-11-23, ada tugas" aria-current="date">23</a><a href="#agenda" data-day="2026-11-24" class="" aria-label="2026-11-24">24</a><a href="#agenda" data-day="2026-11-25" class="" aria-label="2026-11-25">25</a><a href="#agenda" data-day="2026-11-26" class="" aria-label="2026-11-26">26</a><a href="#agenda" data-day="2026-11-27" class="" aria-label="2026-11-27">27</a><a href="#agenda" data-day="2026-11-28" class="" aria-label="2026-11-28">28</a><a href="#agenda" data-day="2026-11-29" class="" aria-label="2026-11-29">29</a><a href="#agenda" data-day="2026-11-30" class="" aria-label="2026-11-30">30</a></div></section>
-        <section class="collection recent-notes"><h2>Catatan terbaru</h2>
-          <ul><li><a href="#entry-4"><strong>Ide untuk sesi belajar</strong><small>Buat rangkuman satu halaman dan tiga soal latihan.</small></a></li></ul>
-          <a href="#note">Semua catatan</a>
-        </section>
-      </div>
-      <div class="dashboard-collections"><section class="collection" id="task">
-    <h2>Tugas</h2>
-    <details class="add-entry" id="add-task"><summary>Tambah tugas</summary><form method="post" action="/workroom/">
-    <input type="hidden" name="kind" value="task">
-    <input type="hidden" name="id" value="">
-    <label>Judul<input name="title" required maxlength="160" value=""></label>
-    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
-    <div class="fields">
-    <label>Status<select name="status"><option value="active">Belum selesai</option><option value="done">Selesai</option></select></label>
-      <label>Tenggat<input type="date" name="due" value=""></label>
-    <label>Prioritas<select name="priority"><option value="normal">Normal</option><option value="high">Tinggi</option></select></label>
-    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
-    </div>
-    <button name="action" value="save">Tambah</button>
-    
-  </form></details>
-    <details id="entry-1">
-      <summary>Siapkan materi praktikum <small>Belum selesai · 2026-11-23</small></summary>
-      <form method="post" action="/workroom/">
-    <input type="hidden" name="kind" value="task">
-    <input type="hidden" name="id" value="1">
-    <label>Judul<input name="title" required maxlength="160" value="Siapkan materi praktikum"></label>
-    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
-    <div class="fields">
-    <label>Status<select name="status"><option value="active" selected>Belum selesai</option><option value="done">Selesai</option></select></label>
-      <label>Tenggat<input type="date" name="due" value="2026-11-23"></label>
-    <label>Prioritas<select name="priority"><option value="normal" selected>Normal</option><option value="high">Tinggi</option></select></label>
-    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
-    </div>
-    <button name="action" value="save">Simpan perubahan</button>
-    <details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>
-  </form>
-    </details><details id="entry-2">
-      <summary>Review catatan kuliah <small>Belum selesai · 2026-11-23</small></summary>
-      <form method="post" action="/workroom/">
-    <input type="hidden" name="kind" value="task">
-    <input type="hidden" name="id" value="2">
-    <label>Judul<input name="title" required maxlength="160" value="Review catatan kuliah"></label>
-    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
-    <div class="fields">
-    <label>Status<select name="status"><option value="active" selected>Belum selesai</option><option value="done">Selesai</option></select></label>
-      <label>Tenggat<input type="date" name="due" value="2026-11-23"></label>
-    <label>Prioritas<select name="priority"><option value="normal" selected>Normal</option><option value="high">Tinggi</option></select></label>
-    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
-    </div>
-    <button name="action" value="save">Simpan perubahan</button>
-    <details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>
-  </form>
-    </details></section><section class="collection" id="project">
-    <h2>Proyek</h2>
-    <details class="add-entry" id="add-project"><summary>Tambah proyek</summary><form method="post" action="/workroom/">
-    <input type="hidden" name="kind" value="project">
-    <input type="hidden" name="id" value="">
-    <label>Judul<input name="title" required maxlength="160" value=""></label>
-    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
-    <div class="fields">
-    <label>Status<select name="status"><option value="active">Aktif</option><option value="done">Selesai</option></select></label>
-      <label>Tenggat<input type="date" name="due" value=""></label>
-    
-    
-    </div>
-    <button name="action" value="save">Tambah</button>
-    
-  </form></details>
-    <details id="entry-3">
-      <summary>Ruang Belajar <small>Aktif</small></summary>
-      <form method="post" action="/workroom/">
-    <input type="hidden" name="kind" value="project">
-    <input type="hidden" name="id" value="3">
-    <label>Judul<input name="title" required maxlength="160" value="Ruang Belajar"></label>
-    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
-    <div class="fields">
-    <label>Status<select name="status"><option value="active" selected>Aktif</option><option value="done">Selesai</option></select></label>
-      <label>Tenggat<input type="date" name="due" value=""></label>
-    
-    
-    </div>
-    <button name="action" value="save">Simpan perubahan</button>
-    <details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>
-  </form>
-    </details></section><section class="collection" id="note">
-    <h2>Catatan</h2>
-    <details class="add-entry" id="add-note"><summary>Tambah catatan</summary><form method="post" action="/workroom/">
-    <input type="hidden" name="kind" value="note">
-    <input type="hidden" name="id" value="">
-    <label>Judul<input name="title" required maxlength="160" value=""></label>
-    <label>Isi catatan<textarea name="body" rows="3" maxlength="10000"></textarea></label>
-    <div class="fields">
-    
-    
-    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
-    </div>
-    <button name="action" value="save">Tambah</button>
-    
-  </form></details>
-    <details id="entry-4">
-      <summary>Ide untuk sesi belajar <small>Tersimpan</small></summary>
-      <form method="post" action="/workroom/">
-    <input type="hidden" name="kind" value="note">
-    <input type="hidden" name="id" value="4">
-    <label>Judul<input name="title" required maxlength="160" value="Ide untuk sesi belajar"></label>
-    <label>Isi catatan<textarea name="body" rows="3" maxlength="10000">Buat rangkuman satu halaman dan tiga soal latihan.</textarea></label>
-    <div class="fields">
-    
-    
-    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
-    </div>
-    <button name="action" value="save">Simpan perubahan</button>
-    <details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>
-  </form>
-    </details></section><section class="collection" id="goal">
-    <h2>Goals</h2>
-    <details class="add-entry" id="add-goal"><summary>Tambah goals</summary><form method="post" action="/workroom/">
-    <input type="hidden" name="kind" value="goal">
-    <input type="hidden" name="id" value="">
-    <label>Judul<input name="title" required maxlength="160" value=""></label>
-    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
-    <div class="fields">
-    <label>Status<select name="status"><option value="active">Sedang berjalan</option><option value="done">Tercapai</option></select></label>
-      <label>Tenggat<input type="date" name="due" value=""></label>
-    
-    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
-    </div>
-    <button name="action" value="save">Tambah</button>
-    
-  </form></details>
-    <details id="entry-5">
-      <summary>Belajar rutin setiap minggu <small>Sedang berjalan</small></summary>
-      <form method="post" action="/workroom/">
-    <input type="hidden" name="kind" value="goal">
-    <input type="hidden" name="id" value="5">
-    <label>Judul<input name="title" required maxlength="160" value="Belajar rutin setiap minggu"></label>
-    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
-    <div class="fields">
-    <label>Status<select name="status"><option value="active" selected>Sedang berjalan</option><option value="done">Tercapai</option></select></label>
-      <label>Tenggat<input type="date" name="due" value=""></label>
-    
-    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
-    </div>
-    <button name="action" value="save">Simpan perubahan</button>
-    <details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>
-  </form>
-    </details></section></div>
-    </div></div></main><script>
-document.addEventListener('submit', event => {
-  event.preventDefault();
-  const form = event.target;
-  if (event.submitter?.value === 'complete') {
-    form.closest('li').remove();
-    return;
+<!doctype html>
+<html lang="id"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>Workroom · Demo</title>
+<style>
+:root{color-scheme:dark;--bg:#141b17;--side:#1b241e;--panel:#202c24;--line:#37463a;--text:#f4efdf;--muted:#b5c0ae;--accent:#d3e4b5}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,sans-serif;display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100dvh}aside{background:var(--side);border-right:1px solid var(--line);padding:22px 16px;position:sticky;top:0;height:100dvh;overflow:auto}main{width:min(100%,1120px);padding:28px clamp(18px,5vw,72px) 72px;margin-inline:auto}h1,h2,p{margin:0}h1{font:clamp(36px,6vw,62px)/1 Georgia,serif;letter-spacing:-.045em}h2{font-size:19px}button,input,select,textarea{font:inherit;color:inherit;border:1px solid var(--line);border-radius:8px;background:var(--side);min-height:44px;padding:8px 12px}button,select{cursor:pointer}button:hover{background:#304236}button[aria-current="page"],button[aria-pressed="true"]{background:#354b3b}.primary{background:var(--accent);color:#162318;border-color:transparent;font-weight:700}.primary:hover{background:#e0edca}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.brand{font:25px Georgia;margin:4px 0 20px}.muted,small{color:var(--muted)}nav{display:grid;gap:4px;margin:14px 0}nav button{text-align:left;border-color:transparent;background:transparent}.search{width:100%;text-align:left}.top,.bar,.capture{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.top{justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:28px}.hero{background:linear-gradient(115deg,#2e4535,#1d2a23);border:1px solid var(--line);padding:clamp(20px,4vw,42px);border-radius:16px;margin:0 0 22px}.hero p{margin-top:12px;color:var(--muted)}.capture{margin-top:20px}.capture input{flex:1 1 170px;min-width:0}.grid,.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}.grid{grid-template-columns:1.5fr 1fr}.panel,.lane{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px;min-width:0}.row{display:flex;gap:8px;align-items:center;padding-block:6px;border-bottom:1px solid var(--line)}.row button:last-child{flex:1;text-align:left;overflow-wrap:anywhere}.bar{margin:20px 0 12px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}table{width:100%;border-collapse:collapse;min-width:490px}th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line)}th{color:var(--muted);background:var(--panel)}td button{border:0;text-align:left;overflow-wrap:anywhere}.card{display:grid;gap:8px;margin-top:8px}.card button{text-align:left;overflow-wrap:anywhere}.editor{display:grid;gap:12px;margin-top:16px}.editor label{display:grid;gap:4px}.editor textarea{min-height:220px;resize:vertical}.editor input,.editor textarea{width:100%}.editor .note-title{font:32px Georgia}.empty{padding:12px 0;color:var(--muted)}dialog{width:min(92vw,540px);border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:14px;padding:16px}dialog::backdrop{background:#101510b5}dialog input,dialog #results button{width:100%;text-align:left}#results{display:grid;gap:5px;margin-block:10px;max-height:55vh;overflow:auto}.sr{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
+@media(max-width:700px){body{display:block}aside{height:auto;position:static;border-right:0;border-bottom:1px solid var(--line);padding:12px 16px}.brand{margin:0 0 8px}nav{display:flex;flex-wrap:wrap;margin:8px 0 0}.top{margin-bottom:16px}.grid,.board{grid-template-columns:1fr}}
+</style>
+<aside><div class="brand">Workroom</div><button class="search" id="search">⌕ Cari di Workroom <small> · Ctrl/⌘ K</small></button><nav id="nav" aria-label="Workroom"></nav><small>Demo dengan data contoh</small></aside>
+<main><div class="top"><span id="crumb"></span><small>Perubahan tersimpan di browser ini</small></div><div id="view"></div><p id="announce" class="sr" role="status"></p></main>
+<dialog id="finder" aria-label="Cari di Workroom"><input id="query" type="search" placeholder="Cari judul tugas atau isi catatan" aria-label="Kata pencarian"><div id="results"></div><form method="dialog"><button>Tutup</button></form></dialog>
+<script>
+const key = 'faisal-workroom-demo-v2';
+const seed = [
+  {id:'t1',kind:'task',title:'Siapkan materi praktikum',status:'doing',body:'Susun diagram dan tiga pertanyaan latihan.'},
+  {id:'t2',kind:'task',title:'Review catatan kuliah',status:'todo',body:''},
+  {id:'t3',kind:'task',title:'Susun agenda minggu ini',status:'done',body:''},
+  {id:'n1',kind:'note',title:'Ide untuk sesi belajar',body:'Buat rangkuman satu halaman.\n\nTutup sesi dengan tiga soal latihan.'}
+];
+let entries;
+try { entries = JSON.parse(localStorage.getItem(key)) ?? seed; } catch { entries = seed; }
+const statusNames = {todo:'Belum mulai',doing:'Dikerjakan',done:'Selesai'};
+const pages = {home:'Beranda',tasks:'Tugas',notes:'Catatan'};
+let page = 'home', mode = 'table', filter = 'all', activeNote;
+const el = id => document.getElementById(id);
+const escape = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function save() {
+  try { localStorage.setItem(key,JSON.stringify(entries)); }
+  catch { document.querySelector('.top small').textContent = 'Perubahan tersimpan selama halaman terbuka'; }
+}
+function openPage(next, note) { page=next; activeNote=note; render(); }
+function add(kind,title) {
+  const item={id:crypto.randomUUID(),kind,title,status:'todo',body:''};
+  entries=[item,...entries]; save(); return item;
+}
+function statusSelect(item) {
+  return '<select aria-label="Status '+escape(item.title)+'" data-status="'+item.id+'">'+Object.entries(statusNames).map(([value,label])=>'<option value="'+value+'" '+(value===item.status?'selected':'')+'>'+label+'</option>').join('')+'</select>';
+}
+function openButton(item){return '<button data-open="'+item.id+'">'+escape(item.title)+'</button>';}
+function render() {
+  const tasks=entries.filter(item=>item.kind==='task');
+  const notes=entries.filter(item=>item.kind==='note');
+  el('nav').innerHTML=Object.entries(pages).map(([id,label])=>'<button data-page="'+id+'" '+(page===id || page==='editor'&&id==='notes'?'aria-current="page"':'')+'>'+label+'</button>').join('');
+  el('crumb').textContent='Workroom / '+(pages[page]||'Catatan');
+  if(page==='home'){
+    const today=new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeZone:'Asia/Makassar'}).format(new Date());
+    const pending=tasks.filter(item=>item.status!=='done');
+    el('view').innerHTML='<section class="hero"><small>'+today+' · WITA</small><h1>Agenda Faisal</h1><p>'+pending.length+' tugas terbuka · '+notes.length+' catatan</p><form class="capture" id="capture"><select name="kind" aria-label="Jenis entri"><option value="task">Tugas</option><option value="note">Catatan</option></select><input name="title" required maxlength="160" placeholder="Apa yang ingin kamu catat?" aria-label="Judul"><button class="primary">Tambah</button></form></section><div class="grid"><section class="panel"><h2>Tugas terbuka</h2>'+(pending.slice(0,5).map(item=>'<div class="row"><button data-complete="'+item.id+'" aria-label="Selesaikan '+escape(item.title)+'">✓</button>'+openButton(item)+'</div>').join('')||'<p class="empty">Semua tugas selesai.</p>')+'</section><section class="panel"><h2>Catatan terbaru</h2>'+notes.slice(0,4).map(item=>'<div class="row">'+openButton(item)+'</div>').join('')+'</section></div>';
+  } else if(page==='tasks'){
+    const visible=tasks.filter(item=>filter==='all'||item.status===filter);
+    const row=item=>'<tr><td>'+openButton(item)+'</td><td>'+statusSelect(item)+'</td></tr>';
+    const board=Object.entries(statusNames).filter(([status])=>filter==='all'||filter===status).map(([status,label])=>'<section class="lane"><h2>'+label+'</h2>'+visible.filter(item=>item.status===status).map(item=>'<div class="card">'+openButton(item)+statusSelect(item)+'</div>').join('')+'</section>').join('');
+    el('view').innerHTML='<h1>Tugas</h1><div class="bar"><button data-mode="table" aria-pressed="'+(mode==='table')+'">Tabel</button><button data-mode="board" aria-pressed="'+(mode==='board')+'">Papan</button><select id="filter" aria-label="Filter status"><option value="all">Semua status</option>'+Object.entries(statusNames).map(([value,label])=>'<option value="'+value+'" '+(value===filter?'selected':'')+'>'+label+'</option>').join('')+'</select></div><form class="capture" id="capture"><input type="hidden" name="kind" value="task"><input name="title" required maxlength="160" aria-label="Judul" placeholder="Judul tugas"><button class="primary">Tambah tugas</button></form><div class="bar"></div>'+(mode==='table'?'<div class="table-wrap"><table><thead><tr><th>Judul</th><th>Status</th></tr></thead><tbody>'+visible.map(row).join('')+'</tbody></table></div>':'<div class="board">'+board+'</div>')+(visible.length?'':'<p class="empty">Tidak ada tugas untuk filter ini.</p>');
+  } else if(page==='notes'){
+    el('view').innerHTML='<h1>Catatan</h1><div class="bar"><button class="primary" data-new-note>Catatan baru</button></div><section class="panel">'+notes.map(item=>'<div class="row">'+openButton(item)+'</div>').join('')+'</section>';
+  } else {
+    const item=entries.find(item=>item.id===activeNote);
+    el('view').innerHTML='<button data-page="'+(item.kind==='note'?'notes':'tasks')+'">← '+(item.kind==='note'?'Catatan':'Tugas')+'</button><div class="editor"><label>Judul<input class="note-title" id="edit-title" maxlength="160" value="'+escape(item.title)+'"></label>'+(item.kind==='task'?statusSelect(item):'')+'<label>'+ (item.kind==='note'?'Isi catatan':'Detail tugas')+'<textarea id="edit-body" maxlength="10000" placeholder="Mulai menulis…">'+escape(item.body)+'</textarea></label></div>';
   }
-  if (!form.matches('.capture')) return;
-  const fields = new FormData(form);
-  const item = document.createElement('p');
-  item.textContent = fields.get('title') + ' · Ditambahkan di demo';
-  document.getElementById(fields.get('kind')).append(item);
-  document.querySelector('.save-notice').textContent = 'Entri ditambahkan di demo.';
-  form.reset();
+}
+function showItem(id) { el('finder').close(); openPage('editor',id); el('edit-title').focus(); }
+function search() {
+  const q=el('query').value.trim().toLocaleLowerCase('id');
+  const matches=entries.filter(item=>(item.title+' '+item.body).toLocaleLowerCase('id').includes(q));
+  el('results').innerHTML=matches.slice(0,20).map(openButton).join('')||'<p>Belum ada hasil.</p>';
+}
+function finder(){el('finder').showModal();el('query').value='';search();el('query').focus();}
+el('search').onclick=finder;
+el('query').oninput=search;
+document.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(!el('finder').open)finder();}});
+document.addEventListener('click',event=>{
+  const button=event.target.closest('button'); if(!button)return;
+  const {page:next,open,mode:nextMode,complete,newNote}=button.dataset;
+  if(next)openPage(next);
+  if(open)showItem(open);
+  if(nextMode){mode=nextMode;render();document.querySelector('[data-mode="'+mode+'"]').focus();}
+  if(complete){entries.find(item=>item.id===complete).status='done';save();render();el('announce').textContent='Tugas selesai.';}
+  if(newNote!==undefined)showItem(add('note','Catatan baru').id);
 });
-document.addEventListener('click', event => {
-  const link = event.target.closest('a[href^="#"]');
-  if (!link) return;
-  const target = document.getElementById(link.hash.slice(1));
-  if (target instanceof HTMLDetailsElement) target.open = true;
-  if (link.dataset.day) {
-    document.querySelector('.days .selected')?.classList.remove('selected');
-    link.classList.add('selected');
-    document.querySelector('.agenda h2').textContent = 'Agenda · ' + link.dataset.day;
-    document.querySelector('.due-list').hidden = link.dataset.day !== '2026-11-23';
-  }
+document.addEventListener('change',event=>{
+  const target=event.target;
+  if(target.id==='filter'){filter=target.value;render();el('filter').focus();}
+  const id=target.dataset.status;
+  if(id){entries.find(item=>item.id===id).status=target.value;save();if(page==='tasks'){render();(document.querySelector('[data-status="'+id+'"]')||el('filter')).focus();}}
 });
-</script></body></html>
+document.addEventListener('input',event=>{
+  if(!['edit-title','edit-body'].includes(event.target.id))return;
+  const item=entries.find(item=>item.id===activeNote);
+  if(event.target.id==='edit-title')item.title=event.target.value.trim()|| (item.kind==='note'?'Catatan baru':'Tugas baru');
+  else item.body=event.target.value;
+  save();
+});
+document.addEventListener('submit',event=>{
+  if(event.target.id!=='capture')return;
+  event.preventDefault();const data=new FormData(event.target);const title=data.get('title').trim();
+  if(!title){event.target.elements.title.focus();return;}
+  const item=add(data.get('kind'),title);
+  if(item.kind==='note')showItem(item.id);
+  else {filter='all';render();el('capture').elements.title.focus();el('announce').textContent='Tugas ditambahkan.';}
+});
+render();
+</script>
+</html>
