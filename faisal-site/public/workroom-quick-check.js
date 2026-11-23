@@ -36,7 +36,7 @@
     feedback.hidden = true;
     display(next === 'done');
     try {
-      const response = await fetch(form.action, { method: 'POST', body: data, headers: { Accept: 'application/json' } });
+      const response = await fetch(form.getAttribute('action'), { method: 'POST', body: data, headers: { Accept: 'application/json' } });
       if (!response.ok || (await response.json()).status !== next) throw new Error('Status belum tersimpan');
       input.value = next === 'done' ? 'active' : 'done';
       if (filter && filter !== next) {
