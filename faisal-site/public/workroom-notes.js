@@ -34,6 +34,7 @@ function serializeNote(editor) {
       return '\n- [' + (box?.checked ? 'x' : ' ') + '] ' + children.trimEnd() + '\n';
     }
     if (Object.hasOwn(markers, tag)) return children ? markers[tag] + children + markers[tag] : '';
+    if (tag === 'A' && node.hasAttribute('data-note-autolink')) return children;
     if (tag === 'IMG' || tag === 'A') {
       const url = node.getAttribute(tag === 'IMG' ? 'src' : 'href');
       const label = (tag === 'IMG' ? node.alt : node.textContent).replace(/[\[\]\n]/g, '');
@@ -225,6 +226,15 @@ document.addEventListener('selectionchange', () => {
 });
 document.addEventListener('mousedown', event => {
   if (event.target.closest('.note-toolbar [data-mark]')) event.preventDefault();
+});
+document.addEventListener('workroom-image', event => {
+  const editor = event.target;
+  if (editor.id !== 'edit-body' || editor !== el('edit-body') || busy) return;
+  focusEditor(editor);
+  if (document.execCommand('insertHTML', false, `<img src="${escape(event.detail)}" alt="Gambar" loading="lazy" decoding="async">`)) {
+    event.preventDefault();
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+  }
 });
 document.addEventListener('paste', event => {
   if (!event.target.closest('#edit-body')) return;
