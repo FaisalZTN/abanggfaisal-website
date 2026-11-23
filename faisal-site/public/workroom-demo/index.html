@@ -30,6 +30,31 @@ main:has(.notes-desk) { width:100%; max-width:1600px; padding-inline:clamp(14px,
 @media(max-width:1000px) { .notes-desk { grid-template-columns:minmax(0,1fr) minmax(0,2fr) } .note-categories { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:4px; align-items:center } .note-categories button { width:auto } }
 @media(max-width:700px) { .notes-desk { grid-template-columns:minmax(0,1fr) } .notes-desk.is-editing :is(.note-categories,.note-index),.notes-desk:not(.is-editing) .note-sheet { display:none } .note-back { display:inline-flex } }
 .note-index details{margin-bottom:10px}.note-index summary{cursor:pointer;color:var(--muted)}.note-index details label{display:block}.note-rendered{flex:1;min-height:260px;padding:12px;overflow-wrap:anywhere}.note-rendered img{display:block;max-width:100%;height:auto}.note-rendered a{color:var(--accent)}.note-check{display:flex;align-items:center;gap:8px}.note-toolbar input{font:inherit;max-width:100%}
+
+/* Keep the writing surface quiet, with controls grouped at its edges. */
+.notes-desk { gap: 10px; }
+.note-categories, .note-index, .note-sheet { border-color: transparent; background: #1c2620; }
+.category-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; }
+.category-head h2 { margin:0 0 0 8px; }
+.category-head #add-category { width:44px; text-align:center; padding:0; font-size:20px; }
+.note-index button { border-bottom-color:transparent; padding:10px; }
+.note-index button:hover, .note-categories button:hover, .note-toolbar button:hover { background:#2a3a30; }
+.note-row-head { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.note-row-head strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:650; }
+.note-row-head time { color:var(--muted); font-size:.78rem; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.note-tag::before { content:''; display:inline-block; width:.45rem; height:.45rem; border-radius:50%; background:#a4c98d; margin-right:.4rem; vertical-align:.12em; }
+.note-sheet { padding:0; gap:0; overflow:hidden; }
+.note-sheet > div:first-child:has(.note-back) { padding-inline:12px; }
+.note-sheet > #edit-title { margin:0; padding:16px 18px; font:650 1.1rem system-ui,sans-serif; border:0; border-radius:0; background:transparent; }
+.note-toolbar { padding:4px 10px; gap:2px; border-block:1px solid var(--line); }
+.note-toolbar button, .note-footer button { border-color:transparent; background:transparent; padding-inline:8px; min-width:44px; }
+.note-toolbar input[type=date] { border-color:transparent; background:transparent; }
+.note-sheet textarea { padding:16px 18px; border:0; border-radius:0; background:transparent; }
+.note-rendered { padding:16px 18px; }
+.note-footer { padding:8px 12px; border-top:1px solid var(--line); }
+.note-footer select { max-width:180px; }
+.note-sheet :focus-visible { outline-offset:-2px; }
+@media(max-width:1000px) { .category-head { width:100%; margin-bottom:0; } }
 </style>
 <aside><div class="brand">Workroom</div><button class="search" id="search">⌕ Cari di Workroom <small> · Ctrl/⌘ K</small></button><nav id="nav" aria-label="Workroom"></nav><small>Demo dengan data contoh</small></aside>
 <main><div class="top"><span id="crumb"></span><small>Perubahan tersimpan di browser ini</small></div><div id="view"></div><p id="announce" class="sr" role="status"></p></main>
@@ -110,7 +135,7 @@ function renderNoteIndex() {
     (!toTime || (noteTime(item) && noteTime(item).replace(' ','T') <= toTime)));
   notes.sort((a,b)=>(b.updated||0)-(a.updated||0));
   el('note-list').innerHTML = notes.map(note => `<button data-open="${note.id}"${note.id === activeNote ? ' aria-current="true"' : ''}>
-    <strong>${escape(note.title)}</strong><small>${noteTime(note) || 'Waktu belum tercatat'}</small><small>${escape(note.body || 'Catatan kosong')}</small><small>${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
+    <span class="note-row-head"><strong>${escape(note.title)}</strong>${noteTime(note) ? `<time title="${noteTime(note)} WITA">${noteTime(note).slice(-5)}</time>` : ''}</span><small>${escape(note.body || 'Catatan kosong')}</small><small class="note-tag">${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
 }
 function renderNotes(notes) {
   const note = notes.find(item => item.id === activeNote) || notes[0];
@@ -118,14 +143,14 @@ function renderNotes(notes) {
   const options = Object.entries(noteCategories).filter(([key]) => key !== 'all');
   el('view').innerHTML = `<div class="notes-head"><h1>Catatan</h1><button class="primary" data-new-note>+ Catatan baru</button></div>
     <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
-      <section class="note-categories" aria-label="Kategori"><h2>Kategori</h2><button id="add-category">+ Kategori baru</button>${Object.entries(noteCategories).map(([key, label]) =>
+      <section class="note-categories" aria-label="Kategori"><div class="category-head"><h2>Kategori</h2><button id="add-category" aria-label="Kategori baru" title="Kategori baru">+</button></div>${Object.entries(noteCategories).map(([key, label]) =>
         `<button data-category="${key}" aria-pressed="${key === noteCategory}">${escape(label)} <small>${notes.filter(item => key === 'all' || (item.category || 'none') === key).length}</small></button>`).join('')}</section>
-      <section class="note-index" aria-label="Daftar catatan"><input type="search" id="note-query" aria-label="Cari catatan" placeholder="Cari catatan…" value="${escape(noteQuery)}"><details ${fromTime || toTime ? "open" : ""}><summary>Filter waktu · WITA</summary><label>Dari<input type="datetime-local" id="note-from" value="${escape(fromTime)}"></label><label>Sampai<input type="datetime-local" id="note-to" value="${escape(toTime)}"></label><button id="clear-time">Hapus filter waktu</button></details><div id="note-list"></div></section>
+      <section class="note-index" aria-label="Daftar catatan"><input type="search" id="note-query" aria-label="Cari catatan" placeholder="Cari catatan…" value="${escape(noteQuery)}"><details ${fromTime || toTime ? "open" : ""}><summary>Filter waktu<span class="muted"> · WITA</span></summary><label>Dari<input type="datetime-local" id="note-from" value="${escape(fromTime)}"></label><label>Sampai<input type="datetime-local" id="note-to" value="${escape(toTime)}"></label><button id="clear-time">Hapus filter waktu</button></details><div id="note-list"></div></section>
       <section class="note-sheet" aria-label="Editor catatan">${note ? `<div><button class="note-back" id="note-back">← Daftar catatan</button></div>
         <input id="edit-title" aria-label="Judul catatan" maxlength="160" value="${escape(note.title)}">
-        <div class="note-toolbar" aria-label="Sisipkan Markdown"><button data-mark="heading">Judul bagian</button><button data-mark="bold"><b>Tebal</b></button><button data-mark="italic"><i>Miring</i></button><button data-mark="sup">x²</button><button data-mark="sub">x₂</button><button data-mark="image">Gambar</button><button data-mark="link">Tautan</button><label>Tanggal <input type="date" id="insert-date"></label><button data-mark="list">Daftar</button><button data-mark="check">Checklist</button></div>
-        <button id="format-preview" aria-pressed="${formatted}">${formatted ? "Kembali mengedit" : "Pratinjau format"}</button>${formatted ? `<div class="note-rendered">${formatNote(note.body)}</div>` : `<textarea id="edit-body" aria-label="Isi catatan" maxlength="10000" placeholder="Tulis ide kamu di sini…">${escape(note.body)}</textarea>`}
-        <div class="note-footer"><small>Markdown · simpan otomatis</small><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label></div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
+        <div class="note-toolbar" aria-label="Sisipkan Markdown"><button data-mark="heading" aria-label="Judul bagian" title="Judul bagian">H₂</button><button data-mark="bold" aria-label="Tebal" title="Tebal"><b>B</b></button><button data-mark="italic" aria-label="Miring" title="Miring"><i>I</i></button><button data-mark="sup">x²</button><button data-mark="sub">x₂</button><button data-mark="image">Gambar</button><button data-mark="link">Tautan</button><label>Tanggal <input type="date" id="insert-date"></label><button data-mark="list" aria-label="Daftar" title="Daftar">☷</button><button data-mark="check" aria-label="Checklist" title="Checklist">☑</button></div>
+        ${formatted ? `<div class="note-rendered">${formatNote(note.body)}</div>` : `<textarea id="edit-body" aria-label="Isi catatan" maxlength="10000" placeholder="Tulis ide kamu di sini…">${escape(note.body)}</textarea>`}
+        <div class="note-footer"><button id="format-preview" aria-pressed="${formatted}">${formatted ? "Edit" : "Pratinjau"}</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label></div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
     </div>`;
   renderNoteIndex();
 }
