@@ -10,7 +10,7 @@ const privateHeaders = {
   'Cache-Control': 'private, no-store',
   'X-Robots-Tag': 'noindex, nofollow',
   'X-Content-Type-Options': 'nosniff',
-  'Content-Security-Policy': "default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+  'Content-Security-Policy': "default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src https:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
 };
 
 function escapeWorkroom(value) {
@@ -167,7 +167,7 @@ async function renderWorkroom(db, notice, addTask, selectedDay, params = new URL
       <h1>Workroom</h1>
       <form class="workspace-search" method="get" action="${WORKROOM}#workspace"><label>Cari di Workroom<input name="q" type="search" maxlength="160" value="${e((params.get('q') || '').slice(0,160))}"></label><button>Cari</button></form>
       <nav aria-label="Bagian Workroom"><a href="#hari-ini">Hari ini</a><a href="#workspace">Daftar tugas</a>${Object.entries(workroomKinds).map(([kind, settings]) =>
-        `<a href="#${kind}">${settings.title}</a>`).join('')}</nav>
+        `<a href="${kind === 'note' ? WORKROOM + '?notes' : '#' + kind}">${settings.title}</a>`).join('')}</nav>
     </aside>
     <div class="dashboard-content">
       ${notice ? '<p class="save-notice" role="status">Perubahan tersimpan.</p>' : ''}
@@ -183,7 +183,7 @@ async function renderWorkroom(db, notice, addTask, selectedDay, params = new URL
       <div class="dashboard-stats">
         <a href="#task">Tugas terbuka<strong>${openTasks}</strong></a>
         <a href="#project">Proyek aktif<strong>${activeProjects}</strong></a>
-        <a href="#note">Catatan<strong>${entries.filter(entry => entry.kind === 'note').length}</strong></a>
+        <a href="${WORKROOM}?notes">Catatan<strong>${entries.filter(entry => entry.kind === 'note').length}</strong></a>
         <a href="#goal">Goals aktif<strong>${activeGoals}</strong></a>
       </div>
       <div class="overview" id="agenda">
@@ -195,13 +195,65 @@ async function renderWorkroom(db, notice, addTask, selectedDay, params = new URL
         ${workroomCalendar(day, entries.filter(entry => entry.kind === 'task' && entry.status !== 'done'), today)}
         <section class="collection recent-notes"><h2>Catatan terbaru</h2>
           ${entries.some(entry => entry.kind === 'note') ? '<ul>' + entries.filter(entry => entry.kind === 'note').slice(0,3).map(note =>
-            `<li><a href="${WORKROOM}?edit=${note.id}#workspace"><strong>${e(note.title)}</strong>${note.body ? '<small>' + e(note.body.slice(0,120)) + '</small>' : ''}</a></li>`).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
-          <a href="#note">Semua catatan</a>
+            `<li><a href="${WORKROOM}?notes&edit=${note.id}"><strong>${e(note.title)}</strong>${note.body ? '<small>' + e(note.body.slice(0,120)) + '</small>' : ''}</a></li>`).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
+          <a href="${WORKROOM}?notes">Semua catatan</a>
         </section>
       </div>
       ${workroomWorkspace(entries, params)}
       <div class="dashboard-collections">${sections}</div>
     </div></div>`);
+}
+
+const builtInNoteCategories = ['belajar', 'ide', 'pribadi', 'referensi'];
+
+async function workroomNotesData(request, db) {
+  const reply = (value, status = 200) => Response.json(value, {status, headers: {
+    'Cache-Control': 'private, no-store',
+    'X-Content-Type-Options': 'nosniff',
+  }});
+  const columns = async () => (await db.prepare('PRAGMA table_info(workroom_entries)').all()).results;
+  const current = await columns();
+  for (const [name, type] of [['note_category', 'TEXT'], ['note_updated', 'INTEGER']]) {
+    if (current.some(column => column.name === name)) continue;
+    try {
+      await db.prepare(`ALTER TABLE workroom_entries ADD COLUMN ${name} ${type}`).run();
+    } catch (error) {
+      if (!(await columns()).some(column => column.name === name)) throw error;
+    }
+  }
+  await db.prepare('CREATE TABLE IF NOT EXISTS workroom_note_categories (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE)').run();
+  if (request.method === 'GET') {
+    const [notes, categories] = await db.batch([
+      db.prepare("SELECT id, kind, title, body, note_category AS category, note_updated AS updated FROM workroom_entries WHERE kind = 'note' ORDER BY id DESC"),
+      db.prepare('SELECT id, name FROM workroom_note_categories ORDER BY name'),
+    ]);
+    return reply({notes: notes.results, categories: categories.results});
+  }
+  let data;
+  try { data = await request.json(); } catch { return reply({error:'Permintaan tidak valid.'}, 400); }
+  if (!data || typeof data !== 'object') return reply({error:'Permintaan tidak valid.'}, 400);
+  if (data.action === 'category') {
+    const name = typeof data.name === 'string' ? data.name.trim() : '';
+    if (!name || name.length > 40) return reply({error:'Nama kategori tidak valid.'}, 400);
+    const id = 'custom-' + crypto.randomUUID();
+    const result = await db.prepare('INSERT OR IGNORE INTO workroom_note_categories (id, name) VALUES (?, ?)').bind(id, name).run();
+    return result.meta.changes ? reply({id, name}, 201) : reply({error:'Kategori sudah ada.'}, 409);
+  }
+  const {id, title, body, category} = data;
+  if (data.action !== 'save' || (id !== null && (!Number.isSafeInteger(id) || id < 1)) ||
+      typeof title !== 'string' || !title.trim() || title.length > 160 || typeof body !== 'string' || body.length > 10000 ||
+      typeof category !== 'string' || category.length > 50) return reply({error:'Periksa judul, isi, dan kategori.'}, 400);
+  if (category !== 'none' && !builtInNoteCategories.includes(category) &&
+      !await db.prepare('SELECT id FROM workroom_note_categories WHERE id = ?').bind(category).first()) {
+    return reply({error:'Kategori tidak ditemukan.'}, 400);
+  }
+  const updated = Date.now();
+  const values = [title.trim(), body, category, updated];
+  const result = id === null
+    ? await db.prepare("INSERT INTO workroom_entries (title, body, note_category, note_updated, kind, status, due, priority) VALUES (?, ?, ?, ?, 'note', 'active', '', 'normal')").bind(...values).run()
+    : await db.prepare("UPDATE workroom_entries SET title = ?, body = ?, note_category = ?, note_updated = ? WHERE id = ? AND kind = 'note'").bind(...values, id).run();
+  if (!result.meta.changes) return reply({error:'Catatan tidak ditemukan.'}, 404);
+  return reply({id: id ?? result.meta.last_row_id, kind:'note', title:title.trim(), body, category, updated});
 }
 
 async function handleWorkroom(request, env, url) {
@@ -228,8 +280,14 @@ async function handleWorkroom(request, env, url) {
     status TEXT NOT NULL,
     due TEXT NOT NULL,
     priority TEXT NOT NULL,
-    project_id INTEGER REFERENCES workroom_entries(id) ON DELETE SET NULL
+    project_id INTEGER REFERENCES workroom_entries(id) ON DELETE SET NULL,
+    note_category TEXT,
+    note_updated INTEGER
   )`).run();
+  if (url.searchParams.has('notes-data')) return workroomNotesData(request, db);
+  if (request.method === 'GET' && url.searchParams.has('notes')) {
+    return workroomPage('<div id="view" aria-busy="true">Memuat catatan…</div><p id="note-status" role="status"></p><noscript>Aktifkan JavaScript untuk membuka editor. <a href="/workroom/#note">Buka daftar catatan dasar</a></noscript><script src="/workroom-notes.js" defer></script>');
+  }
   if (request.method === 'GET') return renderWorkroom(db, url.searchParams.has('saved'), url.searchParams.get('add') === 'task', url.searchParams.get('day'), url.searchParams);
 
   const data = await request.formData();
