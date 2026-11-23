@@ -101,7 +101,136 @@ function workroomForm(kind, entry, projects, standalone = false) {
   </form>`;
 }
 
-function workroomCalendar(day, tasks, today) {
+const googleScope = 'https://www.googleapis.com/auth/calendar.events.readonly';
+const googleStateCookie = '__Host-workroom-google-state';
+const workroomTimeZone = 'Asia/Makassar';
+const workroomDay = new Intl.DateTimeFormat('en-CA', { timeZone: workroomTimeZone });
+const workroomTime = new Intl.DateTimeFormat('id-ID', { timeZone: workroomTimeZone, hour: '2-digit', minute: '2-digit' });
+const googleConfigured = env => Boolean(env.WORKROOM_GOOGLE_CLIENT_ID && env.WORKROOM_GOOGLE_CLIENT_SECRET);
+
+function googleRedirect(url, target, cookie) {
+  const headers = new Headers(privateHeaders);
+  headers.set('Location', new URL(target, url).href);
+  if (cookie) headers.set('Set-Cookie', googleStateCookie + '=' + cookie + '; Path=/; Secure; HttpOnly; SameSite=Lax');
+  return new Response(null, { status: 303, headers });
+}
+
+async function googleToken(env, fields) {
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: env.WORKROOM_GOOGLE_CLIENT_ID,
+      client_secret: env.WORKROOM_GOOGLE_CLIENT_SECRET,
+      ...fields,
+    }),
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!response.ok) throw new Error('Google authentication failed');
+  return response.json();
+}
+
+async function googleCalendarConnection(db) {
+  await db.prepare('CREATE TABLE IF NOT EXISTS workroom_google_calendar (id INTEGER PRIMARY KEY CHECK (id = 1), refresh_token TEXT NOT NULL)').run();
+  return db.prepare('SELECT refresh_token FROM workroom_google_calendar WHERE id = 1').first();
+}
+
+async function connectGoogleCalendar(request, env, url) {
+  if (!googleConfigured(env)) return googleRedirect(url, WORKROOM);
+  const redirectUri = url.origin + WORKROOM + 'google-calendar/';
+  if (url.searchParams.get('google') === 'connect') {
+    const state = crypto.randomUUID();
+    const authorize = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    authorize.search = new URLSearchParams({
+      client_id: env.WORKROOM_GOOGLE_CLIENT_ID, redirect_uri: redirectUri,
+      response_type: 'code', scope: googleScope, access_type: 'offline',
+      prompt: 'consent select_account', state,
+    });
+    return googleRedirect(url, authorize.href, state + '; Max-Age=600');
+  }
+
+  const state = request.headers.get('Cookie')?.split(';').map(value => value.trim())
+    .find(value => value.startsWith(googleStateCookie + '='))?.slice(googleStateCookie.length + 1);
+  const code = url.searchParams.get('code');
+  const result = status => googleRedirect(url, WORKROOM + '?google=' + status + '#agenda', '; Max-Age=0');
+  if (!state || state !== url.searchParams.get('state')) return result('error');
+  if (!code) return result('error');
+
+  try {
+    const token = await googleToken(env, { grant_type: 'authorization_code', code, redirect_uri: redirectUri });
+    if (!token.refresh_token || !token.scope?.split(' ').includes(googleScope)) return result('error');
+    await googleCalendarConnection(env.WORKROOM_DB);
+    await env.WORKROOM_DB.prepare('INSERT INTO workroom_google_calendar (id, refresh_token) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET refresh_token = excluded.refresh_token').bind(token.refresh_token).run();
+    return result('connected');
+  } catch {
+    return result('error');
+  }
+}
+
+async function googleMonth(env, day) {
+  const entries = new Map();
+  if (!googleConfigured(env)) return { entries, status: 'disabled' };
+  try {
+    const connection = await googleCalendarConnection(env.WORKROOM_DB);
+    if (!connection) return { entries, status: 'disconnected' };
+    const token = await googleToken(env, { grant_type: 'refresh_token', refresh_token: connection.refresh_token });
+    const first = day.slice(0, 7) + '-01';
+    const from = new Date(first + 'T00:00:00+08:00');
+    const next = new Date(first + 'T12:00:00Z');
+    next.setUTCMonth(next.getUTCMonth() + 1);
+    const end = new Date(next.toISOString().slice(0, 10) + 'T00:00:00+08:00');
+    const eventsUrl = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
+    eventsUrl.search = new URLSearchParams({
+      timeMin: from.toISOString(), timeMax: end.toISOString(), timeZone: workroomTimeZone,
+      singleEvents: 'true', orderBy: 'startTime', maxResults: '2500',
+      fields: 'nextPageToken,items(summary,start,end)',
+    });
+    const signal = AbortSignal.timeout(5000);
+    do {
+      const response = await fetch(eventsUrl, { headers: { Authorization: 'Bearer ' + token.access_token }, signal });
+      if (!response.ok) throw new Error('Google Calendar request failed');
+      const page = await response.json();
+      for (const event of page.items ?? []) {
+        const allDay = Boolean(event.start?.date);
+        const start = new Date(allDay ? event.start.date + 'T00:00:00+08:00' : event.start?.dateTime);
+        const finish = new Date(allDay ? event.end?.date + 'T00:00:00+08:00' : event.end?.dateTime);
+        if (!Number.isFinite(+start) || !Number.isFinite(+finish)) continue;
+        const startDay = workroomDay.format(start);
+        for (let date = +from; date < +end; date += 86400000) {
+          if (+start >= date + 86400000 || +finish <= date) continue;
+          const key = workroomDay.format(new Date(date));
+          const list = entries.get(key) ?? [];
+          list.push({
+            title: event.summary || 'Acara tanpa judul',
+            time: allDay ? 'Seharian' : key === startDay ? workroomTime.format(start) + ' WITA' : 'Berlangsung',
+          });
+          entries.set(key, list);
+        }
+      }
+      if (!page.nextPageToken) break;
+      eventsUrl.searchParams.set('pageToken', page.nextPageToken);
+    } while (true);
+    return { entries, status: 'connected' };
+  } catch {
+    return { entries: new Map(), status: 'error' };
+  }
+}
+
+function googleAgenda(calendar, day, result) {
+  if (calendar.status === 'disabled') return '';
+  const events = calendar.entries.get(day) ?? [];
+  const connect = '<a href="/workroom/?google=connect">Hubungkan Google Calendar</a>';
+  const status = result === 'error' ? '<p role="status">Izin Google Calendar belum tersimpan.</p>' : '';
+  return `<div class="google-agenda"><h3>Google Calendar</h3>${status}
+    ${calendar.status === 'error' ? '<p>Jadwal Google belum bisa dimuat. Coba muat ulang atau hubungkan kembali.</p>' + connect : ''}
+    ${calendar.status === 'disconnected' ? connect : ''}
+    ${calendar.status === 'connected' ? events.length ? '<ul>' + events.map(event =>
+      `<li><small>${escapeWorkroom(event.time)}</small><strong>${escapeWorkroom(event.title)}</strong></li>`).join('') + '</ul>'
+      : '<p>Tidak ada acara pada tanggal ini.</p>' : ''}
+  </div>`;
+}
+
+function workroomCalendar(day, tasks, today, google) {
   const date = new Date(day + 'T12:00:00Z');
   const year = date.getUTCFullYear(), month = date.getUTCMonth();
   const first = new Date(Date.UTC(year, month, 1));
@@ -112,7 +241,7 @@ function workroomCalendar(day, tasks, today) {
   const dated = new Set(tasks.map(task => task.due));
   const cells = Array.from({length: days}, (_, i) => {
     const value = day.slice(0, 8) + String(i + 1).padStart(2, '0');
-    return `<a href="${href(value)}" class="${value === day ? 'selected ' : ''}${dated.has(value) ? 'marked' : ''}" aria-label="${value}${dated.has(value) ? ', ada tugas' : ''}"${value === today ? ' aria-current="date"' : ''}>${i + 1}</a>`;
+    return `<a href="${href(value)}" class="${value === day ? 'selected ' : ''}${dated.has(value) || google.has(value) ? 'marked' : ''}" aria-label="${value}${dated.has(value) ? ', ada tugas' : ''}${google.has(value) ? ', ada acara Google Calendar' : ''}"${value === today ? ' aria-current="date"' : ''}>${i + 1}</a>`;
   });
   return `<section class="collection calendar"><div class="calendar-heading"><h2>${date.toLocaleDateString('id-ID', {month:'long', year:'numeric', timeZone:'UTC'})}</h2><div>${monthLink(-1,'Bulan sebelumnya','‹')}${monthLink(1,'Bulan berikutnya','›')}</div></div><div class="days">${['Sn','Sl','Rb','Km','Jm','Sb','Mg'].map(d => `<small>${d}</small>`).join('')}${'<span></span>'.repeat((first.getUTCDay()+6)%7)}${cells.join('')}</div></section>`;
 }
@@ -159,7 +288,7 @@ function workroomEntryLink(entry) {
   return path + '?edit=' + entry.id;
 }
 
-async function renderWorkroom(db, page, url) {
+async function renderWorkroom(db, page, url, env) {
   const e = escapeWorkroom;
   const { results: entries } = await db.prepare('SELECT * FROM workroom_entries ORDER BY id DESC').all();
   const params = url.searchParams;
@@ -187,9 +316,10 @@ async function renderWorkroom(db, page, url) {
   if (selected) return workroomRedirect(url, workroomEntryLink(selected));
   if (params.get('add') === 'task') return workroomRedirect(url, workroomPages.task.path + '?add=task#add-task');
   const selectedDay = params.get('day');
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Makassar' }).format(new Date());
+  const today = workroomDay.format(new Date());
   const validDay = /^(19|20)\d{2}-\d{2}-\d{2}$/.test(selectedDay) && Number.isFinite(Date.parse(selectedDay)) && new Date(selectedDay).toISOString().startsWith(selectedDay);
   const day = validDay ? selectedDay : today;
+  const google = await googleMonth(env, day);
   const due = entries.filter(entry => entry.kind === 'task' && entry.status !== 'done' && entry.due && (day === today ? entry.due <= today : entry.due === day))
     .sort((a, b) => a.due.localeCompare(b.due));
   const openTasks = entries.filter(entry => entry.kind === 'task' && entry.status !== 'done').length;
@@ -221,9 +351,10 @@ async function renderWorkroom(db, page, url) {
         <section class="collection agenda"><h2>${day === today ? 'Hari ini' : new Date(day+'T12:00:00Z').toLocaleDateString('id-ID',{day:'numeric',month:'long',timeZone:'UTC'})}</h2>
           ${due.length ? '<ul class="due-list">' + due.map(entry => `<li><form method="post" action="${WORKROOM}"><input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${entry.id}"><button name="action" value="complete" aria-label="Tandai selesai: ${e(entry.title)}">✓</button></form><div><a href="${workroomEntryLink(entry)}">${e(entry.title)}</a><small>${entry.due < today ? 'Lewat tenggat · ' : ''}${e(entry.due)}</small></div></li>`).join('') + '</ul>' : '<p class="agenda-empty">Tidak ada tugas jatuh tempo.</p>'}
           <a class="quick-add" href="${workroomPages.task.path}?add=task#add-task">+ Tambah tugas</a>
+          ${googleAgenda(google, day, params.get('google'))}
           ${day !== today ? '<a class="reset-day" href="/workroom/#agenda">Kembali ke hari ini</a>' : ''}
         </section>
-        ${workroomCalendar(day, entries.filter(entry => entry.kind === 'task' && entry.status !== 'done'), today)}
+        ${workroomCalendar(day, entries.filter(entry => entry.kind === 'task' && entry.status !== 'done'), today, google.entries)}
         <section class="collection recent-notes"><h2>Catatan terbaru</h2>
           ${entries.some(entry => entry.kind === 'note') ? '<ul>' + entries.filter(entry => entry.kind === 'note').slice(0,3).map(note =>
             `<li><a href="${workroomEntryLink(note)}"><strong>${e(note.title)}</strong>${note.body ? '<small>' + e(note.body.slice(0,120)) + '</small>' : ''}</a></li>`).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
@@ -297,6 +428,10 @@ async function handleWorkroom(request, env, url) {
   if (!await isWorkroomOwner(request, env)) {
     return workroomPage('<h1>Workroom privat</h1><p>Akses hanya tersedia untuk akun pemilik.</p>', 403);
   }
+  if (request.method === 'GET' && (url.pathname === WORKROOM + 'google-calendar/' ||
+      (url.pathname === WORKROOM && url.searchParams.get('google') === 'connect'))) {
+    return connectGoogleCalendar(request, env, url);
+  }
   const path = url.pathname.endsWith('/') ? url.pathname : url.pathname + '/';
   const page = Object.keys(workroomPages).find(key => workroomPages[key].path === path);
   if (!page) return workroomPage('<h1>Halaman tidak ditemukan</h1>', 404);
@@ -330,7 +465,7 @@ async function handleWorkroom(request, env, url) {
     if (page === 'note' && !url.searchParams.has('basic')) {
       return workroomPage('<div id="view" aria-busy="true">Memuat catatan…</div><p id="note-status" role="status"></p><noscript>Aktifkan JavaScript untuk membuka editor. <a href="?basic">Buka daftar catatan dasar</a></noscript><script src="/workroom-notes.js" defer></script>', 200, page);
     }
-    return renderWorkroom(db, page, url);
+    return renderWorkroom(db, page, url, env);
   }
 
   const data = await request.formData();
