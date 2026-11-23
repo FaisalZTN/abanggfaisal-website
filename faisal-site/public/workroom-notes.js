@@ -334,32 +334,84 @@ selectionBar.setAttribute('role','toolbar');
 selectionBar.setAttribute('aria-label','Format teks terpilih');
 selectionBar.hidden = true;
 selectionBar.innerHTML = `<select aria-label="Jenis paragraf" data-command="formatBlock"><option value="">Paragraf</option><option value="div">Teks biasa</option>${[1,2,3,4,5,6].map(n=>`<option value="h${n}">Heading ${n}</option>`).join('')}</select>
-<button data-command="bold" aria-label="Tebal"><b>B</b></button><button data-command="italic" aria-label="Miring"><i>I</i></button><button data-command="underline" aria-label="Garis bawah"><u>U</u></button>
 <input type="color" value="#b8d99d" data-command="foreColor" aria-label="Warna teks">
 <select data-command="fontSize" aria-label="Ukuran teks"><option value="">Ukuran</option>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}">${n}</option>`).join('')}</select><button data-command="link">Tautan</button>`;
 document.body.append(selectionBar);
+const selectionPopupDesktop = matchMedia('(hover: hover) and (pointer: fine)');
+const selectionPopupDelay = 500;
 let selectedRange;
-function positionSelectionBar() {
-  const selection=getSelection(), editor=el('edit-body');
-  if(selectionBar.contains(document.activeElement)) return;
-  if(!selection.rangeCount || selection.isCollapsed || !editor?.contains(selection.getRangeAt(0).commonAncestorContainer)){
-    selectionBar.hidden=true; return;
-  }
-  selectedRange=selection.getRangeAt(0).cloneRange();
-  const rect=selectedRange.getBoundingClientRect();
-  selectionBar.hidden=false;
-  selectionBar.style.left=Math.max(8,Math.min(rect.left,innerWidth-selectionBar.offsetWidth-8))+'px';
-  selectionBar.style.top=Math.max(8,Math.min(innerHeight-selectionBar.offsetHeight-8,rect.top>selectionBar.offsetHeight+8?rect.top-selectionBar.offsetHeight-6:rect.bottom+6))+'px';
+let selectionPopupTimer;
+let selectingWithPointer = false;
+
+function closeSelectionBar() {
+  clearTimeout(selectionPopupTimer);
+  selectionBar.hidden = true;
+  selectedRange = undefined;
 }
-document.addEventListener('selectionchange',positionSelectionBar);
-window.addEventListener('resize',positionSelectionBar);
-document.addEventListener('scroll',positionSelectionBar,true);
-document.addEventListener('pointerdown',event=>{if(!selectionBar.contains(event.target))selectionBar.hidden=true;});
-document.addEventListener('keydown',event=>{if(event.key==='Escape')selectionBar.hidden=true;});
+
+function editorSelectionRange() {
+  const selection = getSelection();
+  const editor = el('edit-body');
+  if (!selectionPopupDesktop.matches || !selection?.rangeCount || selection.isCollapsed) return;
+  const range = selection.getRangeAt(0);
+  if (editor?.contains(range.commonAncestorContainer)) return range;
+}
+
+function positionSelectionBar() {
+  if (selectionBar.hidden || !selectedRange) return;
+  const editor = el('edit-body');
+  if (!editor?.contains(selectedRange.commonAncestorContainer)) {
+    closeSelectionBar();
+    return;
+  }
+  const rect = selectedRange.getBoundingClientRect();
+  if (rect.bottom < 0 || rect.top > innerHeight) {
+    closeSelectionBar();
+    return;
+  }
+  const top = rect.top > selectionBar.offsetHeight + 8 ? rect.top - selectionBar.offsetHeight - 6 : rect.bottom + 6;
+  selectionBar.style.left = Math.max(8, Math.min(rect.left, innerWidth - selectionBar.offsetWidth - 8)) + 'px';
+  selectionBar.style.top = Math.max(8, Math.min(innerHeight - selectionBar.offsetHeight - 8, top)) + 'px';
+}
+
+function scheduleSelectionBar() {
+  if (selectionBar.contains(document.activeElement)) return;
+  closeSelectionBar();
+  if (selectingWithPointer || !editorSelectionRange()) return;
+  selectionPopupTimer = setTimeout(() => {
+    const range = editorSelectionRange();
+    if (!range) return;
+    selectedRange = range.cloneRange();
+    selectionBar.hidden = false;
+    positionSelectionBar();
+  }, selectionPopupDelay);
+}
+
+document.addEventListener('selectionchange', scheduleSelectionBar);
+selectionPopupDesktop.addEventListener('change', closeSelectionBar);
+window.addEventListener('resize', positionSelectionBar);
+document.addEventListener('scroll', positionSelectionBar, true);
+document.addEventListener('pointerdown', event => {
+  if (selectionBar.contains(event.target)) return;
+  selectingWithPointer = Boolean(event.target.closest('#edit-body'));
+  closeSelectionBar();
+});
+document.addEventListener('pointerup', () => {
+  if (!selectingWithPointer) return;
+  selectingWithPointer = false;
+  scheduleSelectionBar();
+});
+document.addEventListener('pointercancel', () => {
+  selectingWithPointer = false;
+  closeSelectionBar();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeSelectionBar();
+});
 selectionBar.addEventListener('mousedown',event=>{if(event.target.closest('button'))event.preventDefault();});
 function applySelectionFormat(control) {
   const editor=el('edit-body');
-  if(!control || !selectedRange || !editor?.contains(selectedRange.commonAncestorContainer))return;
+  if(!selectionPopupDesktop.matches || !control || !selectedRange || !editor?.contains(selectedRange.commonAncestorContainer))return;
   editorRange=selectedRange.cloneRange();
   focusEditor(editor);
   const command=control.dataset.command;
