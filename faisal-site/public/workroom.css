@@ -229,6 +229,7 @@ button { justify-self: start; padding: .45rem .95rem; background: var(--green); 
 .days small { color: var(--muted); padding: .35rem 0; }
 .days a { position: relative; min-height: 40px; font-variant-numeric: tabular-nums; }
 .days .selected, .days a:hover, .calendar-heading a:hover { background: var(--accent); color: var(--paper); }
+.days [aria-current="date"] { font-weight: 700; box-shadow: inset 0 0 0 2px currentColor; }
 .days .marked::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
 .due-list { margin: .4rem 0; }
 .due-list li { flex-wrap: nowrap; align-items: center; border-top: 1px solid var(--line); }
@@ -241,7 +242,14 @@ button { justify-self: start; padding: .45rem .95rem; background: var(--green); 
 .calendar-agenda .agenda { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
 .agenda-heading { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem .75rem; }
 .agenda-heading h2 { margin: 0; }
-.agenda-heading span, .reset-day { color: var(--muted); font-size: .85rem; }
+.reset-day {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: .85rem;
+}
 .reset-day { display: inline-flex; align-items: center; min-height: 44px; }
 .agenda-tasks { margin-top: 1rem; }
 .agenda-tasks h3 { font-size: .95rem; margin: 0 0 .4rem; }
