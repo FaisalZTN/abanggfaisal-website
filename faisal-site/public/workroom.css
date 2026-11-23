@@ -386,3 +386,46 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   .note-footer select { width: 100%; min-width: 0; max-width: none; }
   #note-status { overflow-wrap: anywhere; }
 }
+
+/* Keep the Workroom shell in place while the next page fades in. */
+@view-transition { navigation: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .workroom-layout > main { view-transition-name: workroom-content; }
+  .workroom-nav a[aria-current="page"] { view-transition-name: workroom-active-destination; }
+
+  ::view-transition-old(root) { display: none; }
+  ::view-transition-new(root) { animation: none; }
+
+  ::view-transition-group(workroom-content) {
+    animation-duration: .48s;
+    animation-timing-function: cubic-bezier(.22, 1, .36, 1);
+  }
+  ::view-transition-old(workroom-content) {
+    mix-blend-mode: normal;
+    animation: workroom-page-cover .32s ease both reverse;
+  }
+  ::view-transition-new(workroom-content) {
+    mix-blend-mode: normal;
+    animation: workroom-page-cover .48s cubic-bezier(.22, 1, .36, 1) both;
+  }
+
+  ::view-transition-group(workroom-active-destination) {
+    z-index: 1;
+    overflow: hidden;
+    border-radius: .65rem;
+    animation-duration: .48s;
+    animation-timing-function: cubic-bezier(.22, 1, .36, 1);
+  }
+  ::view-transition-old(workroom-active-destination),
+  ::view-transition-new(workroom-active-destination) { animation-duration: .24s; }
+
+  @keyframes workroom-page-cover {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
