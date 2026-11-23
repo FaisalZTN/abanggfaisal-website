@@ -530,22 +530,22 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   white-space: normal;
 }
 .task-detail-link > a { flex: 1 1 12rem; min-width: 0; }
-.task-link-actions {
-  position: absolute;
-  inset-block-start: 100%;
-  inset-inline-end: 0;
-  z-index: 2;
+.workroom-link-options {
+  position: fixed;
+  z-index: 20;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: .5rem;
-  max-width: 100%;
+  max-width: calc(100vw - 16px);
   padding: .5rem;
   border: 1px solid var(--line);
   border-radius: .65rem;
   background: var(--paper);
 }
-.task-link-actions a { display: inline-flex; align-items: center; min-height: 44px; }
+.workroom-link-options[hidden], .workroom-link-options span:empty { display: none; }
+.workroom-link-options a { display: inline-flex; align-items: center; min-height: 44px; }
+.workroom-link-options span { flex-basis: 100%; }
 .task-detail-image img {
   flex-basis: 100%;
   width: min(100%, 44rem);
