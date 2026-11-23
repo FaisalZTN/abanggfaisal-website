@@ -151,6 +151,11 @@ async function renderWorkroom(db, notice, addTask, selectedDay) {
           ${day !== today ? '<a class="reset-day" href="/workroom/#agenda">Kembali ke hari ini</a>' : ''}
         </section>
         ${workroomCalendar(day, entries.filter(entry => entry.kind === 'task' && entry.status === 'active'), today)}
+        <section class="collection recent-notes"><h2>Catatan terbaru</h2>
+          ${entries.some(entry => entry.kind === 'note') ? '<ul>' + entries.filter(entry => entry.kind === 'note').slice(0,3).map(note =>
+            `<li><a href="#entry-${note.id}"><strong>${e(note.title)}</strong>${note.body ? '<small>' + e(note.body.slice(0,120)) + '</small>' : ''}</a></li>`).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
+          <a href="#note">Semua catatan</a>
+        </section>
       </div>
       <div class="dashboard-collections">${sections}</div>
     </div></div>`);
