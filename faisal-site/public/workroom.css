@@ -758,3 +758,7 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-row-title { display: flex; align-items: center; gap: .25rem; min-width: 0; }
 .note-row-title svg, .note-footer :is(#pin-note, #delete-note) svg { width: 1.15rem; height: 1.15rem; flex: none; }
 .note-row-title svg { color: var(--accent); width: 1rem; height: 1rem; }
+
+.note-selection-bar:not([hidden]) { position:fixed; z-index:20; display:flex; align-items:center; flex-wrap:wrap; gap:2px; max-width:calc(100vw - 16px); padding:5px; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:0 6px 24px #0005; }
+.note-selection-bar :is(select,input,button) { width:auto; min-height:40px; margin:0; color:var(--ink); background:var(--paper); }
+.note-selection-bar input[type=color] { width:42px; }
