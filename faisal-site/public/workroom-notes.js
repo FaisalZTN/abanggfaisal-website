@@ -148,8 +148,8 @@ function renderNotes(notes) {
   editorRange = undefined;
   el('view').innerHTML = `<div class="notes-head"><h1>Catatan</h1><button class="primary" data-new-note>+ Catatan baru</button></div>
     <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
-      <section class="note-categories" aria-label="Kategori"><div class="category-head"><h2>Kategori</h2><button id="add-category" aria-label="Kategori baru" title="Kategori baru">+</button></div>${Object.entries(noteCategories).map(([key, label]) =>
-        `<button data-category="${key}" aria-pressed="${key === noteCategory}">${escape(label)} <small>${notes.filter(item => key === 'all' || (item.category || 'none') === key).length}</small></button>`).join('')}</section>
+      <section class="note-categories" aria-label="Kategori"><div class="category-head"><h2>Kategori</h2><button id="add-category" aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('M12 5v14M5 12h14')}</button></div>${Object.entries(noteCategories).map(([key, label]) =>
+        `<button data-category="${key}" aria-pressed="${key === noteCategory}"><span>${escape(label)}</span><small class="note-category-count">${notes.filter(item => key === 'all' || (item.category || 'none') === key).length}</small></button>`).join('')}</section>
       <section class="note-index" aria-label="Daftar catatan"><input type="search" id="note-query" aria-label="Cari catatan" placeholder="Cari catatan…" value="${escape(noteQuery)}"><details ${fromTime || toTime ? "open" : ""}><summary>Filter waktu<span class="muted"> · WITA</span></summary><label>Dari<input type="datetime-local" id="note-from" value="${escape(fromTime)}"></label><label>Sampai<input type="datetime-local" id="note-to" value="${escape(toTime)}"></label><button id="clear-time">Hapus filter waktu</button></details><div id="note-list"></div></section>
       <section class="note-sheet" aria-label="Editor catatan">${note ? `<div><button class="note-back" id="note-back">← Daftar catatan</button></div>
         <input id="edit-title" placeholder="Catatan baru" aria-label="Judul catatan" maxlength="160" value="${escape(note.title)}">
