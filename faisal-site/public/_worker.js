@@ -85,30 +85,47 @@ function workroomForm(kind, entry, projects) {
   </form>`;
 }
 
-async function renderWorkroom(db, notice) {
+async function renderWorkroom(db, notice, addTask) {
   const e = escapeWorkroom;
   const { results: entries } = await db.prepare('SELECT * FROM workroom_entries ORDER BY id DESC').all();
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Makassar' }).format(new Date());
   const due = entries.filter(entry => entry.kind === 'task' && entry.status === 'active' && entry.due && entry.due <= today)
     .sort((a, b) => a.due.localeCompare(b.due));
   const projects = entries.filter(entry => entry.kind === 'project');
-  const sections = Object.entries(workroomKinds).map(([kind, settings]) => `<section id="${kind}">
+  const openTasks = entries.filter(entry => entry.kind === 'task' && entry.status === 'active').length;
+  const activeProjects = projects.filter(project => project.status === 'active').length;
+  const activeGoals = entries.filter(entry => entry.kind === 'goal' && entry.status === 'active').length;
+  const dateLabel = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full', timeZone: 'Asia/Makassar' }).format(new Date());
+  const sections = Object.entries(workroomKinds).map(([kind, settings]) => `<section class="collection" id="${kind}">
     <h2>${settings.title}</h2>
-    <details><summary>Tambah ${settings.title.toLowerCase()}</summary>${workroomForm(kind, null, projects)}</details>
+    <details class="add-entry" id="add-${kind}"${kind === 'task' && addTask ? ' open' : ''}><summary>Tambah ${settings.title.toLowerCase()}</summary>${workroomForm(kind, null, projects)}</details>
     ${entries.filter(entry => entry.kind === kind).map(entry => `<details id="entry-${entry.id}">
       <summary>${e(entry.title)} <small>${settings.statuses[entry.status]}${entry.due ? ' · ' + e(entry.due) : ''}${entry.priority === 'high' ? ' · Prioritas tinggi' : ''}</small></summary>
       ${workroomForm(kind, entry, projects)}
     </details>`).join('')}</section>`).join('');
-  return workroomPage(`<h1>Workroom</h1>
-    ${notice ? '<p role="status">Perubahan tersimpan.</p>' : ''}
-    <nav aria-label="Bagian Workroom">${Object.entries(workroomKinds).map(([kind, settings]) =>
-      `<a href="#${kind}">${settings.title}</a>`).join('')}</nav>
-    <section><h2>Hari Ini</h2>
-      <p>${projects.filter(project => project.status === 'active').length} proyek aktif</p>
-      ${due.length ? '<ul>' + due.map(entry =>
-        `<li><a href="#entry-${entry.id}">${e(entry.title)}</a> · ${e(entry.due)}</li>`).join('') + '</ul>'
-        : '<p>Tidak ada tugas yang jatuh tempo hari ini atau sudah lewat.</p>'}
-    </section>${sections}`);
+  return workroomPage(`<div class="dashboard">
+    <aside class="dashboard-sidebar">
+      <h1>Workroom</h1>
+      <nav aria-label="Bagian Workroom"><a href="#hari-ini">Hari ini</a>${Object.entries(workroomKinds).map(([kind, settings]) =>
+        `<a href="#${kind}">${settings.title}</a>`).join('')}</nav>
+    </aside>
+    <div class="dashboard-content">
+      ${notice ? '<p class="save-notice" role="status">Perubahan tersimpan.</p>' : ''}
+      <section class="today-panel" id="hari-ini">
+        <div class="today-heading"><div><p>${e(dateLabel)}</p><h2>Hari ini</h2></div>
+          <a class="quick-add" href="/workroom/?add=task#add-task">+ Tambah tugas</a>
+        </div>
+        ${due.length ? '<ul class="due-list">' + due.map(entry =>
+          `<li><a href="#entry-${entry.id}">${e(entry.title)}</a> <time datetime="${e(entry.due)}">${e(entry.due)}</time></li>`).join('') + '</ul>'
+          : '<p class="agenda-empty">Tidak ada tugas yang jatuh tempo hari ini atau sudah lewat.</p>'}
+      </section>
+      <div class="dashboard-stats">
+        <a href="#task"><strong>${openTasks}</strong> Tugas terbuka</a>
+        <a href="#project"><strong>${activeProjects}</strong> Proyek aktif</a>
+        <a href="#goal"><strong>${activeGoals}</strong> Goals aktif</a>
+      </div>
+      <div class="dashboard-collections">${sections}</div>
+    </div></div>`);
 }
 
 async function handleWorkroom(request, env, url) {
@@ -137,7 +154,7 @@ async function handleWorkroom(request, env, url) {
     priority TEXT NOT NULL,
     project_id INTEGER REFERENCES workroom_entries(id) ON DELETE SET NULL
   )`).run();
-  if (request.method === 'GET') return renderWorkroom(db, url.searchParams.has('saved'));
+  if (request.method === 'GET') return renderWorkroom(db, url.searchParams.has('saved'), url.searchParams.get('add') === 'task');
 
   const data = await request.formData();
   const get = key => String(data.get(key) ?? '').trim();
