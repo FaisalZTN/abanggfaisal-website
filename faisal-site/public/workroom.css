@@ -105,3 +105,14 @@ button { justify-self: start; padding: .45rem .95rem; background: var(--green); 
   .capture { grid-template-columns: 1fr auto; }
   .capture input[name="title"] { grid-column: 1 / -1; grid-row: 1; }
 }
+
+.recent-notes ul { list-style: none; padding: 0; }
+.recent-notes li { margin: .5rem 0; }
+.recent-notes li a { display: grid; gap: .2rem; background: #263129; padding: .7rem; border-radius: .6rem; text-decoration: none; overflow-wrap: anywhere; }
+.recent-notes small, .recent-notes p { color: var(--muted); }
+@media (min-width: 621px) and (max-width: 1150px) {
+  .recent-notes { grid-column: 1 / -1; }
+}
+@media (min-width: 1151px) {
+  .overview { grid-template-columns: minmax(0,1.15fr) minmax(18rem,1fr) minmax(0,.9fr); }
+}
