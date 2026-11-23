@@ -29,6 +29,7 @@ main:has(.notes-desk) { width:100%; max-width:1600px; padding-inline:clamp(14px,
 .note-back { display:none }
 @media(max-width:1000px) { .notes-desk { grid-template-columns:minmax(0,1fr) minmax(0,2fr) } .note-categories { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:4px; align-items:center } .note-categories button { width:auto } }
 @media(max-width:700px) { .notes-desk { grid-template-columns:minmax(0,1fr) } .notes-desk.is-editing :is(.note-categories,.note-index),.notes-desk:not(.is-editing) .note-sheet { display:none } .note-back { display:inline-flex } }
+.note-index details{margin-bottom:10px}.note-index summary{cursor:pointer;color:var(--muted)}.note-index details label{display:block}.note-rendered{flex:1;min-height:260px;padding:12px;overflow-wrap:anywhere}.note-rendered img{display:block;max-width:100%;height:auto}.note-rendered a{color:var(--accent)}.note-check{display:flex;align-items:center;gap:8px}.note-toolbar input{font:inherit;max-width:100%}
 </style>
 <aside><div class="brand">Workroom</div><button class="search" id="search">⌕ Cari di Workroom <small> · Ctrl/⌘ K</small></button><nav id="nav" aria-label="Workroom"></nav><small>Demo dengan data contoh</small></aside>
 <main><div class="top"><span id="crumb"></span><small>Perubahan tersimpan di browser ini</small></div><div id="view"></div><p id="announce" class="sr" role="status"></p></main>
@@ -46,6 +47,22 @@ try { entries = JSON.parse(localStorage.getItem(key)) ?? seed; } catch { entries
 const statusNames = {todo:'Belum mulai',doing:'Dikerjakan',done:'Selesai'};
 const pages = {home:'Beranda',tasks:'Tugas',notes:'Catatan'};
 const noteCategories = {all:'Semua',belajar:'Belajar',ide:'Ide',pribadi:'Pribadi',referensi:'Referensi',none:'Tanpa kategori'};
+const categoryKey = key + '-categories';
+try { Object.assign(noteCategories, JSON.parse(localStorage.getItem(categoryKey) || '{}')); } catch {}
+const clock = new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Makassar',dateStyle:'short',timeStyle:'short'});
+const noteTime = item => item.updated ? clock.format(new Date(item.updated)) : '';
+let fromTime='', toTime='', formatted=false;
+function formatNote(body) {
+  return body.split('\n').map((line,i)=>{
+    const check=line.match(/^- \[([ xX])\] (.*)$/);
+    let text=escape(check ? check[2] : line);
+    text=text.replace(/(!?)\[([^\]]*)\]\((https:\/\/[^\s)]+)\)/g, (_,image,label,url)=>
+      image ? '<img referrerpolicy="no-referrer" src="'+url+'" alt="'+label+'">' :
+      '<a target="_blank" rel="noopener noreferrer" href="'+url+'">'+label+'</a>');
+    if (!line.includes('https://')) text=text.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\*([^*]+)\*/g,'<i>$1</i>').replace(/\^([^^]+)\^/g,'<sup>$1</sup>').replace(/~([^~]+)~/g,'<sub>$1</sub>');
+    return check ? '<label class="note-check"><input type="checkbox" data-check="'+i+'" '+(check[1]!==' '?'checked':'')+'>'+text+'</label>' : '<div>'+ (text||'<br>')+'</div>';
+  }).join('');
+}
 let noteCategory = 'all', noteQuery = '', noteEditing = false;
 let page = new URLSearchParams(location.search).has('catatan') ? 'notes' : 'home', mode = 'table', filter = 'all', activeNote;
 const el = id => document.getElementById(id);
@@ -56,7 +73,7 @@ function save() {
 }
 function openPage(next, note) { page=next; activeNote=note; noteEditing=Boolean(note); render(); }
 function add(kind,title) {
-  const item={id:crypto.randomUUID(),kind,title,status:'todo',body:''};
+  const item={id:crypto.randomUUID(),kind,title,status:'todo',body:'',updated:Date.now()};
   entries=[item,...entries]; save(); return item;
 }
 function statusSelect(item) {
@@ -88,9 +105,12 @@ function renderNoteIndex() {
   const q = noteQuery.trim().toLocaleLowerCase('id');
   const notes = entries.filter(item => item.kind === 'note' &&
     (noteCategory === 'all' || (item.category || 'none') === noteCategory) &&
-    (item.title + ' ' + item.body).toLocaleLowerCase('id').includes(q));
+    (item.title + ' ' + item.body + ' ' + noteTime(item)).toLocaleLowerCase('id').includes(q) &&
+    (!fromTime || (noteTime(item) && noteTime(item).replace(' ','T') >= fromTime)) &&
+    (!toTime || (noteTime(item) && noteTime(item).replace(' ','T') <= toTime)));
+  notes.sort((a,b)=>(b.updated||0)-(a.updated||0));
   el('note-list').innerHTML = notes.map(note => `<button data-open="${note.id}"${note.id === activeNote ? ' aria-current="true"' : ''}>
-    <strong>${escape(note.title)}</strong><small>${escape(note.body || 'Catatan kosong')}</small><small>${noteCategories[note.category || 'none']}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
+    <strong>${escape(note.title)}</strong><small>${noteTime(note) || 'Waktu belum tercatat'}</small><small>${escape(note.body || 'Catatan kosong')}</small><small>${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
 }
 function renderNotes(notes) {
   const note = notes.find(item => item.id === activeNote) || notes[0];
@@ -98,20 +118,21 @@ function renderNotes(notes) {
   const options = Object.entries(noteCategories).filter(([key]) => key !== 'all');
   el('view').innerHTML = `<div class="notes-head"><h1>Catatan</h1><button class="primary" data-new-note>+ Catatan baru</button></div>
     <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
-      <section class="note-categories" aria-label="Kategori"><h2>Kategori</h2>${Object.entries(noteCategories).map(([key, label]) =>
-        `<button data-category="${key}" aria-pressed="${key === noteCategory}">${label} <small>${notes.filter(item => key === 'all' || (item.category || 'none') === key).length}</small></button>`).join('')}</section>
-      <section class="note-index" aria-label="Daftar catatan"><input type="search" id="note-query" aria-label="Cari catatan" placeholder="Cari catatan…" value="${escape(noteQuery)}"><div id="note-list"></div></section>
+      <section class="note-categories" aria-label="Kategori"><h2>Kategori</h2><button id="add-category">+ Kategori baru</button>${Object.entries(noteCategories).map(([key, label]) =>
+        `<button data-category="${key}" aria-pressed="${key === noteCategory}">${escape(label)} <small>${notes.filter(item => key === 'all' || (item.category || 'none') === key).length}</small></button>`).join('')}</section>
+      <section class="note-index" aria-label="Daftar catatan"><input type="search" id="note-query" aria-label="Cari catatan" placeholder="Cari catatan…" value="${escape(noteQuery)}"><details ${fromTime || toTime ? "open" : ""}><summary>Filter waktu · WITA</summary><label>Dari<input type="datetime-local" id="note-from" value="${escape(fromTime)}"></label><label>Sampai<input type="datetime-local" id="note-to" value="${escape(toTime)}"></label><button id="clear-time">Hapus filter waktu</button></details><div id="note-list"></div></section>
       <section class="note-sheet" aria-label="Editor catatan">${note ? `<div><button class="note-back" id="note-back">← Daftar catatan</button></div>
         <input id="edit-title" aria-label="Judul catatan" maxlength="160" value="${escape(note.title)}">
-        <div class="note-toolbar" aria-label="Sisipkan Markdown"><button data-mark="heading">Judul bagian</button><button data-mark="bold">Tebal</button><button data-mark="list">Daftar</button><button data-mark="check">Checklist</button></div>
-        <textarea id="edit-body" aria-label="Isi catatan" maxlength="10000" placeholder="Tulis ide kamu di sini…">${escape(note.body)}</textarea>
-        <div class="note-footer"><small>Markdown · simpan otomatis</small><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${label}</option>`).join('')}</select></label></div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
+        <div class="note-toolbar" aria-label="Sisipkan Markdown"><button data-mark="heading">Judul bagian</button><button data-mark="bold"><b>Tebal</b></button><button data-mark="italic"><i>Miring</i></button><button data-mark="sup">x²</button><button data-mark="sub">x₂</button><button data-mark="image">Gambar</button><button data-mark="link">Tautan</button><label>Tanggal <input type="date" id="insert-date"></label><button data-mark="list">Daftar</button><button data-mark="check">Checklist</button></div>
+        <button id="format-preview" aria-pressed="${formatted}">${formatted ? "Kembali mengedit" : "Pratinjau format"}</button>${formatted ? `<div class="note-rendered">${formatNote(note.body)}</div>` : `<textarea id="edit-body" aria-label="Isi catatan" maxlength="10000" placeholder="Tulis ide kamu di sini…">${escape(note.body)}</textarea>`}
+        <div class="note-footer"><small>Markdown · simpan otomatis</small><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label></div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
     </div>`;
   renderNoteIndex();
 }
 function showItem(id) {
   el('finder').close();
   const item = entries.find(entry => entry.id === id);
+  formatted=false;
   openPage(item.kind === 'note' ? 'notes' : 'editor', id);
   el('edit-title').focus();
 }
@@ -128,14 +149,33 @@ document.addEventListener('click',event=>{
   const button=event.target.closest('button'); if(!button)return;
   const {page:next,open,mode:nextMode,complete,newNote}=button.dataset;
   if(next)openPage(next);
+  if(button.id==='format-preview'){formatted=!formatted;render();el('format-preview').focus();}
+  if(button.id==='clear-time'){fromTime='';toTime='';render();el('note-query').focus();}
+  if(button.id==='add-category'){
+    const name=prompt('Nama kategori baru')?.trim().slice(0,40);
+    if(!name)return;
+    if(Object.values(noteCategories).some(label=>label.toLowerCase()===name.toLowerCase())){alert('Kategori sudah ada.');return;}
+    const id='custom-'+crypto.randomUUID();
+    noteCategories[id]=name;
+    try {localStorage.setItem(categoryKey,JSON.stringify(Object.fromEntries(Object.entries(noteCategories).filter(([key])=>key.startsWith('custom-')))));} catch {}
+    noteCategory=id;render();
+  }
   if(button.dataset.category){noteCategory=button.dataset.category;noteEditing=false;render();}
   if(button.id==='note-back'){noteEditing=false;render();el('note-query').focus();}
   if(button.dataset.mark){
-    const field=el('edit-body');
-    const markers={heading:['## ',''],bold:['**','**'],list:['- ',''],check:['- [ ] ','']};
+    const field=el('edit-body'); if(!field)return;
+    const markers={heading:['## ',''],bold:['**','**'],italic:['*','*'],sup:['^','^'],sub:['~','~'],image:['',''],link:['',''],list:['- ',''],check:['- [ ] ','']};
     const [before,after]=markers[button.dataset.mark];
-    const selected=field.value.slice(field.selectionStart,field.selectionEnd);
-    if(field.value.length+before.length+after.length<=field.maxLength){
+    let selected=field.value.slice(field.selectionStart,field.selectionEnd);
+    if(['image','link'].includes(button.dataset.mark)){
+      const image=button.dataset.mark==='image';
+      const raw=prompt(image?'URL gambar (HTTPS)':'URL tautan (HTTPS)');
+      if(!raw)return;
+      let url;
+      try { url=new URL(raw); if(url.protocol!=='https:')throw Error(); } catch { alert('Masukkan URL HTTPS yang valid.'); return; }
+      selected=(image?'!':'')+'['+(selected.replace(/[\[\]\n]/g,'')||(image?'Gambar':'Tautan'))+']('+url.href.replace(/\)/g,'%29')+')';
+    }
+    if(field.value.length-(field.selectionEnd-field.selectionStart)+selected.length+before.length+after.length<=field.maxLength){
       field.setRangeText(before+selected+after,field.selectionStart,field.selectionEnd,'end');
       field.dispatchEvent(new Event('input',{bubbles:true}));
     }
@@ -148,8 +188,26 @@ document.addEventListener('click',event=>{
 });
 document.addEventListener('change',event=>{
   const target=event.target;
+  if(target.id==='note-from' || target.id==='note-to'){
+    if(target.id==='note-from')fromTime=target.value;else toTime=target.value;
+    renderNoteIndex();
+  }
+  if(target.id==='insert-date' && target.value && el('edit-body')){
+    const field=el('edit-body');
+    if(field.value.length-(field.selectionEnd-field.selectionStart)+target.value.length<=field.maxLength){
+      field.setRangeText(target.value,field.selectionStart,field.selectionEnd,'end');
+      field.dispatchEvent(new Event('input',{bubbles:true}));
+      target.value='';field.focus();
+    }
+  }
+  if(target.dataset.check!==undefined){
+    const item=entries.find(entry=>entry.id===activeNote), lines=item.body.split('\n');
+    const i=Number(target.dataset.check);
+    lines[i]=lines[i].replace(/^- \[[ xX]\]/,target.checked?'- [x]':'- [ ]');
+    item.body=lines.join('\n');item.updated=Date.now();save();renderNoteIndex();
+  }
   if(target.id==='filter'){filter=target.value;render();el('filter').focus();}
-  if(target.id==='note-category'){entries.find(item=>item.id===activeNote).category=target.value;save();render();el('note-category').focus();}
+  if(target.id==='note-category'){entries.find(item=>item.id===activeNote).category=target.value;entries.find(item=>item.id===activeNote).updated=Date.now();save();render();el('note-category').focus();}
   const id=target.dataset.status;
   if(id){entries.find(item=>item.id===id).status=target.value;save();if(page==='tasks'){render();(document.querySelector('[data-status="'+id+'"]')||el('filter')).focus();}}
 });
@@ -159,6 +217,7 @@ document.addEventListener('input',event=>{
   const item=entries.find(item=>item.id===activeNote);
   if(event.target.id==='edit-title')item.title=event.target.value.trim()|| (item.kind==='note'?'Catatan baru':'Tugas baru');
   else item.body=event.target.value;
+  if(item.kind==='note')item.updated=Date.now();
   save();
   if(page==='notes')renderNoteIndex();
 });
