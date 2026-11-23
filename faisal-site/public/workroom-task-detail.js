@@ -39,7 +39,9 @@
     item.className = 'task-detail-link';
     const toggle = document.createElement('button');
     toggle.type = 'button';
-    toggle.textContent = 'Opsi link';
+    toggle.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>';
+    toggle.setAttribute('aria-label', 'Opsi link');
+    toggle.title = 'Opsi link';
     toggle.dataset.linkOptions = '';
     toggle.setAttribute('aria-expanded', 'false');
     item.append(externalLink(url, label), toggle);
