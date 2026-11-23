@@ -344,7 +344,7 @@ function workroomDailyTasks(tasks, projects, filter) {
     byDate.get(date).push(task);
   }
   const dates = [...byDate.keys()].sort((a, b) => (a || '9999').localeCompare(b || '9999'));
-  return `<div class="daily-task-grid">${dates.map(date => {
+  return `<p class="quick-check-feedback" role="status" hidden></p><div class="daily-task-grid">${dates.map(date => {
     const items = byDate.get(date);
     const completed = items.filter(task => task.status === 'done').length;
     const title = date ? dateLabel.format(new Date(date + 'T12:00:00Z')) : 'Tanpa tenggat';
@@ -355,19 +355,19 @@ function workroomDailyTasks(tasks, projects, filter) {
     return `<article class="daily-task-card" id="tasks-${date || 'undated'}">
       <details${collapsed ? '' : ' open'}>
         <summary><strong>${e(title)}</strong>${date === today ? '<span class="daily-task-today">Hari ini</span>' : ''}
-          <small class="daily-task-progress" aria-label="${completed} dari ${items.length} selesai">${completed}/${items.length}</small></summary>
+          <small class="daily-task-progress" data-completed="${completed}" data-total="${items.length}" aria-label="${completed} dari ${items.length} selesai">${completed}/${items.length}</small></summary>
         ${items.length ? `<ul>${items.map(task => {
           const done = task.status === 'done';
           const change = done ? 'Buka kembali' : 'Tandai selesai';
           const project = projectTitles.get(task.project_id);
           return `<li${done ? ' class="is-done"' : ''}>
-            <form method="post" action="${path}">
+            <form method="post" action="${path}" data-quick-check>
               <input type="hidden" name="kind" value="task">
               <input type="hidden" name="id" value="${task.id}">
               <input type="hidden" name="view" value="daily">
               <input type="hidden" name="status" value="${done ? 'active' : 'done'}">
               <input type="hidden" name="filter" value="${Object.hasOwn(workroomKinds.task.statuses, filter) ? filter : ''}">
-              <button name="action" value="status" role="checkbox" aria-checked="${done}" aria-label="${change}: ${e(task.title)}"><span aria-hidden="true">${done ? '✓' : ''}</span></button>
+              <button name="action" value="status" role="checkbox" aria-checked="${done}" data-title="${e(task.title)}" aria-label="${change}: ${e(task.title)}"><span aria-hidden="true"></span></button>
             </form>
             <div><a class="daily-task-title" href="${workroomEntryLink(task)}#workspace">${e(task.title)}</a>
               ${project || task.priority === 'high' || task.status === 'doing' ? `<div class="daily-task-meta">
@@ -437,16 +437,22 @@ async function ensureWorkroomActivity(db) {
     id INTEGER PRIMARY KEY, entry_id INTEGER NOT NULL, kind TEXT NOT NULL,
     title TEXT NOT NULL, action TEXT NOT NULL, occurred INTEGER NOT NULL
   )`).run();
+  const keepDailyStatus = action => `DELETE FROM workroom_activity
+    WHERE kind = 'task' AND entry_id = NEW.id AND action = '${action}'
+    AND occurred >= unixepoch('now', '+8 hours', 'start of day', '-8 hours'); ${record(action)}`;
   await db.batch([
     db.prepare('CREATE INDEX IF NOT EXISTS workroom_activity_period ON workroom_activity (occurred)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS workroom_activity_task_status ON workroom_activity (entry_id, kind, action, occurred)'),
     db.prepare(`CREATE TRIGGER IF NOT EXISTS workroom_activity_created AFTER INSERT ON workroom_entries
       BEGIN ${record('created')} END`),
     db.prepare(`CREATE TRIGGER IF NOT EXISTS workroom_activity_completed_on_create AFTER INSERT ON workroom_entries
       WHEN NEW.kind = 'task' AND NEW.status = 'done' BEGIN ${record('completed')} END`),
-    db.prepare(`CREATE TRIGGER IF NOT EXISTS workroom_activity_completed AFTER UPDATE OF status ON workroom_entries
-      WHEN NEW.kind = 'task' AND OLD.status <> 'done' AND NEW.status = 'done' BEGIN ${record('completed')} END`),
-    db.prepare(`CREATE TRIGGER IF NOT EXISTS workroom_activity_reopened AFTER UPDATE OF status ON workroom_entries
-      WHEN NEW.kind = 'task' AND OLD.status = 'done' AND NEW.status <> 'done' BEGIN ${record('reopened')} END`),
+    db.prepare('DROP TRIGGER IF EXISTS workroom_activity_completed'),
+    db.prepare('DROP TRIGGER IF EXISTS workroom_activity_reopened'),
+    db.prepare(`CREATE TRIGGER IF NOT EXISTS workroom_activity_daily_completed AFTER UPDATE OF status ON workroom_entries
+      WHEN NEW.kind = 'task' AND OLD.status <> 'done' AND NEW.status = 'done' BEGIN ${keepDailyStatus('completed')} END`),
+    db.prepare(`CREATE TRIGGER IF NOT EXISTS workroom_activity_daily_reopened AFTER UPDATE OF status ON workroom_entries
+      WHEN NEW.kind = 'task' AND OLD.status = 'done' AND NEW.status <> 'done' BEGIN ${keepDailyStatus('reopened')} END`),
     db.prepare(`CREATE TRIGGER IF NOT EXISTS workroom_activity_note_edited AFTER UPDATE OF body, title ON workroom_entries
       WHEN NEW.kind = 'note' AND (OLD.body <> NEW.body OR OLD.title <> NEW.title) BEGIN ${record('edited')} END`),
   ]);
@@ -478,9 +484,15 @@ function reviewTimeline(activity, google) {
   const e = escapeWorkroom;
   const timeline = new Map(google.entries);
   const actionLabels = { created: 'Dibuat', completed: 'Diselesaikan', reopened: 'Dibuka lagi', edited: 'Diedit' };
+  const dailyStatus = new Set();
   for (const item of activity) {
     const time = new Date(item.occurred * 1000);
     const date = workroomDay.format(time);
+    if (item.kind === 'task' && (item.action === 'completed' || item.action === 'reopened')) {
+      const key = date + ':' + item.entry_id;
+      if (dailyStatus.has(key)) continue;
+      dailyStatus.add(key);
+    }
     const entries = timeline.get(date) ?? [];
     entries.push({
       start: +time, title: item.title, time: workroomTime.format(time) + ' WITA',
@@ -640,7 +652,7 @@ async function renderWorkroom(db, page, url, env) {
   };
   if (page !== 'home') {
     return workroomPage(`<div class="dashboard-content"><h1>${workroomPages[page].title}</h1>
-      ${notice}${collection(page)}${page === 'task' ? workroomWorkspace(entries, params) + '<script src="/workroom-task-detail.js" defer></script>' : ''}</div>`, 200, page);
+      ${notice}${collection(page)}${page === 'task' ? workroomWorkspace(entries, params) + '<script src="/workroom-task-detail.js" defer></script><script src="/workroom-quick-check.js" defer></script>' : ''}</div>`, 200, page);
   }
 
   const selectedDay = params.get('day');
@@ -904,12 +916,17 @@ async function handleWorkroom(request, env, url) {
   if (get('action') === 'status' && kind === 'task' && id) {
     const status = get('status');
     if (!Object.hasOwn(workroomKinds.task.statuses, status)) return invalid();
-    await db.prepare("UPDATE workroom_entries SET status = ? WHERE id = ? AND kind = 'task'").bind(status, id).run();
+    const task = await db.prepare("UPDATE workroom_entries SET status = ? WHERE id = ? AND kind = 'task' RETURNING due, status").bind(status, id).first();
+    if (request.headers.get('Accept') === 'application/json') {
+      return Response.json(task ? { status: task.status } : { error: 'Tugas tidak ditemukan.' }, {
+        status: task ? 200 : 404,
+        headers: { ...privateHeaders, 'Content-Type': 'application/json; charset=utf-8' },
+      });
+    }
     const query = new URLSearchParams({saved: '', view: workroomTaskView(get('view') || 'table')});
     if (Object.hasOwn(workroomKinds.task.statuses, get('filter'))) query.set('status', get('filter'));
     let anchor = 'workspace';
     if (query.get('view') === 'daily') {
-      const task = await db.prepare("SELECT due FROM workroom_entries WHERE id = ? AND kind = 'task'").bind(id).first();
       if (task) anchor = 'tasks-' + (validWorkroomDay(task.due) ? task.due : 'undated');
     }
     return new Response(null, { status: 303, headers: { ...privateHeaders, Location: workroomPages.task.path + '?' + query + '#' + anchor } });
