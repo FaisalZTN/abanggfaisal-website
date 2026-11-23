@@ -188,6 +188,7 @@ button { justify-self: start; padding: .45rem .95rem; background: var(--green); 
 
 .today-panel { background: linear-gradient(115deg, #032c7d, #0c1b43); border: 1px solid var(--line); }
 .today-heading h2 { font-size: clamp(2rem, 4vw, 3.25rem); }
+.today-heading .workroom-greeting-copy { margin: .55rem 0 0; }
 .capture { grid-template-columns: auto minmax(0, 1fr) auto; margin-top: 1.25rem; padding: 0; gap: .45rem; }
 .capture button { background: var(--accent); color: var(--paper); font-weight: 650; }
 .dashboard-stats strong { color: var(--accent); }
