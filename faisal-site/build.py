@@ -16,6 +16,13 @@ def asset(name):
     versioned=path.stem+'.'+hashlib.sha256(data).hexdigest()[:12]+path.suffix
     (D/versioned).write_bytes(data)
     return '/'+versioned
+workroom_worker = D / '_worker.js'
+workroom_source = workroom_worker.read_text(encoding='utf-8')
+for workroom_asset in ('workroom.css', 'workroom-notes.js'):
+    workroom_source = workroom_source.replace(
+        f'"/{workroom_asset}"', f'"{asset(workroom_asset)}"'
+    )
+workroom_worker.write_text(workroom_source, encoding='utf-8')
 style_url=asset('style.css')
 script_url=asset('app.js')
 theme_bootstrap = '''<script>
