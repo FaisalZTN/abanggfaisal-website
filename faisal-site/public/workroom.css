@@ -656,12 +656,21 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .daily-task-card [role="checkbox"] span {
   display: grid;
   place-items: center;
-  width: 1.35rem;
-  height: 1.35rem;
-  border: 2px solid var(--muted);
-  border-radius: 50%;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 1.5px solid var(--muted);
+  border-radius: .15rem;
+  color: var(--ink);
 }
-.daily-task-card [aria-checked="true"] span { border-color: var(--accent); background: var(--accent); color: var(--paper); }
+.daily-task-card [aria-checked="true"] span::after {
+  content: '';
+  width: .31rem;
+  height: .55rem;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: translateY(-.06rem) rotate(45deg);
+}
+.quick-check-feedback { color: var(--muted); }
 .daily-task-title { font-weight: 650; }
 .daily-task-card .is-done .daily-task-title { color: var(--muted); text-decoration: line-through; }
 .daily-task-meta { display: flex; flex-wrap: wrap; gap: .25rem .6rem; color: var(--muted); }
