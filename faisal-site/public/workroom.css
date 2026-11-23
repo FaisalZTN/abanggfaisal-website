@@ -14,7 +14,29 @@ body { margin: 0; background: var(--paper); color: var(--ink); font: 1rem/1.55 s
 a { color: inherit; text-underline-offset: .2em; }
 header, main { width: min(100% - 2rem, 84rem); margin-inline: auto; }
 header { display: flex; justify-content: space-between; align-items: center; min-height: 4rem; border-bottom: 1px solid var(--line); }
-header a:first-child { font-weight: 750; text-decoration: none; }
+.workroom-header { gap: .55rem 1rem; flex-wrap: wrap; padding-block: .6rem; }
+.workroom-wordmark { font-size: clamp(1.4rem, 2.5vw, 2.1rem); font-weight: 780; letter-spacing: -.045em; text-decoration: none; }
+.workroom-header nav { display: flex; gap: .25rem clamp(.65rem, 2vw, 1.5rem); flex-wrap: wrap; font-size: .9rem; }
+.workroom-header nav a { color: var(--muted); text-decoration: none; padding-block: .35rem; }
+.workroom-header nav a:hover { color: var(--ink); text-decoration: underline; }
+.workroom-layout { display: flex; flex-direction: column; min-height: 100vh; }
+.workroom-footer {
+  width: min(100% - 1rem, 84rem);
+  margin: auto auto 0;
+  border-top: 1px solid var(--line);
+  padding-block: 1.1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.25rem;
+}
+.workroom-logo { display: grid; place-items: center; color: var(--ink); }
+.workroom-logo svg { width: 1.35rem; height: 1.35rem; }
+.workroom-logo.googlecalendar { color: #70a8ff; }
+.workroom-logo.cloudflare { color: #ff984a; }
+@media (max-width: 520px) {
+  .workroom-header { justify-content: flex-start; }
+}
 main { padding-block: clamp(1.2rem, 4vw, 3rem) 4rem; }
 h1, h2 { font-family: Georgia, serif; font-weight: 400; line-height: 1.08; margin: 0; }
 h1 { font-size: clamp(2rem, 5vw, 3.15rem); letter-spacing: -.055em; }
@@ -266,3 +288,15 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .google-agenda ul { list-style: none; margin: 0; padding: 0; }
 .google-agenda li { display: grid; gap: .15rem; padding-block: .35rem; overflow-wrap: anywhere; }
 .google-agenda small { color: var(--muted); }
+.note-toolbar [data-mark] { display:inline-grid; place-items:center; }
+.note-toolbar [data-mark][aria-pressed="true"] { background:var(--selected); }
+.note-toolbar svg { width:20px; height:20px; }
+.note-toolbar #insert-date { width:auto; max-width:100%; padding-inline:.45rem; }
+.note-rendered { cursor:text; white-space:pre-wrap; }
+.note-rendered:has(> div:only-child > br:only-child)::before,
+.note-rendered:empty::before { content:attr(data-placeholder); color:var(--muted); pointer-events:none; }
+.note-rendered h2 { margin-block:.55rem; }
+.note-rendered ul { margin-block:.3rem; padding-inline-start:1.5rem; }
+.note-rendered .note-check { align-items:baseline; min-height:1.6rem; }
+.workroom-layout .note-rendered .note-check input { cursor:pointer; min-height:0; width:1.05rem; height:1.05rem; accent-color:var(--accent); flex:none; }
+.note-rendered .note-check span { flex:1; min-width:0; }
