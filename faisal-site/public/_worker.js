@@ -11,6 +11,7 @@ const workroomPages = {
   home: { path: WORKROOM, title: 'Ringkasan', icon: 'M3 10l9-7 9 7v10H3z M9 20v-7h6v7' },
   today: { path: WORKROOM + 'today/', title: 'Hari Ini', icon: 'M5 5h14v15H5z M8 3v4m8-4v4M5 10h14m-11 5 2 2 4-4' },
   task: { path: WORKROOM + 'tasks/', title: 'Tugas', icon: 'M20 12v8H4V4h12 M8 11l4 4 9-10' },
+  privateNotes: { path: WORKROOM + 'private-notes/', title: 'Catatan Rahasia', icon: 'M6 10h12v10H6z M9 10V7a3 3 0 0 1 6 0v3 M12 14v2' },
   note: { path: WORKROOM + 'notes/', title: 'Catatan', icon: 'M6 3h8l4 4v14H6z M14 3v5h4 M9 12h6 M9 16h6' },
   project: { path: WORKROOM + 'projects/', title: 'Proyek', icon: 'M3 6h7l2 3h9v11H3z' },
   goal: { path: WORKROOM + 'goals/', title: 'Goals', icon: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0z M12 12h.01' },
@@ -945,6 +946,138 @@ async function workroomImage(request, url, db) {
   return reply({ url: WORKROOM + 'images/' + key }, 201);
 }
 
+const privateNotesCookie = '__Secure-workroom-private-notes';
+const privateNotesLifetime = 300;
+const privateNotesEncoder = new TextEncoder();
+
+function privateNotesReply(content, status = 200) {
+  return workroomPage(`<div class="dashboard-content"><h1>Catatan Rahasia</h1>${content}</div>`, status, 'privateNotes');
+}
+
+function privateNotesHex(bytes) {
+  return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function privateNotesKey(secret, purpose, algorithm, usages) {
+  const key = await crypto.subtle.importKey('raw', privateNotesEncoder.encode(secret), 'HKDF', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({
+    name: 'HKDF', hash: 'SHA-256', salt: privateNotesEncoder.encode('workroom-private-notes-v1'),
+    info: privateNotesEncoder.encode(purpose),
+  }, key, algorithm, false, usages);
+}
+
+async function workroomPrivateNotes(request, url, env) {
+  const { WORKROOM_PRIVATE_NOTES_PASSWORD: password, WORKROOM_PRIVATE_NOTES_KEY: secret, WORKROOM_DB: db } = env;
+  const path = workroomPages.privateNotes.path;
+  if (typeof password !== 'string' || password.length < 8 ||
+      typeof secret !== 'string' || !/^[a-f0-9]{64}$/i.test(secret)) {
+    return privateNotesReply('<p>Catatan Rahasia terkunci sampai sandi dan kunci penyimpanan dikonfigurasi.</p>', 503);
+  }
+  const e = escapeWorkroom;
+  const now = Math.floor(Date.now() / 1000);
+  const form = request.method === 'POST' ? await request.formData() : null;
+  const action = form?.get('action');
+  const cookie = request.headers.get('Cookie')?.match(/(?:^|; *)__Secure-workroom-private-notes=([a-f0-9]{64})(?:;|$)/)?.[1];
+  const hashToken = async token => privateNotesHex(await crypto.subtle.digest('SHA-256', privateNotesEncoder.encode(token)));
+  const tokenHash = cookie ? await hashToken(cookie) : '';
+  const redirect = (token = '', seconds = 0) => {
+    const headers = new Headers(privateHeaders);
+    headers.set('Location', new URL(path, url).href);
+    headers.set('Set-Cookie',
+      `${privateNotesCookie}=${token}; Path=${path}; HttpOnly; Secure; SameSite=Strict; Max-Age=${seconds}`);
+    return new Response(null, { status: 303, headers });
+  };
+  const locked = (message = '', status = 200) => privateNotesReply(`<section class="collection private-notes-panel">
+    ${message ? `<p role="alert">${e(message)}</p>` : ''}
+    <form method="post" action="${path}">
+      <input type="hidden" name="action" value="unlock">
+      <label>Sandi Catatan Rahasia<input type="password" name="password" required maxlength="200" autocomplete="off"></label>
+      <button>Buka Catatan Rahasia</button>
+    </form></section>`, status);
+
+  if (!tokenHash && action !== 'unlock') {
+    return locked(form ? 'Sesi terkunci. Buka kembali halaman sebelum menyimpan.' : '', form ? 401 : 200);
+  }
+
+  await db.batch([
+    db.prepare('CREATE TABLE IF NOT EXISTS workroom_private_notes (id TEXT PRIMARY KEY, payload BLOB NOT NULL, iv BLOB NOT NULL, updated INTEGER NOT NULL)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS workroom_private_sessions (token TEXT PRIMARY KEY, expires INTEGER NOT NULL, access_hash TEXT NOT NULL, config_hash TEXT NOT NULL)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS workroom_private_attempts (window INTEGER PRIMARY KEY, attempts INTEGER NOT NULL)'),
+  ]);
+  const accessHash = await hashToken(request.headers.get('Cf-Access-Jwt-Assertion'));
+  const authKey = await privateNotesKey(secret, 'authentication', { name: 'HMAC', hash: 'SHA-256' }, ['sign', 'verify']);
+  const signature = await crypto.subtle.sign('HMAC', authKey, privateNotesEncoder.encode(password));
+  const configHash = privateNotesHex(signature);
+
+  if (action === 'lock') {
+    if (tokenHash) await db.prepare('DELETE FROM workroom_private_sessions WHERE token = ?').bind(tokenHash).run();
+    return redirect();
+  }
+  if (action === 'unlock') {
+    const attempt = form.get('password');
+    if (typeof attempt !== 'string' || !attempt || attempt.length > 200) return locked('Masukkan sandi yang valid.', 400);
+    const window = Math.floor(now / 300);
+    const [,, rate] = await db.batch([
+      db.prepare('DELETE FROM workroom_private_sessions WHERE expires <= ?').bind(now),
+      db.prepare('DELETE FROM workroom_private_attempts WHERE window < ?').bind(window),
+      db.prepare(`INSERT INTO workroom_private_attempts (window, attempts) VALUES (?, 1)
+        ON CONFLICT(window) DO UPDATE SET attempts = attempts + 1 RETURNING attempts`).bind(window),
+    ]);
+    if ((rate.results[0]?.attempts ?? Infinity) > 5) return locked('Terlalu banyak percobaan. Coba lagi dalam beberapa menit.', 429);
+    if (!await crypto.subtle.verify('HMAC', authKey, signature, privateNotesEncoder.encode(attempt))) {
+      return locked('Sandi salah.', 401);
+    }
+    const token = privateNotesHex(crypto.getRandomValues(new Uint8Array(32)));
+    await db.prepare('INSERT INTO workroom_private_sessions (token, expires, access_hash, config_hash) VALUES (?, ?, ?, ?)')
+      .bind(await hashToken(token), now + privateNotesLifetime, accessHash, configHash).run();
+    return redirect(token, privateNotesLifetime);
+  }
+
+  const session = tokenHash && await db.prepare(`SELECT expires FROM workroom_private_sessions
+    WHERE token = ? AND expires > ? AND access_hash = ? AND config_hash = ?`)
+    .bind(tokenHash, now, accessHash, configHash).first();
+  if (!session) return locked(form ? 'Sesi terkunci. Buka kembali halaman sebelum menyimpan.' : '', form ? 401 : 200);
+
+  const cipher = await privateNotesKey(secret, 'encryption', { name: 'AES-GCM', length: 256 }, ['encrypt', 'decrypt']);
+  const aes = (id, iv) => ({ name: 'AES-GCM', iv, additionalData: privateNotesEncoder.encode(id) });
+  const validId = value => typeof value === 'string' && /^[a-f0-9-]{36}$/.test(value);
+  if (form) {
+    const id = form.get('id') || crypto.randomUUID();
+    const title = form.get('title');
+    const body = form.get('body');
+    if (action !== 'save' || !validId(id) || typeof title !== 'string' || !title.trim() || title.length > 160 ||
+        typeof body !== 'string' || body.length > 10000) return privateNotesReply('<p>Periksa judul dan panjang isi catatan.</p>', 400);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const payload = await crypto.subtle.encrypt(aes(id, iv), cipher, privateNotesEncoder.encode(JSON.stringify({ title: title.trim(), body })));
+    await db.prepare(`INSERT INTO workroom_private_notes (id, payload, iv, updated) VALUES (?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET payload = excluded.payload, iv = excluded.iv, updated = excluded.updated`)
+      .bind(id, payload, iv.buffer, now).run();
+    return new Response(null, { status: 303, headers: { ...privateHeaders, Location: path + '?edit=' + id } });
+  }
+  const { results } = await db.prepare('SELECT id, payload, iv FROM workroom_private_notes ORDER BY updated DESC, id').all();
+  const notes = await Promise.all(results.map(async row => {
+    const plain = await crypto.subtle.decrypt(aes(row.id, new Uint8Array(row.iv)), cipher, new Uint8Array(row.payload));
+    return { ...JSON.parse(new TextDecoder().decode(plain)), id: row.id };
+  }));
+  const selected = notes.find(note => note.id === url.searchParams.get('edit'));
+  return privateNotesReply(`<div data-private-notes-expires="${session.expires}">
+    <form method="post" action="${path}"><button name="action" value="lock">Kunci sekarang</button></form>
+    <div class="today-workspace-grid">
+      <section class="collection"><h2>Daftar catatan</h2><a href="${path}">+ Catatan baru</a>
+        ${notes.length ? '<ul>' + notes.map(note => `<li><a href="${path}?edit=${e(note.id)}">${e(note.title)}</a></li>`).join('') + '</ul>' : '<p>Belum ada catatan rahasia.</p>'}
+      </section>
+      <section class="collection"><h2>${selected ? 'Edit catatan' : 'Catatan baru'}</h2>
+        <form method="post" action="${path}" autocomplete="off">
+          <input type="hidden" name="action" value="save"><input type="hidden" name="id" value="${e(selected?.id)}">
+          <label>Judul<input name="title" required maxlength="160" value="${e(selected?.title)}"></label>
+          <label>Isi catatan<textarea name="body" rows="12" maxlength="10000">${e(selected?.body)}</textarea></label>
+          <button>Simpan</button>
+        </form>
+      </section>
+    </div>
+  </div><script src="/workroom-private-notes.js" defer></script>`);
+}
+
 async function handleWorkroom(request, env, url) {
   if (!env.WORKROOM_ACCESS_AUD || !env.WORKROOM_OWNER_EMAIL ||
       !/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(env.WORKROOM_ACCESS_ISSUER || '') || !env.WORKROOM_DB) {
@@ -966,6 +1099,8 @@ async function handleWorkroom(request, env, url) {
     return workroomPage('<h1>Permintaan ditolak</h1>', 403);
   }
   if (request.method !== 'GET' && request.method !== 'POST') return workroomPage('<h1>Metode tidak didukung</h1>', 405);
+
+  if (page === 'privateNotes') return workroomPrivateNotes(request, url, env);
 
   if (page === 'home' && request.method === 'GET' && url.searchParams.has('calendar-data')) {
     const day = url.searchParams.get('calendar-data');
