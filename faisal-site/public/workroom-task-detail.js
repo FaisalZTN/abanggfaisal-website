@@ -34,56 +34,15 @@
     return link;
   }
 
-  function linkPreview(url, label, status) {
+  function linkPreview(url, label) {
     const item = document.createElement('div');
     item.className = 'task-detail-link';
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.textContent = 'Opsi link';
+    toggle.dataset.linkOptions = '';
     toggle.setAttribute('aria-expanded', 'false');
-    const actions = document.createElement('div');
-    actions.className = 'task-link-actions';
-    actions.hidden = true;
-    const copy = document.createElement('button');
-    copy.type = 'button';
-    copy.textContent = 'Salin link';
-    copy.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(url);
-        status.textContent = 'Link disalin.';
-      } catch {
-        status.textContent = 'Link belum bisa disalin. Kamu bisa menyalinnya dari kolom detail.';
-      }
-    };
-    const setOpen = open => {
-      actions.hidden = !open;
-      toggle.setAttribute('aria-expanded', String(open));
-    };
-    toggle.onclick = () => {
-      const pinned = item.toggleAttribute('data-pinned');
-      setOpen(pinned);
-    };
-    item.addEventListener('pointerenter', event => {
-      if (event.pointerType === 'mouse') setOpen(true);
-    });
-    item.addEventListener('pointerleave', () => {
-      if (!item.hasAttribute('data-pinned') && !actions.contains(document.activeElement)) setOpen(false);
-    });
-    item.addEventListener('focusout', event => {
-      if (!item.contains(event.relatedTarget)) {
-        item.removeAttribute('data-pinned');
-        setOpen(false);
-      }
-    });
-    item.addEventListener('keydown', event => {
-      if (event.key === 'Escape' && !actions.hidden) {
-        item.removeAttribute('data-pinned');
-        toggle.focus();
-        setOpen(false);
-      }
-    });
-    actions.append(copy, externalLink(url, 'Buka link di tab baru'));
-    item.append(externalLink(url, label), toggle, actions);
+    item.append(externalLink(url, label), toggle);
     return item;
   }
 
@@ -132,7 +91,7 @@
         const url = webUrl(value, isImage);
         if (!url) continue;
         nodes.push(text.slice(offset, match.index));
-        nodes.push(isImage ? imagePreview(url, match[1]) : linkPreview(url, value, status));
+        nodes.push(isImage ? imagePreview(url, match[1]) : linkPreview(url, value));
         offset = match.index + (isImage ? match[0].length : value.length);
       }
       preview.hidden = !nodes.length;
@@ -175,6 +134,16 @@
       insertImage();
     });
     tools.querySelector('.task-image-add').onclick = insertImage;
+    field.addEventListener('workroom-image', event => {
+      const cursor = field.selectionEnd;
+      const insert = '\n![](' + event.detail + ')\n';
+      if (field.value.length + insert.length <= field.maxLength) {
+        field.setRangeText(insert, cursor, cursor, 'end');
+        render();
+        field.focus();
+        event.preventDefault();
+      }
+    });
     field.addEventListener('input', render);
     tools.hidden = false;
     render();
