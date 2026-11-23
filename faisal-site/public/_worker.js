@@ -270,6 +270,9 @@ function workroomCalendar(day, tasks, today, google) {
   const iso = value => value.toISOString().slice(0, 10);
   const href = value => `${WORKROOM}?day=${value}#agenda`;
   const monthLink = (offset, label, symbol) => `<a aria-label="${label}" href="${href(iso(new Date(Date.UTC(year, month + offset, 1))))}">${symbol}</a>`;
+  const todayLabel = new Date(today + 'T12:00:00Z').toLocaleDateString('id-ID', {
+    day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+  });
   const dated = new Set(tasks.map(task => task.due));
   const cells = Array.from({length: days}, (_, i) => {
     const value = day.slice(0, 8) + String(i + 1).padStart(2, '0');
@@ -279,7 +282,9 @@ function workroomCalendar(day, tasks, today, google) {
     ${monthLink(-1, 'Bulan sebelumnya', '←')}
     <h2>${date.toLocaleDateString('id-ID', {month:'long', year:'numeric', timeZone:'UTC'})}</h2>
     ${monthLink(1, 'Bulan berikutnya', '→')}
-  </div><div class="days">${['Sn','Sl','Rb','Km','Jm','Sb','Mg'].map(d => `<small>${d}</small>`).join('')}${'<span></span>'.repeat((first.getUTCDay()+6)%7)}${cells.join('')}</div></section>`;
+  </div>
+  <a class="reset-day" href="${href(today)}">Hari ini · ${todayLabel}</a>
+  <div class="days">${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<small>${d}</small>`).join('')}${'<span></span>'.repeat(first.getUTCDay())}${cells.join('')}</div></section>`;
 }
 
 function workroomWorkspace(entries, params) {
@@ -523,7 +528,6 @@ async function renderWorkroom(db, page, url, env) {
           <section class="agenda" aria-label="Agenda tanggal terpilih">
             <div class="agenda-heading">
               <h2>${new Date(day + 'T12:00:00Z').toLocaleDateString('id-ID', {day:'numeric', month:'long', timeZone:'UTC'})}</h2>
-              ${day === today ? '<span>Hari ini</span>' : '<a class="reset-day" href="/workroom/#agenda">Kembali ke hari ini</a>'}
             </div>
             ${googleAgenda(google, day, params.get('google'))}
             <div class="agenda-tasks">
