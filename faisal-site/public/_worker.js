@@ -34,15 +34,28 @@ function escapeWorkroom(value) {
 function workroomPage(content, status = 200, page = null) {
   const wordmark = '<a class="workroom-wordmark" href="/">abanggfaisal.</a>';
   const currentPage = page === 'privateNotes' ? 'note' : page;
+  const secondaryPages = ['project', 'goal', 'review'];
+  const sidebarLink = ([key, { path, title, icon }], extra = false) => {
+    const secondary = secondaryPages.includes(key);
+    return `<a href="${path}" aria-label="${title}"${currentPage === key ? ' aria-current="page"' : ''}${secondary && !extra ? ' class="workroom-nav-secondary"' : ''}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="${key === 'review' ? '#fff' : 'currentColor'}" stroke-width="1.6"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icon}"/></svg>
+      <span aria-hidden="true">${!extra && key === 'home' ? '<span class="workroom-nav-full">Ringkasan</span><span class="workroom-nav-short">Ringkas</span>' : title}</span>
+    </a>`;
+  };
   const sidebar = page ? `<nav class="workroom-nav" aria-label="Navigasi Workroom">
     ${wordmark}
-    ${Object.entries(workroomPages).filter(([key]) => key !== 'privateNotes').map(([key, {path, title, icon}]) =>
-      `<a href="${path}" aria-label="${title}"${currentPage === key ? ' aria-current="page"' : ''}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="${key === 'review' ? '#fff' : 'currentColor'}" stroke-width="1.6"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icon}"/></svg>
-        <span aria-hidden="true">${title}</span>
-      </a>`).join('')}
-  </nav>` : '';
+    ${Object.entries(workroomPages).filter(([key]) => key !== 'privateNotes').map(entry => sidebarLink(entry)).join('')}
+    <details class="workroom-nav-more"${secondaryPages.includes(currentPage) ? ' data-active' : ''}>
+      <summary aria-label="Lainnya">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+        <span>Lainnya</span>
+      </summary>
+      <div class="workroom-nav-menu">
+        ${secondaryPages.map(key => sidebarLink([key, workroomPages[key]], true)).join('')}
+      </div>
+    </details>
+  </nav><script src="/workroom-nav.js" defer></script>` : '';
   return new Response(`<!doctype html><html lang="id"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${page && page !== 'home' ? workroomPages[page].title + ' · ' : ''}Workroom · abangfaisal</title><link rel="icon" type="image/svg+xml" href="/workroom-favicon.svg"><link rel="stylesheet" href="/workroom.css"></head>
