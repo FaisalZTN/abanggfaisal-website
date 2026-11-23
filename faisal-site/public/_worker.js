@@ -247,12 +247,11 @@ async function googleCalendarRange(env, first, endDate) {
   }
 }
 
-function googleAgenda(calendar, day, result) {
+function googleAgenda(calendar, day) {
   if (calendar.status === 'disabled') return '';
   const events = calendar.entries.get(day) ?? [];
   const connect = '<a href="/workroom/?google=connect">Hubungkan Google Calendar</a>';
-  const status = result === 'error' ? '<p role="status">Izin Google Calendar belum tersimpan.</p>' : '';
-  return `<div class="google-agenda"><h3>Google Calendar</h3>${status}
+  return `<div class="google-agenda"><h3>Google Calendar</h3>
     ${calendar.status === 'error' ? '<p>Jadwal Google belum bisa dimuat. Coba muat ulang atau hubungkan kembali.</p>' + connect : ''}
     ${calendar.status === 'disconnected' ? connect : ''}
     ${calendar.status === 'partial' ? '<p>Sebagian kalender belum bisa dimuat. Periksa ID kalender dan izin aksesnya.</p>' : ''}
@@ -262,28 +261,54 @@ function googleAgenda(calendar, day, result) {
   </div>`;
 }
 
-function workroomCalendar(day, tasks, today, google) {
+async function workroomCalendarData(env, day) {
+  const calendar = await googleMonth(env, day);
+  return Response.json({
+    status: calendar.status,
+    fallback: googleAgenda(calendar, ''),
+    days: Object.fromEntries([...calendar.entries.keys()].map(date => [date, googleAgenda(calendar, date)])),
+  }, { headers: { ...privateHeaders, 'Content-Type': 'application/json; charset=utf-8' } });
+}
+
+function validWorkroomDay(value) {
+  if (!/^(19|20)\d{2}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value + 'T12:00:00Z');
+  return Number.isFinite(+date) && date.toISOString().slice(0, 10) === value;
+}
+
+function workroomDueTask(entry, today) {
+  const title = escapeWorkroom(entry.title);
+  return `<li data-due="${escapeWorkroom(entry.due)}"><form method="post" action="${WORKROOM}">
+    <input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${entry.id}">
+    <button name="action" value="complete" aria-label="Tandai selesai: ${title}">✓</button>
+    </form><div><a href="${workroomEntryLink(entry)}">${title}</a><small>${entry.due < today ? 'Lewat tenggat · ' : ''}${escapeWorkroom(entry.due)}</small></div></li>`;
+}
+
+function workroomCalendar(day, tasks, today, google, fullCalendar) {
   const date = new Date(day + 'T12:00:00Z');
   const year = date.getUTCFullYear(), month = date.getUTCMonth();
   const first = new Date(Date.UTC(year, month, 1));
   const days = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   const iso = value => value.toISOString().slice(0, 10);
-  const href = value => `${WORKROOM}?day=${value}#agenda`;
-  const monthLink = (offset, label, symbol) => `<a aria-label="${label}" href="${href(iso(new Date(Date.UTC(year, month + offset, 1))))}">${symbol}</a>`;
+  const href = value => `${WORKROOM}?day=${value}${fullCalendar ? '&amp;calendar=full' : ''}#agenda`;
+  const monthLink = (offset, label, symbol) => {
+    const value = iso(new Date(Date.UTC(year, month + offset, 1)));
+    return `<a data-calendar-date="${value}" aria-label="${label}" href="${href(value)}">${symbol}</a>`;
+  };
   const todayLabel = new Date(today + 'T12:00:00Z').toLocaleDateString('id-ID', {
     day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
   });
   const dated = new Set(tasks.map(task => task.due));
   const cells = Array.from({length: days}, (_, i) => {
     const value = day.slice(0, 8) + String(i + 1).padStart(2, '0');
-    return `<a href="${href(value)}" class="${value === day ? 'selected ' : ''}${dated.has(value) || google.has(value) ? 'marked' : ''}" aria-label="${value}${dated.has(value) ? ', ada tugas' : ''}${google.has(value) ? ', ada acara Google Calendar' : ''}"${value === today ? ' aria-current="date"' : ''}>${i + 1}</a>`;
+    return `<a data-calendar-date="${value}" href="${href(value)}" class="${value === day ? 'selected ' : ''}${dated.has(value) || google.has(value) ? 'marked' : ''}" aria-label="${value}${dated.has(value) ? ', ada tugas' : ''}${google.has(value) ? ', ada acara Google Calendar' : ''}"${value === today ? ' aria-current="date"' : ''}>${i + 1}</a>`;
   });
   return `<section class="calendar"><div class="calendar-heading">
     ${monthLink(-1, 'Bulan sebelumnya', '←')}
     <h2>${date.toLocaleDateString('id-ID', {month:'long', year:'numeric', timeZone:'UTC'})}</h2>
     ${monthLink(1, 'Bulan berikutnya', '→')}
   </div>
-  <a class="reset-day" href="${href(today)}">Hari ini · ${todayLabel}</a>
+  <a data-calendar-date="${today}" class="reset-day" href="${href(today)}">Hari ini · ${todayLabel}</a>
   <div class="days">${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<small>${d}</small>`).join('')}${'<span></span>'.repeat(first.getUTCDay())}${cells.join('')}</div></section>`;
 }
 
@@ -483,11 +508,14 @@ async function renderWorkroom(db, page, url, env) {
   if (params.get('add') === 'task') return workroomRedirect(url, workroomPages.task.path + '?add=task#add-task');
   const selectedDay = params.get('day');
   const today = workroomDay.format(new Date());
-  const validDay = /^(19|20)\d{2}-\d{2}-\d{2}$/.test(selectedDay) && Number.isFinite(Date.parse(selectedDay)) && new Date(selectedDay).toISOString().startsWith(selectedDay);
-  const day = validDay ? selectedDay : today;
-  const google = await googleMonth(env, day);
-  const due = entries.filter(entry => entry.kind === 'task' && entry.status !== 'done' && entry.due && (day === today ? entry.due <= today : entry.due === day))
+  const day = validWorkroomDay(selectedDay) ? selectedDay : today;
+  const showGoogle = googleConfigured(env);
+  const fullCalendar = params.get('calendar') === 'full';
+  const google = fullCalendar ? await googleMonth(env, day) : { entries: new Map(), status: 'disabled' };
+  const tasks = entries.filter(entry => entry.kind === 'task' && entry.status !== 'done' && entry.due)
     .sort((a, b) => a.due.localeCompare(b.due));
+  const isDue = entry => day === today ? entry.due <= today : entry.due === day;
+  const due = tasks.filter(isDue);
   const openTasks = entries.filter(entry => entry.kind === 'task' && entry.status !== 'done').length;
   const activeProjects = projects.filter(project => project.status === 'active').length;
   const activeGoals = entries.filter(entry => entry.kind === 'goal' && entry.status === 'active').length;
@@ -523,16 +551,21 @@ async function renderWorkroom(db, page, url, env) {
           <a href="${workroomPages.note.path}">Catatan<strong>${entries.filter(entry => entry.kind === 'note').length}</strong></a>
           <a href="${workroomPages.goal.path}">Goals aktif<strong>${activeGoals}</strong></a>
         </div>
-        <div class="collection calendar-agenda" id="agenda">
-          ${workroomCalendar(day, entries.filter(entry => entry.kind === 'task' && entry.status !== 'done'), today, google.entries)}
+        <div class="collection calendar-agenda" id="agenda" data-day="${day}" data-today="${today}" data-google="${showGoogle}"${fullCalendar ? ' data-calendar-full' : ''}>
+          ${workroomCalendar(day, tasks, today, google.entries, fullCalendar)}
+          <template id="calendar-tasks">${tasks.filter(entry => !isDue(entry)).map(entry => workroomDueTask(entry, today)).join('')}</template>
+          <script src="/workroom-calendar.js" defer></script>
           <section class="agenda" aria-label="Agenda tanggal terpilih">
             <div class="agenda-heading">
               <h2>${new Date(day + 'T12:00:00Z').toLocaleDateString('id-ID', {day:'numeric', month:'long', timeZone:'UTC'})}</h2>
             </div>
-            ${googleAgenda(google, day, params.get('google'))}
+            ${params.get('google') === 'error' ? '<p role="status">Izin Google Calendar belum tersimpan.</p>' : ''}
+            <div id="calendar-google" aria-live="polite">${fullCalendar ? googleAgenda(google, day) : ''}</div>
+            ${showGoogle && !fullCalendar ? `<noscript><p><a href="${WORKROOM}?day=${day}&amp;calendar=full#agenda">Muat Google Calendar</a></p></noscript>` : ''}
             <div class="agenda-tasks">
               <h3>Tugas</h3>
-              ${due.length ? '<ul class="due-list">' + due.map(entry => `<li><form method="post" action="${WORKROOM}"><input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${entry.id}"><button name="action" value="complete" aria-label="Tandai selesai: ${e(entry.title)}">✓</button></form><div><a href="${workroomEntryLink(entry)}">${e(entry.title)}</a><small>${entry.due < today ? 'Lewat tenggat · ' : ''}${e(entry.due)}</small></div></li>`).join('') + '</ul>' : '<p class="agenda-empty">Tidak ada tugas jatuh tempo.</p>'}
+              <ul class="due-list"${due.length ? '' : ' hidden'}>${due.map(entry => workroomDueTask(entry, today)).join('')}</ul>
+              <p class="agenda-empty"${due.length ? ' hidden' : ''}>Tidak ada tugas jatuh tempo.</p>
               <a class="quick-add" href="${workroomPages.task.path}?add=task#add-task">+ Tambah tugas</a>
             </div>
           </section>
@@ -622,6 +655,16 @@ async function handleWorkroom(request, env, url) {
     return workroomPage('<h1>Permintaan ditolak</h1>', 403);
   }
   if (request.method !== 'GET' && request.method !== 'POST') return workroomPage('<h1>Metode tidak didukung</h1>', 405);
+
+  if (page === 'home' && request.method === 'GET' && url.searchParams.has('calendar-data')) {
+    const day = url.searchParams.get('calendar-data');
+    if (!validWorkroomDay(day)) {
+      return Response.json({ error: 'Tanggal tidak valid.' }, {
+        status: 400, headers: { ...privateHeaders, 'Content-Type': 'application/json; charset=utf-8' },
+      });
+    }
+    return workroomCalendarData(env, day);
+  }
 
   const db = env.WORKROOM_DB;
   await db.prepare(`CREATE TABLE IF NOT EXISTS workroom_entries (
