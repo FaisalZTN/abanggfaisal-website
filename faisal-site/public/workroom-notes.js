@@ -1,3 +1,5 @@
+import { noteInline, noteLines, notePreview } from './workroom-note-format.js';
+
 const el = id => document.getElementById(id);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const noteCategories = {all:'Semua',belajar:'Belajar',ide:'Ide',pribadi:'Pribadi',referensi:'Referensi',none:'Tanpa kategori'};
@@ -6,33 +8,12 @@ const noteTime = item => item.updated ? clock.format(new Date(item.updated)) : '
 let fromTime='', toTime='';
 let editorRange;
 
-function noteInline(text) {
-  const tokens = /(!?)\[([^\]]*)\]\((https:\/\/[^\s)]+)\)|\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*([^*]+)\*|\^([^^]+)\^|~([^~]+)~/g;
-  let html = '', offset = 0;
-  for (const match of text.matchAll(tokens)) {
-    const [token, image, label, url, both, bold, italic, sup, sub] = match;
-    html += escape(text.slice(offset, match.index));
-    if (url) {
-      html += image ? `<img src="${escape(url)}" alt="${escape(label)}" referrerpolicy="no-referrer">`
-        : `<a href="${escape(url)}" rel="noopener noreferrer">${escape(label)}</a>`;
-    } else if (both) {
-      html += `<strong><em>${noteInline(both)}</em></strong>`;
-    } else {
-      const [tag, value] = bold ? ['strong', bold] : italic ? ['em', italic] : sup ? ['sup', sup] : ['sub', sub];
-      html += `<${tag}>${noteInline(value)}</${tag}>`;
-    }
-    offset = match.index + token.length;
-  }
-  return html + escape(text.slice(offset));
-}
-
 function checklistItem(text, checked = false) {
   return `<div class="note-check"><input type="checkbox" aria-label="Tandai selesai" contenteditable="false"${checked ? ' checked' : ''}><span>${text || '<br>'}</span></div>`;
 }
 
 function formatNote(body) {
-  // Older editors could insert a checklist marker in the middle of a line.
-  return body.replace(/([^\n]) +(?=- \[[ xX]\] )/g, '$1\n').split('\n').map(line => {
+  return noteLines(body).map(line => {
     const check = line.match(/^- \[([ xX])\] (.*)$/);
     if (check) return checklistItem(noteInline(check[2]), check[1] !== ' ');
     if (line.startsWith('## ')) return `<h2>${noteInline(line.slice(3))}</h2>`;
@@ -133,12 +114,12 @@ function renderNoteIndex() {
   const q = noteQuery.trim().toLocaleLowerCase('id');
   const notes = entries.filter(item => item.kind === 'note' &&
     (noteCategory === 'all' || (item.category || 'none') === noteCategory) &&
-    (item.title + ' ' + item.body + ' ' + noteTime(item)).toLocaleLowerCase('id').includes(q) &&
+    (!q || (item.title + ' ' + item.body + ' ' + notePreview(item.body, Infinity) + ' ' + noteTime(item)).toLocaleLowerCase('id').includes(q)) &&
     (!fromTime || (noteTime(item) && noteTime(item).replace(' ','T') >= fromTime)) &&
     (!toTime || (noteTime(item) && noteTime(item).replace(' ','T') <= toTime)));
   notes.sort((a,b)=>(b.updated||0)-(a.updated||0));
   el('note-list').innerHTML = notes.map(note => `<button data-open="${note.id ?? 'new'}"${note.id === activeNote ? ' aria-current="true"' : ''}>
-    <span class="note-row-head"><strong>${escape(note.title)}</strong>${noteTime(note) ? `<time title="${noteTime(note)} WITA">${noteTime(note).slice(-5)}</time>` : ''}</span><small>${escape(note.body.replace(/^[#-]+ +|\*+|^\[.\] /gm, '') || 'Catatan kosong')}</small><small class="note-tag">${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
+    <span class="note-row-head"><strong>${escape(note.title)}</strong>${noteTime(note) ? `<time title="${noteTime(note)} WITA">${noteTime(note).slice(-5)}</time>` : ''}</span><small>${escape(notePreview(note.body) || 'Catatan kosong')}</small><small class="note-tag">${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
 }
 function renderNotes(notes) {
   const note = notes.find(item => item.id === activeNote) || notes[0];
