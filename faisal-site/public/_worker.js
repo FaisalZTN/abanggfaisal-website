@@ -346,21 +346,22 @@ function workroomDailyTasks(tasks, projects, filter) {
   const dates = [...byDate.keys()].sort((a, b) => (a || '9999').localeCompare(b || '9999'));
   return `<p class="quick-check-feedback" role="status" hidden></p><div class="daily-task-grid">${dates.map(date => {
     const items = byDate.get(date);
-    const completed = items.filter(task => task.status === 'done').length;
+    const visible = items.filter(task => !filter || task.status === filter);
+    const completed = visible.filter(task => task.status === 'done').length;
     const title = date ? dateLabel.format(new Date(date + 'T12:00:00Z')) : 'Tanpa tenggat';
     const add = new URLSearchParams({ add: 'task', view: 'daily' });
     if (date) add.set('due', date);
     if (Object.hasOwn(workroomKinds.task.statuses, filter)) add.set('status', filter);
-    const collapsed = date && date < today && items.length === completed;
-    return `<article class="daily-task-card" id="tasks-${date || 'undated'}">
+    const collapsed = date && date < today && items.every(task => task.status === 'done');
+    return `<article class="daily-task-card" id="tasks-${date || 'undated'}"${!visible.length && date !== today ? ' hidden' : ''}>
       <details${collapsed ? '' : ' open'}>
         <summary><strong>${e(title)}</strong>${date === today ? '<span class="daily-task-today">Hari ini</span>' : ''}
-          <small class="daily-task-progress" data-completed="${completed}" data-total="${items.length}" aria-label="${completed} dari ${items.length} selesai">${completed}/${items.length}</small></summary>
+          <small class="daily-task-progress" data-completed="${completed}" data-total="${visible.length}" aria-label="${completed} dari ${visible.length} selesai">${completed}/${visible.length}</small></summary>
         ${items.length ? `<ul>${items.map(task => {
           const done = task.status === 'done';
           const change = done ? 'Buka kembali' : 'Tandai selesai';
           const project = projectTitles.get(task.project_id);
-          return `<li${done ? ' class="is-done"' : ''}>
+          return `<li data-task-status="${e(task.status)}"${filter && task.status !== filter ? ' hidden' : ''}${done ? ' class="is-done"' : ''}>
             <form method="post" action="${path}" data-quick-check>
               <input type="hidden" name="kind" value="task">
               <input type="hidden" name="id" value="${task.id}">
@@ -372,12 +373,13 @@ function workroomDailyTasks(tasks, projects, filter) {
             <div><a class="daily-task-title" href="${workroomEntryLink(task)}#workspace">${e(task.title)}</a>
               ${project || task.priority === 'high' || task.status === 'doing' ? `<div class="daily-task-meta">
                 ${task.priority === 'high' ? '<small>Prioritas tinggi</small>' : ''}
-                ${task.status === 'doing' ? '<small>Dikerjakan</small>' : ''}
+                ${task.status === 'doing' ? '<small data-task-doing>Dikerjakan</small>' : ''}
                 ${project ? `<small>${e(project)}</small>` : ''}
               </div>` : ''}
             </div>
           </li>`;
-        }).join('')}</ul>` : `<p>${filter ? 'Tidak ada tugas dengan status ini.' : 'Belum ada tugas untuk hari ini.'}</p>`}
+        }).join('')}</ul>` : ''}
+        <p data-daily-empty${visible.length ? ' hidden' : ''}>${filter ? 'Tidak ada tugas dengan status ini.' : 'Belum ada tugas untuk hari ini.'}</p>
       </details>
       <a class="daily-task-add" href="${path}?${e(add)}#add-task" aria-label="Tambah tugas: ${e(title)}" title="Tambah tugas">+</a>
     </article>`;
@@ -388,14 +390,15 @@ function workroomWorkspace(entries, params) {
   const e = escapeWorkroom;
   const path = workroomPages.task.path;
   const view = workroomTaskView(params.get('view'));
-  const filter = params.get('status');
+  const requestedStatus = params.get('status');
+  const filter = Object.hasOwn(workroomKinds.task.statuses, requestedStatus) ? requestedStatus : '';
   const editLink = entry => {
     const query = new URLSearchParams({ edit: entry.id, view });
     if (Object.hasOwn(workroomKinds.task.statuses, filter)) query.set('status', filter);
     return `<a href="${path}?${e(query)}#workspace">${e(entry.title)}</a>${entry.priority === 'high' ? ' <small>Prioritas tinggi</small>' : ''}`;
   };
   const selected = entries.find(entry => entry.kind === 'task' && String(entry.id) === params.get('edit'));
-  const tasks = entries.filter(entry => entry.kind === 'task' && (!Object.hasOwn(workroomKinds.task.statuses, filter) || entry.status === filter));
+  const tasks = entries.filter(entry => entry.kind === 'task');
   const statuses = Object.entries(workroomKinds.task.statuses);
   const statusForm = entry => `<form class="task-status" method="post" action="${path}">
     <input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${entry.id}">
@@ -405,9 +408,9 @@ function workroomWorkspace(entries, params) {
       `<option value="${value}"${entry.status === value ? ' selected' : ''}>${label}</option>`).join('')}</select>
     <button name="action" value="status">Ubah</button></form>`;
   const table = view === 'table' ? `<div class="task-table"><table><thead><tr><th>Judul</th><th>Tenggat</th><th>Status</th></tr></thead>
-    <tbody>${tasks.map(entry => `<tr><td>${editLink(entry)}</td><td>${e(entry.due || '—')}</td><td>${statusForm(entry)}</td></tr>`).join('')}</tbody></table></div>` : '';
-  const board = view === 'board' ? `<div class="task-board">${statuses.map(([status, label]) => `<section><h3>${label}</h3>
-    ${tasks.filter(entry => entry.status === status).map(entry => `<article>${editLink(entry)}${statusForm(entry)}</article>`).join('') || '<p>Belum ada tugas.</p>'}</section>`).join('')}</div>` : '';
+    <tbody>${tasks.map(entry => `<tr data-task-status="${e(entry.status)}"${filter && entry.status !== filter ? ' hidden' : ''}><td>${editLink(entry)}</td><td>${e(entry.due || '—')}</td><td>${statusForm(entry)}</td></tr>`).join('')}</tbody></table></div>` : '';
+  const board = view === 'board' ? `<div class="task-board">${statuses.map(([status, label]) => `<section data-status-column="${status}"${filter && filter !== status ? ' hidden' : ''}><h3>${label}</h3>
+    ${tasks.filter(entry => entry.status === status).map(entry => `<article data-task-status="${e(entry.status)}">${editLink(entry)}${statusForm(entry)}</article>`).join('') || '<p>Belum ada tugas.</p>'}</section>`).join('')}</div>` : '';
   const views = Object.entries({daily: 'Per tanggal', table: 'Tabel', board: 'Papan'}).map(([key, label]) => {
     const query = new URLSearchParams({view: key});
     if (Object.hasOwn(workroomKinds.task.statuses, filter)) query.set('status', filter);
@@ -417,12 +420,12 @@ function workroomWorkspace(entries, params) {
     ${workroomForm(selected.kind, selected, entries.filter(entry => entry.kind === 'project'), true)}</section>` : '';
   return `<div class="workspace" id="workspace">${editor}<section class="collection">
     <h2>Daftar tugas</h2><div class="workspace-tools">${views}
-    <form method="get" action="${path}#workspace"><input type="hidden" name="view" value="${view}">
+    <form method="get" action="${path}#workspace" data-task-filter><input type="hidden" name="view" value="${view}">
     <select name="status" aria-label="Filter status"><option value="">Semua status</option>
     ${statuses.map(([value, label]) => `<option value="${value}"${filter === value ? ' selected' : ''}>${label}</option>`).join('')}</select>
-    <button>Filter</button></form></div>
+    <noscript><button>Filter</button></noscript></form></div>
     ${view === 'daily' ? workroomDailyTasks(tasks, entries.filter(entry => entry.kind === 'project'), filter) : view === 'board' ? board : table}
-    ${view === 'table' && !tasks.length ? '<p>Belum ada tugas untuk filter ini.</p>' : ''}</section></div>`;
+    ${view === 'table' ? `<p data-table-empty${tasks.some(task => !filter || task.status === filter) ? ' hidden' : ''}>Belum ada tugas untuk filter ini.</p>` : ''}</section></div>`;
 }
 
 function workroomEntryLink(entry) {
