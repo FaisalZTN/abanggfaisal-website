@@ -85,3 +85,15 @@ Buat atau perbarui entri di **Blok Ruang Belajar** dalam CMS. Isi nama, semester
 Pilih blok pada materi kuliah, tutorial, dan entri pengajar baru. Pengajar dapat dipakai kembali di blok lain lewat relasi pada kuliah. Tutorial hanya dapat menunjuk kuliah dalam bloknya sendiri. Entri lama tanpa pilihan blok dibaca sebagai KSI. Gunakan ID yang berbeda untuk topik atau skenario dengan judul sama.
 
 Status **Segera hadir** menampilkan halaman persiapan. Setelah data diperiksa, pilih **Aktif**. Halaman akan menggunakan data blok tersebut untuk agenda WITA, direktori, katalog, tutorial, dan kalender. Kumpulan Guideline tampil di semua dashboard blok. Di CMS, pilih jenis **Portal rujukan profesi** untuk tautan ke direktori pedoman organisasi.
+
+## Catatan Rahasia
+
+Set the encrypted Cloudflare Pages runtime secrets `WORKROOM_PRIVATE_NOTES_PASSWORD`
+and `WORKROOM_PRIVATE_NOTES_KEY` on the Workroom deployment. Use a unique password
+of at least eight characters and generate a separate 32-byte hex encryption key
+with `openssl rand -hex 32`. Keep a private backup of the key. Losing or changing it
+makes existing notes unreadable. Never commit either secret.
+
+The private notes route uses Workroom's owner authentication plus a separate
+five-minute unlock. Notes use a dedicated encrypted table. The regular Notes API,
+search and Review do not access it.

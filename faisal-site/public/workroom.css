@@ -388,7 +388,7 @@ main:has(.notes-desk) { padding-top:1.5rem; }
     border: 0;
     border-top: 1px solid var(--line);
   }
-  .workroom-nav a { width: min(14.28%, 4.75rem); min-height: 3rem; gap: .1rem; align-content: center; }
+  .workroom-nav a { width: min(12.5%, 4.75rem); min-height: 3rem; gap: .1rem; align-content: center; }
   .workroom-nav a[aria-current="page"] { box-shadow: inset 0 2px var(--accent); }
   .workroom-nav a span {
     display: block;
@@ -690,3 +690,7 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 @media (max-width: 700px) {
   .today-workspace-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+.private-notes-panel { max-width: 28rem; }
+[data-private-notes-expires] > form { margin-bottom: .75rem; }
+.workroom-nav a[aria-label="Catatan Rahasia"] span { max-width: 100%; overflow-wrap: anywhere; text-align: center; }
