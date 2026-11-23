@@ -245,7 +245,10 @@ document.addEventListener('keydown', event => {
   selection.collapse(item.nextSibling, 0);
 });
 window.addEventListener('beforeunload',event=>{if(dirty.size){event.preventDefault();event.returnValue='';}});
-request().then(data=>{
+const bootstrap = el('workroom-notes-data');
+const initialNotes = bootstrap ? Promise.resolve().then(() => JSON.parse(bootstrap.textContent)) : request();
+initialNotes.then(data=>{
+  bootstrap?.remove();
   entries=data.notes;
   for(const {id,name} of data.categories)noteCategories[id]=name;
   const selected=Number(new URLSearchParams(location.search).get('edit'));
