@@ -270,7 +270,7 @@ function workroomCalendar(day, tasks, today, google) {
     const value = day.slice(0, 8) + String(i + 1).padStart(2, '0');
     return `<a href="${href(value)}" class="${value === day ? 'selected ' : ''}${dated.has(value) || google.has(value) ? 'marked' : ''}" aria-label="${value}${dated.has(value) ? ', ada tugas' : ''}${google.has(value) ? ', ada acara Google Calendar' : ''}"${value === today ? ' aria-current="date"' : ''}>${i + 1}</a>`;
   });
-  return `<section class="collection calendar"><div class="calendar-heading"><h2>${date.toLocaleDateString('id-ID', {month:'long', year:'numeric', timeZone:'UTC'})}</h2><div>${monthLink(-1,'Bulan sebelumnya','‹')}${monthLink(1,'Bulan berikutnya','›')}</div></div><div class="days">${['Sn','Sl','Rb','Km','Jm','Sb','Mg'].map(d => `<small>${d}</small>`).join('')}${'<span></span>'.repeat((first.getUTCDay()+6)%7)}${cells.join('')}</div></section>`;
+  return `<section class="calendar"><div class="calendar-heading"><h2>${date.toLocaleDateString('id-ID', {month:'long', year:'numeric', timeZone:'UTC'})}</h2><div>${monthLink(-1,'Bulan sebelumnya','‹')}${monthLink(1,'Bulan berikutnya','›')}</div></div><div class="days">${['Sn','Sl','Rb','Km','Jm','Sb','Mg'].map(d => `<small>${d}</small>`).join('')}${'<span></span>'.repeat((first.getUTCDay()+6)%7)}${cells.join('')}</div></section>`;
 }
 
 function workroomWorkspace(entries, params) {
@@ -375,13 +375,21 @@ async function renderWorkroom(db, page, url, env) {
         <a href="${workroomPages.goal.path}">Goals aktif<strong>${activeGoals}</strong></a>
       </div>
       <div class="overview" id="agenda">
-        <section class="collection agenda"><h2>${day === today ? 'Hari ini' : new Date(day+'T12:00:00Z').toLocaleDateString('id-ID',{day:'numeric',month:'long',timeZone:'UTC'})}</h2>
-          ${due.length ? '<ul class="due-list">' + due.map(entry => `<li><form method="post" action="${WORKROOM}"><input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${entry.id}"><button name="action" value="complete" aria-label="Tandai selesai: ${e(entry.title)}">✓</button></form><div><a href="${workroomEntryLink(entry)}">${e(entry.title)}</a><small>${entry.due < today ? 'Lewat tenggat · ' : ''}${e(entry.due)}</small></div></li>`).join('') + '</ul>' : '<p class="agenda-empty">Tidak ada tugas jatuh tempo.</p>'}
-          <a class="quick-add" href="${workroomPages.task.path}?add=task#add-task">+ Tambah tugas</a>
-          ${googleAgenda(google, day, params.get('google'))}
-          ${day !== today ? '<a class="reset-day" href="/workroom/#agenda">Kembali ke hari ini</a>' : ''}
-        </section>
-        ${workroomCalendar(day, entries.filter(entry => entry.kind === 'task' && entry.status !== 'done'), today, google.entries)}
+        <div class="collection calendar-agenda">
+          ${workroomCalendar(day, entries.filter(entry => entry.kind === 'task' && entry.status !== 'done'), today, google.entries)}
+          <section class="agenda" aria-label="Agenda tanggal terpilih">
+            <div class="agenda-heading">
+              <h2>${new Date(day + 'T12:00:00Z').toLocaleDateString('id-ID', {day:'numeric', month:'long', timeZone:'UTC'})}</h2>
+              ${day === today ? '<span>Hari ini</span>' : '<a class="reset-day" href="/workroom/#agenda">Kembali ke hari ini</a>'}
+            </div>
+            ${googleAgenda(google, day, params.get('google'))}
+            <div class="agenda-tasks">
+              <h3>Tugas</h3>
+              ${due.length ? '<ul class="due-list">' + due.map(entry => `<li><form method="post" action="${WORKROOM}"><input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${entry.id}"><button name="action" value="complete" aria-label="Tandai selesai: ${e(entry.title)}">✓</button></form><div><a href="${workroomEntryLink(entry)}">${e(entry.title)}</a><small>${entry.due < today ? 'Lewat tenggat · ' : ''}${e(entry.due)}</small></div></li>`).join('') + '</ul>' : '<p class="agenda-empty">Tidak ada tugas jatuh tempo.</p>'}
+              <a class="quick-add" href="${workroomPages.task.path}?add=task#add-task">+ Tambah tugas</a>
+            </div>
+          </section>
+        </div>
         <section class="collection recent-notes"><h2>Catatan terbaru</h2>
           ${entries.some(entry => entry.kind === 'note') ? '<ul>' + entries.filter(entry => entry.kind === 'note').slice(0,3).map(note =>
             `<li><a href="${workroomEntryLink(note)}"><strong>${e(note.title)}</strong>${note.body ? '<small>' + e(note.body.slice(0,120)) + '</small>' : ''}</a></li>`).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
