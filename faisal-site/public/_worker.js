@@ -167,6 +167,20 @@ async function connectGoogleCalendar(request, env, url) {
   }
 }
 
+async function googleCalendarEvents(id, accessToken, query, signal) {
+  const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(id)}/events`);
+  url.search = query;
+  const events = [];
+  do {
+    const response = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken }, signal });
+    if (!response.ok) throw new Error('Google Calendar request failed');
+    const page = await response.json();
+    events.push(...(page.items ?? []));
+    if (!page.nextPageToken) return events;
+    url.searchParams.set('pageToken', page.nextPageToken);
+  } while (true);
+}
+
 async function googleMonth(env, day) {
   const entries = new Map();
   if (!googleConfigured(env)) return { entries, status: 'disabled' };
@@ -179,18 +193,20 @@ async function googleMonth(env, day) {
     const next = new Date(first + 'T12:00:00Z');
     next.setUTCMonth(next.getUTCMonth() + 1);
     const end = new Date(next.toISOString().slice(0, 10) + 'T00:00:00+08:00');
-    const eventsUrl = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
-    eventsUrl.search = new URLSearchParams({
+    const query = new URLSearchParams({
       timeMin: from.toISOString(), timeMax: end.toISOString(), timeZone: workroomTimeZone,
       singleEvents: 'true', orderBy: 'startTime', maxResults: '2500',
       fields: 'nextPageToken,items(summary,start,end)',
     });
     const signal = AbortSignal.timeout(5000);
-    do {
-      const response = await fetch(eventsUrl, { headers: { Authorization: 'Bearer ' + token.access_token }, signal });
-      if (!response.ok) throw new Error('Google Calendar request failed');
-      const page = await response.json();
-      for (const event of page.items ?? []) {
+    const extraIds = (env.WORKROOM_GOOGLE_CALENDAR_IDS ?? '').split(',').map(id => id.trim()).filter(Boolean);
+    const ids = [...new Set(['primary', ...extraIds])];
+    const calendars = await Promise.allSettled(ids.map(id =>
+      googleCalendarEvents(id, token.access_token, query, signal)));
+    if (calendars.every(calendar => calendar.status === 'rejected')) throw new Error('No Google Calendar could be loaded');
+    for (const calendar of calendars) {
+      if (calendar.status !== 'fulfilled') continue;
+      for (const event of calendar.value) {
         const allDay = Boolean(event.start?.date);
         const start = new Date(allDay ? event.start.date + 'T00:00:00+08:00' : event.start?.dateTime);
         const finish = new Date(allDay ? event.end?.date + 'T00:00:00+08:00' : event.end?.dateTime);
@@ -201,16 +217,16 @@ async function googleMonth(env, day) {
           const key = workroomDay.format(new Date(date));
           const list = entries.get(key) ?? [];
           list.push({
+            start: +start,
             title: event.summary || 'Acara tanpa judul',
             time: allDay ? 'Seharian' : key === startDay ? workroomTime.format(start) + ' WITA' : 'Berlangsung',
           });
           entries.set(key, list);
         }
       }
-      if (!page.nextPageToken) break;
-      eventsUrl.searchParams.set('pageToken', page.nextPageToken);
-    } while (true);
-    return { entries, status: 'connected' };
+    }
+    for (const list of entries.values()) list.sort((a, b) => a.start - b.start);
+    return { entries, status: calendars.some(calendar => calendar.status === 'rejected') ? 'partial' : 'connected' };
   } catch {
     return { entries: new Map(), status: 'error' };
   }
@@ -224,9 +240,10 @@ function googleAgenda(calendar, day, result) {
   return `<div class="google-agenda"><h3>Google Calendar</h3>${status}
     ${calendar.status === 'error' ? '<p>Jadwal Google belum bisa dimuat. Coba muat ulang atau hubungkan kembali.</p>' + connect : ''}
     ${calendar.status === 'disconnected' ? connect : ''}
-    ${calendar.status === 'connected' ? events.length ? '<ul>' + events.map(event =>
+    ${calendar.status === 'partial' ? '<p>Sebagian kalender belum bisa dimuat. Periksa ID kalender dan izin aksesnya.</p>' : ''}
+    ${['connected', 'partial'].includes(calendar.status) ? events.length ? '<ul>' + events.map(event =>
       `<li><small>${escapeWorkroom(event.time)}</small><strong>${escapeWorkroom(event.title)}</strong></li>`).join('') + '</ul>'
-      : '<p>Tidak ada acara pada tanggal ini.</p>' : ''}
+      : calendar.status === 'connected' ? '<p>Tidak ada acara pada tanggal ini.</p>' : '' : ''}
   </div>`;
 }
 
