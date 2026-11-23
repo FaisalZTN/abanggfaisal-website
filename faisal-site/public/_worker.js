@@ -17,7 +17,7 @@ const privateHeaders = {
   'Cache-Control': 'private, no-store',
   'X-Robots-Tag': 'noindex, nofollow',
   'X-Content-Type-Options': 'nosniff',
-  'Content-Security-Policy': "default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src https:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+  'Content-Security-Policy': "default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; font-src 'self'; img-src https:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
 };
 
 function escapeWorkroom(value) {
@@ -270,7 +270,11 @@ function workroomCalendar(day, tasks, today, google) {
     const value = day.slice(0, 8) + String(i + 1).padStart(2, '0');
     return `<a href="${href(value)}" class="${value === day ? 'selected ' : ''}${dated.has(value) || google.has(value) ? 'marked' : ''}" aria-label="${value}${dated.has(value) ? ', ada tugas' : ''}${google.has(value) ? ', ada acara Google Calendar' : ''}"${value === today ? ' aria-current="date"' : ''}>${i + 1}</a>`;
   });
-  return `<section class="calendar"><div class="calendar-heading"><h2>${date.toLocaleDateString('id-ID', {month:'long', year:'numeric', timeZone:'UTC'})}</h2><div>${monthLink(-1,'Bulan sebelumnya','‹')}${monthLink(1,'Bulan berikutnya','›')}</div></div><div class="days">${['Sn','Sl','Rb','Km','Jm','Sb','Mg'].map(d => `<small>${d}</small>`).join('')}${'<span></span>'.repeat((first.getUTCDay()+6)%7)}${cells.join('')}</div></section>`;
+  return `<section class="calendar"><div class="calendar-heading">
+    ${monthLink(-1, 'Bulan sebelumnya', '←')}
+    <h2>${date.toLocaleDateString('id-ID', {month:'long', year:'numeric', timeZone:'UTC'})}</h2>
+    ${monthLink(1, 'Bulan berikutnya', '→')}
+  </div><div class="days">${['Sn','Sl','Rb','Km','Jm','Sb','Mg'].map(d => `<small>${d}</small>`).join('')}${'<span></span>'.repeat((first.getUTCDay()+6)%7)}${cells.join('')}</div></section>`;
 }
 
 function workroomWorkspace(entries, params) {
@@ -363,28 +367,28 @@ async function renderWorkroom(db, page, url, env) {
         <h1>Workroom</h1>
       </div>
       ${notice}
-      <section class="today-panel" id="hari-ini">
-        <div class="today-heading"><div>
-          <p>${e(dateLabel)} · WITA</p>
-          <h2 data-workroom-greeting data-morning="${greetings.morning}" data-afternoon="${greetings.afternoon}" data-night="${greetings.night}">${greetings[period]}</h2>
-          <p class="workroom-greeting-copy">Sudah siap ngopi, nugas, dan belajar?</p>
-        </div></div>
-        <script src="/workroom-greeting.js" defer></script>
-        <form class="capture" method="post" action="${WORKROOM}">
-          <input type="hidden" name="action" value="save"><input type="hidden" name="priority" value="normal">
-          <select aria-label="Jenis entri" name="kind"><option value="task">Tugas</option><option value="note">Catatan</option></select>
-          <input name="title" aria-label="Judul entri baru" placeholder="Apa yang ingin kamu catat?" required maxlength="160">
-          <button>Simpan</button>
-        </form>
-      </section>
-      <div class="dashboard-stats">
-        <a href="${workroomPages.task.path}">Tugas terbuka<strong>${openTasks}</strong></a>
-        <a href="${workroomPages.project.path}">Proyek aktif<strong>${activeProjects}</strong></a>
-        <a href="${workroomPages.note.path}">Catatan<strong>${entries.filter(entry => entry.kind === 'note').length}</strong></a>
-        <a href="${workroomPages.goal.path}">Goals aktif<strong>${activeGoals}</strong></a>
-      </div>
-      <div class="overview" id="agenda">
-        <div class="collection calendar-agenda">
+      <div class="overview">
+        <section class="today-panel" id="hari-ini">
+          <div class="today-heading"><div>
+            <p>${e(dateLabel)} · WITA</p>
+            <h2 data-workroom-greeting data-morning="${greetings.morning}" data-afternoon="${greetings.afternoon}" data-night="${greetings.night}">${greetings[period]}</h2>
+            <p class="workroom-greeting-copy">Sudah siap ngopi, nugas, dan belajar?</p>
+          </div></div>
+          <script src="/workroom-greeting.js" defer></script>
+          <form class="capture" method="post" action="${WORKROOM}">
+            <input type="hidden" name="action" value="save"><input type="hidden" name="priority" value="normal">
+            <select aria-label="Jenis entri" name="kind"><option value="task">Tugas</option><option value="note">Catatan</option></select>
+            <input name="title" aria-label="Judul entri baru" placeholder="Apa yang ingin kamu catat?" required maxlength="160">
+            <button>Simpan</button>
+          </form>
+        </section>
+        <div class="dashboard-stats">
+          <a href="${workroomPages.task.path}">Tugas terbuka<strong>${openTasks}</strong></a>
+          <a href="${workroomPages.project.path}">Proyek aktif<strong>${activeProjects}</strong></a>
+          <a href="${workroomPages.note.path}">Catatan<strong>${entries.filter(entry => entry.kind === 'note').length}</strong></a>
+          <a href="${workroomPages.goal.path}">Goals aktif<strong>${activeGoals}</strong></a>
+        </div>
+        <div class="collection calendar-agenda" id="agenda">
           ${workroomCalendar(day, entries.filter(entry => entry.kind === 'task' && entry.status !== 'done'), today, google.entries)}
           <section class="agenda" aria-label="Agenda tanggal terpilih">
             <div class="agenda-heading">
