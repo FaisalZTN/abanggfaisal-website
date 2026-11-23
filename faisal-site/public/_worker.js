@@ -851,7 +851,7 @@ const builtInNoteCategories = ['belajar', 'ide', 'pribadi', 'referensi'];
 async function ensureWorkroomNotes(db) {
   const columns = async () => (await db.prepare('PRAGMA table_info(workroom_entries)').all()).results;
   const current = await columns();
-  for (const [name, type] of [['note_category', 'TEXT'], ['note_updated', 'INTEGER']]) {
+  for (const [name, type] of [['note_category', 'TEXT'], ['note_updated', 'INTEGER'], ['note_pinned', 'INTEGER NOT NULL DEFAULT 0']]) {
     if (current.some(column => column.name === name)) continue;
     try {
       await db.prepare(`ALTER TABLE workroom_entries ADD COLUMN ${name} ${type}`).run();
@@ -864,7 +864,7 @@ async function ensureWorkroomNotes(db) {
 
 async function readWorkroomNotes(db) {
   const [notes, categories] = await db.batch([
-    db.prepare("SELECT id, kind, title, body, note_category AS category, note_updated AS updated FROM workroom_entries WHERE kind = 'note' ORDER BY id DESC"),
+    db.prepare("SELECT id, kind, title, body, note_category AS category, note_updated AS updated, note_pinned AS pinned FROM workroom_entries WHERE kind = 'note' ORDER BY id DESC"),
     db.prepare('SELECT id, name FROM workroom_note_categories ORDER BY name'),
   ]);
   return { notes: notes.results, categories: categories.results };
@@ -880,6 +880,18 @@ async function workroomNotesData(request, db) {
   let data;
   try { data = await request.json(); } catch { return reply({error:'Permintaan tidak valid.'}, 400); }
   if (!data || typeof data !== 'object') return reply({error:'Permintaan tidak valid.'}, 400);
+  if (data.action === 'pin' || data.action === 'delete') {
+    if (!Number.isSafeInteger(data.id) || data.id < 1 ||
+        (data.action === 'pin' && typeof data.pinned !== 'boolean')) {
+      return reply({error:'Permintaan catatan tidak valid.'}, 400);
+    }
+    const note = data.action === 'pin'
+      ? await db.prepare("UPDATE workroom_entries SET note_pinned = ? WHERE id = ? AND kind = 'note' RETURNING id, note_pinned AS pinned")
+        .bind(Number(data.pinned), data.id).first()
+      : await db.prepare("DELETE FROM workroom_entries WHERE id = ? AND kind = 'note' RETURNING id")
+        .bind(data.id).first();
+    return note ? reply(note) : reply({error:'Catatan tidak ditemukan.'}, 404);
+  }
   if (data.action === 'category') {
     const name = typeof data.name === 'string' ? data.name.trim() : '';
     if (!name || name.length > 40) return reply({error:'Nama kategori tidak valid.'}, 400);
@@ -1139,7 +1151,8 @@ async function handleWorkroom(request, env, url) {
     priority TEXT NOT NULL,
     project_id INTEGER REFERENCES workroom_entries(id) ON DELETE SET NULL,
     note_category TEXT,
-    note_updated INTEGER
+    note_updated INTEGER,
+    note_pinned INTEGER NOT NULL DEFAULT 0
   )`).run();
   if (page === 'today') return workroomToday(request, url, env);
   if (request.method === 'POST' || page === 'review') await ensureWorkroomActivity(db);
