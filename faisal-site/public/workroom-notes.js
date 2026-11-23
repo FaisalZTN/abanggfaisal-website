@@ -118,9 +118,9 @@ function renderNoteIndex() {
     (!q || (item.title + ' ' + item.body + ' ' + notePreview(item.body, Infinity) + ' ' + noteTime(item)).toLocaleLowerCase('id').includes(q)) &&
     (!fromTime || (noteTime(item) && noteTime(item).replace(' ','T') >= fromTime)) &&
     (!toTime || (noteTime(item) && noteTime(item).replace(' ','T') <= toTime)));
-  notes.sort((a,b)=>(b.updated||0)-(a.updated||0));
+  notes.sort((a, b) => (b.pinned || 0) - (a.pinned || 0) || (b.updated || 0) - (a.updated || 0));
   el('note-list').innerHTML = notes.map(note => `<button data-open="${note.id ?? 'new'}"${note.id === activeNote ? ' aria-current="true"' : ''}>
-    <span class="note-row-head"><strong>${escape(note.title)}</strong>${noteTime(note) ? `<time title="${noteTime(note)} WITA">${noteTime(note).slice(-5)}</time>` : ''}</span><small>${escape(notePreview(note.body) || 'Catatan kosong')}</small><small class="note-tag">${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
+    <span class="note-row-head"><strong>${escape(note.title)}</strong>${note.pinned ? '<span class="note-pinned-label">Dipin</span>' : ''}${noteTime(note) ? `<time title="${noteTime(note)} WITA">${noteTime(note).slice(-5)}</time>` : ''}</span><small>${escape(notePreview(note.body) || 'Catatan kosong')}</small><small class="note-tag">${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
 }
 function renderNotes(notes) {
   const note = notes.find(item => item.id === activeNote) || notes[0];
@@ -139,7 +139,10 @@ function renderNotes(notes) {
           <input type="date" id="insert-date" aria-label="Sisipkan tanggal" title="Sisipkan tanggal">
         </div>
         <div id="edit-body" class="note-rendered" contenteditable="true" role="textbox" aria-label="Isi catatan" aria-multiline="true" data-placeholder="Tulis ide kamu di sini…">${formatNote(note.body)}</div>
-        <div class="note-footer"><button class="note-save" id="save-note">Simpan</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label></div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
+        <div class="note-footer"><button class="note-save" id="save-note">Simpan</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label>
+          ${note.id !== null ? `<button type="button" id="pin-note" aria-pressed="${Boolean(note.pinned)}">${note.pinned ? 'Lepas pin' : 'Pin'}</button>` : ''}
+          <button type="button" id="delete-note">${note.id === null ? 'Buang draf' : 'Hapus'}</button>
+        </div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
     </div>`;
   renderNoteIndex();
 }
@@ -156,6 +159,45 @@ document.addEventListener('click', async event=>{
     noteQuery=''; activeNote=null;noteEditing=true;render();el('edit-title').focus();
   }
   if(button.dataset.mark) editFormat(button.dataset.mark, el('edit-body'));
+
+  if (button.id === 'pin-note' || button.id === 'delete-note') {
+    const note = entries.find(item => item.id === activeNote);
+    if (!note) return;
+    const deleting = button.id === 'delete-note';
+    if (deleting && !confirm(note.id === null ? 'Buang draf ini?' : 'Hapus catatan ini secara permanen?')) return;
+    busy = true;
+    el('view').inert = true;
+    try {
+      if (deleting) {
+        if (note.id !== null) await request({ action: 'delete', id: note.id });
+        entries = entries.filter(item => item !== note);
+        dirty.delete(note);
+        activeNote = undefined;
+        noteEditing = false;
+        const url = new URL(location.href);
+        if (url.searchParams.get('edit') === String(note.id)) {
+          url.searchParams.delete('edit');
+          history.replaceState(history.state, '', url);
+        }
+        render();
+        el('note-query').focus();
+        message(note.id === null ? 'Draf dibuang.' : 'Catatan dihapus.');
+      } else {
+        const result = await request({ action: 'pin', id: note.id, pinned: !note.pinned });
+        note.pinned = result.pinned;
+        button.textContent = note.pinned ? 'Lepas pin' : 'Pin';
+        button.setAttribute('aria-pressed', String(Boolean(note.pinned)));
+        renderNoteIndex();
+        message(note.pinned ? 'Catatan dipin.' : 'Pin dilepas.');
+      }
+    } catch (error) {
+      message(error.message);
+    } finally {
+      busy = false;
+      el('view').inert = false;
+    }
+    return;
+  }
 
   if(button.id==='add-category' || button.id==='save-note'){
     const note=entries.find(item=>item.id===activeNote);
