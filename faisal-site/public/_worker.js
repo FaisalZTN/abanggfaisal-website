@@ -1,3 +1,5 @@
+import { notePreview } from './workroom-note-format.js';
+
 const WORKROOM = '/workroom/';
 const workroomKinds = {
   task: { title: 'Tugas', statuses: { active: 'Belum mulai', doing: 'Dikerjakan', done: 'Selesai' } },
@@ -99,7 +101,7 @@ function workroomForm(kind, entry, projects, standalone = false) {
     <input type="hidden" name="kind" value="${kind}">
     <input type="hidden" name="id" value="${entry?.id ?? ''}">
     <label>Judul<input name="title" required maxlength="160" value="${e(entry?.title)}"></label>
-    <label>${kind === 'note' ? 'Isi catatan' : 'Detail'}<textarea name="body" rows="${standalone ? 12 : 3}" maxlength="10000">${e(entry?.body)}</textarea></label>
+    <label>${kind === 'note' ? 'Isi catatan (Markdown)' : 'Detail'}<textarea name="body" rows="${standalone ? 12 : 3}" maxlength="10000">${e(entry?.body)}</textarea></label>
     <div class="fields">
     ${kind !== 'note' ? `<label>Status<select name="status">${statuses}</select></label>
       <label>Tenggat<input type="date" name="due" value="${e(entry?.due)}"></label>` : ''}
@@ -571,8 +573,10 @@ async function renderWorkroom(db, page, url, env) {
           </section>
         </div>
         <section class="collection recent-notes"><h2>Catatan terbaru</h2>
-          ${entries.some(entry => entry.kind === 'note') ? '<ul>' + entries.filter(entry => entry.kind === 'note').slice(0,3).map(note =>
-            `<li><a href="${workroomEntryLink(note)}"><strong>${e(note.title)}</strong>${note.body ? '<small>' + e(note.body.slice(0,120)) + '</small>' : ''}</a></li>`).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
+          ${entries.some(entry => entry.kind === 'note') ? '<ul>' + entries.filter(entry => entry.kind === 'note').slice(0,3).map(note => {
+            const preview = notePreview(note.body);
+            return `<li><a href="${workroomEntryLink(note)}"><strong>${e(note.title)}</strong>${preview ? '<small>' + e(preview) + '</small>' : ''}</a></li>`;
+          }).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
           <a href="${workroomPages.note.path}">Semua catatan</a>
         </section>
       </div>
@@ -690,7 +694,7 @@ async function handleWorkroom(request, env, url) {
       return workroomRedirect(url, workroomPages.note.path + url.search);
     }
     if (page === 'note' && !url.searchParams.has('basic')) {
-      return workroomPage('<div id="view" aria-busy="true">Memuat catatan…</div><p id="note-status" role="status"></p><noscript>Aktifkan JavaScript untuk membuka editor. <a href="?basic">Buka daftar catatan dasar</a></noscript><script src="/workroom-notes.js" defer></script>', 200, page);
+      return workroomPage('<div id="view" aria-busy="true">Memuat catatan…</div><p id="note-status" role="status"></p><noscript>Aktifkan JavaScript untuk membuka editor. <a href="?basic">Buka daftar catatan dasar</a></noscript><script type="module" src="/workroom-notes.js"></script>', 200, page);
     }
     return renderWorkroom(db, page, url, env);
   }
