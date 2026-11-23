@@ -1,0 +1,210 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Workroom · abangfaisal</title><link rel="stylesheet" href="/workroom.css"></head>
+    <body><header><a href="/">abangfaisal.</a><a href="/ruang-belajar/">Ruang Belajar</a></header>
+    <main><p class="save-notice">Demo Workroom · Data contoh · Perubahan berlaku sampai halaman dimuat ulang.</p><div class="dashboard">
+    <aside class="dashboard-sidebar">
+      <h1>Workroom</h1>
+      <nav aria-label="Bagian Workroom"><a href="#hari-ini">Hari ini</a><a href="#task">Tugas</a><a href="#project">Proyek</a><a href="#note">Catatan</a><a href="#goal">Goals</a></nav>
+    </aside>
+    <div class="dashboard-content">
+      
+      <section class="today-panel" id="hari-ini">
+        <div class="today-heading"><div><p>Senin, 23 November 2026 · WITA</p><h2>Agenda Faisal</h2></div></div>
+        <form class="capture" method="post" action="/workroom/">
+          <input type="hidden" name="action" value="save"><input type="hidden" name="priority" value="normal">
+          <select aria-label="Jenis entri" name="kind"><option value="task">Tugas</option><option value="note">Catatan</option></select>
+          <input name="title" aria-label="Judul entri baru" placeholder="Apa yang ingin kamu catat?" required maxlength="160">
+          <button>Simpan</button>
+        </form>
+      </section>
+      <div class="dashboard-stats">
+        <a href="#task">Tugas terbuka<strong>2</strong></a>
+        <a href="#project">Proyek aktif<strong>1</strong></a>
+        <a href="#note">Catatan<strong>1</strong></a>
+        <a href="#goal">Goals aktif<strong>1</strong></a>
+      </div>
+      <div class="overview" id="agenda">
+        <section class="collection agenda"><h2>Hari ini</h2>
+          <ul class="due-list"><li><form method="post" action="/workroom/"><input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="1"><button name="action" value="complete" aria-label="Tandai selesai: Siapkan materi praktikum">✓</button></form><div><a href="#entry-1">Siapkan materi praktikum</a><small>2026-11-23</small></div></li><li><form method="post" action="/workroom/"><input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="2"><button name="action" value="complete" aria-label="Tandai selesai: Review catatan kuliah">✓</button></form><div><a href="#entry-2">Review catatan kuliah</a><small>2026-11-23</small></div></li></ul>
+          <a class="quick-add" href="#add-task">+ Tambah tugas</a>
+          
+        </section>
+        <section class="collection calendar"><div class="calendar-heading"><h2>November 2026</h2><div></div></div><div class="days"><small>Sn</small><small>Sl</small><small>Rb</small><small>Km</small><small>Jm</small><small>Sb</small><small>Mg</small><span></span><span></span><span></span><span></span><span></span><span></span><a href="#agenda" data-day="2026-11-01" class="" aria-label="2026-11-01">1</a><a href="#agenda" data-day="2026-11-02" class="" aria-label="2026-11-02">2</a><a href="#agenda" data-day="2026-11-03" class="" aria-label="2026-11-03">3</a><a href="#agenda" data-day="2026-11-04" class="" aria-label="2026-11-04">4</a><a href="#agenda" data-day="2026-11-05" class="" aria-label="2026-11-05">5</a><a href="#agenda" data-day="2026-11-06" class="" aria-label="2026-11-06">6</a><a href="#agenda" data-day="2026-11-07" class="" aria-label="2026-11-07">7</a><a href="#agenda" data-day="2026-11-08" class="" aria-label="2026-11-08">8</a><a href="#agenda" data-day="2026-11-09" class="" aria-label="2026-11-09">9</a><a href="#agenda" data-day="2026-11-10" class="" aria-label="2026-11-10">10</a><a href="#agenda" data-day="2026-11-11" class="" aria-label="2026-11-11">11</a><a href="#agenda" data-day="2026-11-12" class="" aria-label="2026-11-12">12</a><a href="#agenda" data-day="2026-11-13" class="" aria-label="2026-11-13">13</a><a href="#agenda" data-day="2026-11-14" class="" aria-label="2026-11-14">14</a><a href="#agenda" data-day="2026-11-15" class="" aria-label="2026-11-15">15</a><a href="#agenda" data-day="2026-11-16" class="" aria-label="2026-11-16">16</a><a href="#agenda" data-day="2026-11-17" class="" aria-label="2026-11-17">17</a><a href="#agenda" data-day="2026-11-18" class="" aria-label="2026-11-18">18</a><a href="#agenda" data-day="2026-11-19" class="" aria-label="2026-11-19">19</a><a href="#agenda" data-day="2026-11-20" class="" aria-label="2026-11-20">20</a><a href="#agenda" data-day="2026-11-21" class="" aria-label="2026-11-21">21</a><a href="#agenda" data-day="2026-11-22" class="" aria-label="2026-11-22">22</a><a href="#agenda" data-day="2026-11-23" class="selected marked" aria-label="2026-11-23, ada tugas" aria-current="date">23</a><a href="#agenda" data-day="2026-11-24" class="" aria-label="2026-11-24">24</a><a href="#agenda" data-day="2026-11-25" class="" aria-label="2026-11-25">25</a><a href="#agenda" data-day="2026-11-26" class="" aria-label="2026-11-26">26</a><a href="#agenda" data-day="2026-11-27" class="" aria-label="2026-11-27">27</a><a href="#agenda" data-day="2026-11-28" class="" aria-label="2026-11-28">28</a><a href="#agenda" data-day="2026-11-29" class="" aria-label="2026-11-29">29</a><a href="#agenda" data-day="2026-11-30" class="" aria-label="2026-11-30">30</a></div></section>
+        <section class="collection recent-notes"><h2>Catatan terbaru</h2>
+          <ul><li><a href="#entry-4"><strong>Ide untuk sesi belajar</strong><small>Buat rangkuman satu halaman dan tiga soal latihan.</small></a></li></ul>
+          <a href="#note">Semua catatan</a>
+        </section>
+      </div>
+      <div class="dashboard-collections"><section class="collection" id="task">
+    <h2>Tugas</h2>
+    <details class="add-entry" id="add-task"><summary>Tambah tugas</summary><form method="post" action="/workroom/">
+    <input type="hidden" name="kind" value="task">
+    <input type="hidden" name="id" value="">
+    <label>Judul<input name="title" required maxlength="160" value=""></label>
+    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
+    <div class="fields">
+    <label>Status<select name="status"><option value="active">Belum selesai</option><option value="done">Selesai</option></select></label>
+      <label>Tenggat<input type="date" name="due" value=""></label>
+    <label>Prioritas<select name="priority"><option value="normal">Normal</option><option value="high">Tinggi</option></select></label>
+    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
+    </div>
+    <button name="action" value="save">Tambah</button>
+    
+  </form></details>
+    <details id="entry-1">
+      <summary>Siapkan materi praktikum <small>Belum selesai · 2026-11-23</small></summary>
+      <form method="post" action="/workroom/">
+    <input type="hidden" name="kind" value="task">
+    <input type="hidden" name="id" value="1">
+    <label>Judul<input name="title" required maxlength="160" value="Siapkan materi praktikum"></label>
+    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
+    <div class="fields">
+    <label>Status<select name="status"><option value="active" selected>Belum selesai</option><option value="done">Selesai</option></select></label>
+      <label>Tenggat<input type="date" name="due" value="2026-11-23"></label>
+    <label>Prioritas<select name="priority"><option value="normal" selected>Normal</option><option value="high">Tinggi</option></select></label>
+    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
+    </div>
+    <button name="action" value="save">Simpan perubahan</button>
+    <details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>
+  </form>
+    </details><details id="entry-2">
+      <summary>Review catatan kuliah <small>Belum selesai · 2026-11-23</small></summary>
+      <form method="post" action="/workroom/">
+    <input type="hidden" name="kind" value="task">
+    <input type="hidden" name="id" value="2">
+    <label>Judul<input name="title" required maxlength="160" value="Review catatan kuliah"></label>
+    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
+    <div class="fields">
+    <label>Status<select name="status"><option value="active" selected>Belum selesai</option><option value="done">Selesai</option></select></label>
+      <label>Tenggat<input type="date" name="due" value="2026-11-23"></label>
+    <label>Prioritas<select name="priority"><option value="normal" selected>Normal</option><option value="high">Tinggi</option></select></label>
+    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
+    </div>
+    <button name="action" value="save">Simpan perubahan</button>
+    <details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>
+  </form>
+    </details></section><section class="collection" id="project">
+    <h2>Proyek</h2>
+    <details class="add-entry" id="add-project"><summary>Tambah proyek</summary><form method="post" action="/workroom/">
+    <input type="hidden" name="kind" value="project">
+    <input type="hidden" name="id" value="">
+    <label>Judul<input name="title" required maxlength="160" value=""></label>
+    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
+    <div class="fields">
+    <label>Status<select name="status"><option value="active">Aktif</option><option value="done">Selesai</option></select></label>
+      <label>Tenggat<input type="date" name="due" value=""></label>
+    
+    
+    </div>
+    <button name="action" value="save">Tambah</button>
+    
+  </form></details>
+    <details id="entry-3">
+      <summary>Ruang Belajar <small>Aktif</small></summary>
+      <form method="post" action="/workroom/">
+    <input type="hidden" name="kind" value="project">
+    <input type="hidden" name="id" value="3">
+    <label>Judul<input name="title" required maxlength="160" value="Ruang Belajar"></label>
+    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
+    <div class="fields">
+    <label>Status<select name="status"><option value="active" selected>Aktif</option><option value="done">Selesai</option></select></label>
+      <label>Tenggat<input type="date" name="due" value=""></label>
+    
+    
+    </div>
+    <button name="action" value="save">Simpan perubahan</button>
+    <details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>
+  </form>
+    </details></section><section class="collection" id="note">
+    <h2>Catatan</h2>
+    <details class="add-entry" id="add-note"><summary>Tambah catatan</summary><form method="post" action="/workroom/">
+    <input type="hidden" name="kind" value="note">
+    <input type="hidden" name="id" value="">
+    <label>Judul<input name="title" required maxlength="160" value=""></label>
+    <label>Isi catatan<textarea name="body" rows="3" maxlength="10000"></textarea></label>
+    <div class="fields">
+    
+    
+    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
+    </div>
+    <button name="action" value="save">Tambah</button>
+    
+  </form></details>
+    <details id="entry-4">
+      <summary>Ide untuk sesi belajar <small>Tersimpan</small></summary>
+      <form method="post" action="/workroom/">
+    <input type="hidden" name="kind" value="note">
+    <input type="hidden" name="id" value="4">
+    <label>Judul<input name="title" required maxlength="160" value="Ide untuk sesi belajar"></label>
+    <label>Isi catatan<textarea name="body" rows="3" maxlength="10000">Buat rangkuman satu halaman dan tiga soal latihan.</textarea></label>
+    <div class="fields">
+    
+    
+    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
+    </div>
+    <button name="action" value="save">Simpan perubahan</button>
+    <details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>
+  </form>
+    </details></section><section class="collection" id="goal">
+    <h2>Goals</h2>
+    <details class="add-entry" id="add-goal"><summary>Tambah goals</summary><form method="post" action="/workroom/">
+    <input type="hidden" name="kind" value="goal">
+    <input type="hidden" name="id" value="">
+    <label>Judul<input name="title" required maxlength="160" value=""></label>
+    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
+    <div class="fields">
+    <label>Status<select name="status"><option value="active">Sedang berjalan</option><option value="done">Tercapai</option></select></label>
+      <label>Tenggat<input type="date" name="due" value=""></label>
+    
+    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
+    </div>
+    <button name="action" value="save">Tambah</button>
+    
+  </form></details>
+    <details id="entry-5">
+      <summary>Belajar rutin setiap minggu <small>Sedang berjalan</small></summary>
+      <form method="post" action="/workroom/">
+    <input type="hidden" name="kind" value="goal">
+    <input type="hidden" name="id" value="5">
+    <label>Judul<input name="title" required maxlength="160" value="Belajar rutin setiap minggu"></label>
+    <label>Detail<textarea name="body" rows="3" maxlength="10000"></textarea></label>
+    <div class="fields">
+    <label>Status<select name="status"><option value="active" selected>Sedang berjalan</option><option value="done">Tercapai</option></select></label>
+      <label>Tenggat<input type="date" name="due" value=""></label>
+    
+    <label>Proyek<select name="project_id"><option value="">Tanpa proyek</option><option value="3">Ruang Belajar</option></select></label>
+    </div>
+    <button name="action" value="save">Simpan perubahan</button>
+    <details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>
+  </form>
+    </details></section></div>
+    </div></div></main><script>
+document.addEventListener('submit', event => {
+  event.preventDefault();
+  const form = event.target;
+  if (event.submitter?.value === 'complete') {
+    form.closest('li').remove();
+    return;
+  }
+  if (!form.matches('.capture')) return;
+  const fields = new FormData(form);
+  const item = document.createElement('p');
+  item.textContent = fields.get('title') + ' · Ditambahkan di demo';
+  document.getElementById(fields.get('kind')).append(item);
+  document.querySelector('.save-notice').textContent = 'Entri ditambahkan di demo.';
+  form.reset();
+});
+document.addEventListener('click', event => {
+  const link = event.target.closest('a[href^="#"]');
+  if (!link) return;
+  const target = document.getElementById(link.hash.slice(1));
+  if (target instanceof HTMLDetailsElement) target.open = true;
+  if (link.dataset.day) {
+    document.querySelector('.days .selected')?.classList.remove('selected');
+    link.classList.add('selected');
+    document.querySelector('.agenda h2').textContent = 'Agenda · ' + link.dataset.day;
+    document.querySelector('.due-list').hidden = link.dataset.day !== '2026-11-23';
+  }
+});
+</script></body></html>
