@@ -27,7 +27,9 @@ function escapeWorkroom(value) {
 }
 
 function workroomPage(content, status = 200, page = null) {
+  const wordmark = '<a class="workroom-wordmark" href="/">abanggfaisal.</a>';
   const sidebar = page ? `<nav class="workroom-nav" aria-label="Navigasi Workroom">
+    ${wordmark}
     ${Object.entries(workroomPages).map(([key, {path, title, icon}]) =>
       `<a href="${path}" aria-label="${title}"${page === key ? ' aria-current="page"' : ''}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
@@ -40,7 +42,7 @@ function workroomPage(content, status = 200, page = null) {
     <title>${page && page !== 'home' ? workroomPages[page].title + ' · ' : ''}Workroom · abangfaisal</title><link rel="icon" type="image/svg+xml" href="/workroom-favicon.svg"><link rel="stylesheet" href="/workroom.css"></head>
     <body${page ? ' class="workroom-layout"' : ''}>${sidebar}
     <header class="workroom-header">
-      <a class="workroom-wordmark" href="/">abanggfaisal.</a>
+      ${wordmark}
       <nav aria-label="Navigasi situs"><a href="/">Menu Utama</a><a href="/ruang-belajar/">Ruang Belajar</a></nav>
     </header>
     <main>${content}</main>
