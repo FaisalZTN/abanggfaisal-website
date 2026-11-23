@@ -16,7 +16,8 @@ function formatNote(body) {
   return noteLines(body).map(line => {
     const check = line.match(/^- \[([ xX])\] (.*)$/);
     if (check) return checklistItem(noteInline(check[2]), check[1] !== ' ');
-    if (line.startsWith('## ')) return `<h2>${noteInline(line.slice(3))}</h2>`;
+    const heading = /^(#{1,6}) (.*)$/.exec(line);
+    if (heading) return `<h${heading[1].length}>${noteInline(heading[2])}</h${heading[1].length}>`;
     if (line.startsWith('- ')) return `<ul><li>${noteInline(line.slice(2))}</li></ul>`;
     return `<div>${noteInline(line) || '<br>'}</div>`;
   }).join('').replaceAll('</ul><ul>', '');
@@ -42,7 +43,15 @@ function serializeNote(editor) {
         return (tag === 'IMG' ? '!' : '') + '[' + label + '](' + url.replaceAll(')', '%29') + ')';
       }
     }
-    if (tag === 'H2') return '\n## ' + children.trimEnd() + '\n';
+    if (/^H[1-6]$/.test(tag)) return '\n' + '#'.repeat(Number(tag[1])) + ' ' + children.trimEnd() + '\n';
+    if (tag === 'U') return '<u>' + children + '</u>';
+    if (tag === 'FONT') {
+      const color = node.getAttribute('color'), size = node.getAttribute('size');
+      let result = children;
+      if (/^#[a-f0-9]{6}$/i.test(color)) result = '<font color="' + color + '">' + result + '</font>';
+      if (/^[1-7]$/.test(size)) result = '<font size="' + size + '">' + result + '</font>';
+      return result;
+    }
     if (tag === 'LI') return '\n- ' + children.trimEnd() + '\n';
     if (tag === 'BR') return node.parentNode.childNodes.length === 1 ? '' : '\n';
     if (tag === 'DIV' || tag === 'P') return children.endsWith('\n') ? children : children + '\n';
@@ -91,10 +100,13 @@ function editFormat(mark, editor) {
     try { url = new URL(raw); if (url.protocol !== 'https:') throw Error(); }
     catch { message('Masukkan URL HTTPS yang valid.'); return; }
     const selected = getSelection().toString();
+    const label = image ? selected : prompt('Nama tautan (opsional)', selected);
+    if (label === null) return;
+    focusEditor(editor);
     const href = escape(url.href);
     document.execCommand('insertHTML', false, image
       ? `<img src="${href}" alt="${escape(selected || 'Gambar')}" referrerpolicy="no-referrer">`
-      : `<a href="${href}" rel="noopener noreferrer">${escape(selected || url.href)}</a>`);
+      : `<a href="${href}" rel="noopener noreferrer">${escape(label || selected || url.href)}</a>`);
   }
   editor.dispatchEvent(new Event('input', {bubbles:true}));
 }
@@ -307,3 +319,49 @@ initialNotes.then(data=>{
   if(entries.some(note=>note.id===selected)){activeNote=selected;noteEditing=true;}
   render();
 }).catch(error=>{el('view').textContent=error.message;}).finally(()=>el('view').removeAttribute('aria-busy'));
+
+const selectionBar = document.createElement('div');
+selectionBar.className = 'note-selection-bar';
+selectionBar.setAttribute('role','toolbar');
+selectionBar.setAttribute('aria-label','Format teks terpilih');
+selectionBar.hidden = true;
+selectionBar.innerHTML = `<select aria-label="Jenis paragraf" data-command="formatBlock"><option value="">Paragraf</option><option value="div">Teks biasa</option>${[1,2,3,4,5,6].map(n=>`<option value="h${n}">Heading ${n}</option>`).join('')}</select>
+<button data-command="bold" aria-label="Tebal"><b>B</b></button><button data-command="italic" aria-label="Miring"><i>I</i></button><button data-command="underline" aria-label="Garis bawah"><u>U</u></button>
+<input type="color" value="#b8d99d" data-command="foreColor" aria-label="Warna teks">
+<select data-command="fontSize" aria-label="Ukuran teks"><option value="">Ukuran</option>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}">${n}</option>`).join('')}</select><button data-command="link">Tautan</button>`;
+document.body.append(selectionBar);
+let selectedRange;
+function positionSelectionBar() {
+  const selection=getSelection(), editor=el('edit-body');
+  if(selectionBar.contains(document.activeElement)) return;
+  if(!selection.rangeCount || selection.isCollapsed || !editor?.contains(selection.getRangeAt(0).commonAncestorContainer)){
+    selectionBar.hidden=true; return;
+  }
+  selectedRange=selection.getRangeAt(0).cloneRange();
+  const rect=selectedRange.getBoundingClientRect();
+  selectionBar.hidden=false;
+  selectionBar.style.left=Math.max(8,Math.min(rect.left,innerWidth-selectionBar.offsetWidth-8))+'px';
+  selectionBar.style.top=Math.max(8,Math.min(innerHeight-selectionBar.offsetHeight-8,rect.top>selectionBar.offsetHeight+8?rect.top-selectionBar.offsetHeight-6:rect.bottom+6))+'px';
+}
+document.addEventListener('selectionchange',positionSelectionBar);
+window.addEventListener('resize',positionSelectionBar);
+document.addEventListener('scroll',positionSelectionBar,true);
+document.addEventListener('pointerdown',event=>{if(!selectionBar.contains(event.target))selectionBar.hidden=true;});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')selectionBar.hidden=true;});
+selectionBar.addEventListener('mousedown',event=>{if(event.target.closest('button'))event.preventDefault();});
+function applySelectionFormat(control) {
+  const editor=el('edit-body');
+  if(!control || !selectedRange || !editor?.contains(selectedRange.commonAncestorContainer))return;
+  editorRange=selectedRange.cloneRange();
+  focusEditor(editor);
+  const command=control.dataset.command;
+  if(command==='link')editFormat('link',editor);
+  else {
+    document.execCommand('styleWithCSS',false,false);
+    document.execCommand(command,false,control.value || null);
+    editor.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  if(control.tagName==='SELECT')control.selectedIndex=0;
+}
+selectionBar.addEventListener('click',event=>applySelectionFormat(event.target.closest('button')));
+selectionBar.addEventListener('change',event=>applySelectionFormat(event.target));
