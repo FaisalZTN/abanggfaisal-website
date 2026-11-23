@@ -3,17 +3,118 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp
 const noteCategories = {all:'Semua',belajar:'Belajar',ide:'Ide',pribadi:'Pribadi',referensi:'Referensi',none:'Tanpa kategori'};
 const clock = new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Makassar',dateStyle:'short',timeStyle:'short'});
 const noteTime = item => item.updated ? clock.format(new Date(item.updated)) : '';
-let fromTime='', toTime='', formatted=false;
+let fromTime='', toTime='';
+let editorRange;
+
+function noteInline(text) {
+  const tokens = /(!?)\[([^\]]*)\]\((https:\/\/[^\s)]+)\)|\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*([^*]+)\*|\^([^^]+)\^|~([^~]+)~/g;
+  let html = '', offset = 0;
+  for (const match of text.matchAll(tokens)) {
+    const [token, image, label, url, both, bold, italic, sup, sub] = match;
+    html += escape(text.slice(offset, match.index));
+    if (url) {
+      html += image ? `<img src="${escape(url)}" alt="${escape(label)}" referrerpolicy="no-referrer">`
+        : `<a href="${escape(url)}" rel="noopener noreferrer">${escape(label)}</a>`;
+    } else if (both) {
+      html += `<strong><em>${noteInline(both)}</em></strong>`;
+    } else {
+      const [tag, value] = bold ? ['strong', bold] : italic ? ['em', italic] : sup ? ['sup', sup] : ['sub', sub];
+      html += `<${tag}>${noteInline(value)}</${tag}>`;
+    }
+    offset = match.index + token.length;
+  }
+  return html + escape(text.slice(offset));
+}
+
+function checklistItem(text, checked = false) {
+  return `<div class="note-check"><input type="checkbox" aria-label="Tandai selesai" contenteditable="false"${checked ? ' checked' : ''}><span>${text || '<br>'}</span></div>`;
+}
+
 function formatNote(body) {
-  return body.split('\n').map((line,i)=>{
-    const check=line.match(/^- \[([ xX])\] (.*)$/);
-    let text=escape(check ? check[2] : line);
-    text=text.replace(/(!?)\[([^\]]*)\]\((https:\/\/[^\s)]+)\)/g, (_,image,label,url)=>
-      image ? '<img referrerpolicy="no-referrer" src="'+url+'" alt="'+label+'">' :
-      '<a target="_blank" rel="noopener noreferrer" href="'+url+'">'+label+'</a>');
-    if (!line.includes('https://')) text=text.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\*([^*]+)\*/g,'<i>$1</i>').replace(/\^([^^]+)\^/g,'<sup>$1</sup>').replace(/~([^~]+)~/g,'<sub>$1</sub>');
-    return check ? '<label class="note-check"><input type="checkbox" data-check="'+i+'" '+(check[1]!==' '?'checked':'')+'>'+text+'</label>' : '<div>'+ (text||'<br>')+'</div>';
-  }).join('');
+  // Older editors could insert a checklist marker in the middle of a line.
+  return body.replace(/([^\n]) +(?=- \[[ xX]\] )/g, '$1\n').split('\n').map(line => {
+    const check = line.match(/^- \[([ xX])\] (.*)$/);
+    if (check) return checklistItem(noteInline(check[2]), check[1] !== ' ');
+    if (line.startsWith('## ')) return `<h2>${noteInline(line.slice(3))}</h2>`;
+    if (line.startsWith('- ')) return `<ul><li>${noteInline(line.slice(2))}</li></ul>`;
+    return `<div>${noteInline(line) || '<br>'}</div>`;
+  }).join('').replaceAll('</ul><ul>', '');
+}
+
+function serializeNote(editor) {
+  const markers = {B:'**', STRONG:'**', I:'*', EM:'*', SUP:'^', SUB:'~'};
+  function read(node) {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent.replaceAll('\u00a0', ' ');
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    const tag = node.tagName;
+    const children = [...node.childNodes].map(read).join('');
+    if (node.classList.contains('note-check')) {
+      const box = node.querySelector('input');
+      return '\n- [' + (box?.checked ? 'x' : ' ') + '] ' + children.trimEnd() + '\n';
+    }
+    if (Object.hasOwn(markers, tag)) return children ? markers[tag] + children + markers[tag] : '';
+    if (tag === 'IMG' || tag === 'A') {
+      const url = node.getAttribute(tag === 'IMG' ? 'src' : 'href');
+      const label = (tag === 'IMG' ? node.alt : node.textContent).replace(/[\[\]\n]/g, '');
+      if (/^https:\/\/[^\s]+$/.test(url || '')) {
+        return (tag === 'IMG' ? '!' : '') + '[' + label + '](' + url.replaceAll(')', '%29') + ')';
+      }
+    }
+    if (tag === 'H2') return '\n## ' + children.trimEnd() + '\n';
+    if (tag === 'LI') return '\n- ' + children.trimEnd() + '\n';
+    if (tag === 'BR') return node.parentNode.childNodes.length === 1 ? '' : '\n';
+    if (tag === 'DIV' || tag === 'P') return children.endsWith('\n') ? children : children + '\n';
+    return children;
+  }
+  return [...editor.childNodes].map(read).join('').replace(/\n(?=\n(?:## |- ))/g, '').replace(/^\n|\n$/g, '');
+}
+
+const toolbar = [
+  ['heading','Judul bagian','H₂'], ['bold','Tebal','<b>B</b>'], ['italic','Miring','<i>I</i>'],
+  ['sup','Superskrip','x²'], ['sub','Subskrip','x₂'], ['list','Daftar','☷'], ['check','Checklist','☑'],
+  ['link','Sisipkan tautan','↗'], ['image','Sisipkan gambar',
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m3 17 5-4 4 3 4-5 5 6"/></svg>'],
+];
+
+function focusEditor(editor) {
+  editor.focus();
+  if (editorRange && editor.contains(editorRange.commonAncestorContainer)) {
+    const selection = getSelection();
+    selection.removeAllRanges();
+    selection.addRange(editorRange);
+  }
+}
+
+function editFormat(mark, editor) {
+  focusEditor(editor);
+  const commands = {heading:'formatBlock', bold:'bold', italic:'italic', sup:'superscript', sub:'subscript', list:'insertUnorderedList'};
+  if (Object.hasOwn(commands, mark)) {
+    document.execCommand(commands[mark], false, mark === 'heading' ? (document.queryCommandValue('formatBlock') === 'h2' ? 'div' : 'h2') : null);
+  } else if (mark === 'check') {
+    const selection = getSelection();
+    const current = selection.anchorNode?.parentElement?.closest('.note-check');
+    if (current) return;
+    const item = checklistItem(escape(selection.toString())).replace('<span>', '<span data-new-check>');
+    document.execCommand('insertHTML', false, item + '<div><br></div>');
+    const label = editor.querySelector('[data-new-check]');
+    if (label) {
+      label.removeAttribute('data-new-check');
+      selection.collapse(label, label.textContent ? label.childNodes.length : 0);
+    }
+  } else {
+    const image = mark === 'image';
+    const raw = prompt(image ? 'URL gambar (HTTPS)' : 'URL tautan (HTTPS)');
+    if (!raw) return;
+    let url;
+    try { url = new URL(raw); if (url.protocol !== 'https:') throw Error(); }
+    catch { message('Masukkan URL HTTPS yang valid.'); return; }
+    const selected = getSelection().toString();
+    const href = escape(url.href);
+    document.execCommand('insertHTML', false, image
+      ? `<img src="${href}" alt="${escape(selected || 'Gambar')}" referrerpolicy="no-referrer">`
+      : `<a href="${href}" rel="noopener noreferrer">${escape(selected || url.href)}</a>`);
+  }
+  editor.dispatchEvent(new Event('input', {bubbles:true}));
 }
 
 let noteCategory='all', noteQuery='', noteEditing=false, activeNote;
@@ -37,12 +138,13 @@ function renderNoteIndex() {
     (!toTime || (noteTime(item) && noteTime(item).replace(' ','T') <= toTime)));
   notes.sort((a,b)=>(b.updated||0)-(a.updated||0));
   el('note-list').innerHTML = notes.map(note => `<button data-open="${note.id ?? 'new'}"${note.id === activeNote ? ' aria-current="true"' : ''}>
-    <span class="note-row-head"><strong>${escape(note.title)}</strong>${noteTime(note) ? `<time title="${noteTime(note)} WITA">${noteTime(note).slice(-5)}</time>` : ''}</span><small>${escape(note.body || 'Catatan kosong')}</small><small class="note-tag">${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
+    <span class="note-row-head"><strong>${escape(note.title)}</strong>${noteTime(note) ? `<time title="${noteTime(note)} WITA">${noteTime(note).slice(-5)}</time>` : ''}</span><small>${escape(note.body.replace(/^[#-]+ +|\*+|^\[.\] /gm, '') || 'Catatan kosong')}</small><small class="note-tag">${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
 }
 function renderNotes(notes) {
   const note = notes.find(item => item.id === activeNote) || notes[0];
   activeNote = note?.id;
   const options = Object.entries(noteCategories).filter(([key]) => key !== 'all');
+  editorRange = undefined;
   el('view').innerHTML = `<div class="notes-head"><h1>Catatan</h1><button class="primary" data-new-note>+ Catatan baru</button></div>
     <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
       <section class="note-categories" aria-label="Kategori"><div class="category-head"><h2>Kategori</h2><button id="add-category" aria-label="Kategori baru" title="Kategori baru">+</button></div>${Object.entries(noteCategories).map(([key, label]) =>
@@ -50,9 +152,12 @@ function renderNotes(notes) {
       <section class="note-index" aria-label="Daftar catatan"><input type="search" id="note-query" aria-label="Cari catatan" placeholder="Cari catatan…" value="${escape(noteQuery)}"><details ${fromTime || toTime ? "open" : ""}><summary>Filter waktu<span class="muted"> · WITA</span></summary><label>Dari<input type="datetime-local" id="note-from" value="${escape(fromTime)}"></label><label>Sampai<input type="datetime-local" id="note-to" value="${escape(toTime)}"></label><button id="clear-time">Hapus filter waktu</button></details><div id="note-list"></div></section>
       <section class="note-sheet" aria-label="Editor catatan">${note ? `<div><button class="note-back" id="note-back">← Daftar catatan</button></div>
         <input id="edit-title" placeholder="Catatan baru" aria-label="Judul catatan" maxlength="160" value="${escape(note.title)}">
-        <div class="note-toolbar" aria-label="Sisipkan Markdown"><button data-mark="heading" aria-label="Judul bagian" title="Judul bagian">H₂</button><button data-mark="bold" aria-label="Tebal" title="Tebal"><b>B</b></button><button data-mark="italic" aria-label="Miring" title="Miring"><i>I</i></button><button data-mark="sup">x²</button><button data-mark="sub">x₂</button><button data-mark="image">Gambar</button><button data-mark="link">Tautan</button><label>Tanggal <input type="date" id="insert-date"></label><button data-mark="list" aria-label="Daftar" title="Daftar">☷</button><button data-mark="check" aria-label="Checklist" title="Checklist">☑</button></div>
-        ${formatted ? `<div class="note-rendered">${formatNote(note.body)}</div>` : `<textarea id="edit-body" aria-label="Isi catatan" maxlength="10000" placeholder="Tulis ide kamu di sini…">${escape(note.body)}</textarea>`}
-        <div class="note-footer"><button class="note-save" id="save-note">Simpan</button><button id="format-preview" aria-pressed="${formatted}">${formatted ? "Edit" : "Pratinjau"}</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label></div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
+        <div class="note-toolbar" role="group" aria-label="Format catatan">${toolbar.map(([mark, label, icon]) =>
+          `<button data-mark="${mark}" aria-label="${label}" title="${label}">${icon}</button>`).join('')}
+          <input type="date" id="insert-date" aria-label="Sisipkan tanggal" title="Sisipkan tanggal">
+        </div>
+        <div id="edit-body" class="note-rendered" contenteditable="true" role="textbox" aria-label="Isi catatan" aria-multiline="true" data-placeholder="Tulis ide kamu di sini…">${formatNote(note.body)}</div>
+        <div class="note-footer"><button class="note-save" id="save-note">Simpan</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label></div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
     </div>`;
   renderNoteIndex();
 }
@@ -60,34 +165,15 @@ function renderNotes(notes) {
 document.addEventListener('click', async event=>{
   const button=event.target.closest('#view button');
   if(!button || busy)return;
-  if(button.id==='format-preview'){formatted=!formatted;render();el('format-preview').focus();}
   if(button.id==='clear-time'){fromTime='';toTime='';render();el('note-query').focus();}
   if(button.dataset.category){noteCategory=button.dataset.category;noteEditing=false;render();}
   if(button.id==='note-back'){noteEditing=false;render();el('note-query').focus();}
-  if(button.dataset.open){activeNote=button.dataset.open==='new'?null:Number(button.dataset.open);noteEditing=true;formatted=false;render();el('edit-title').focus();}
+  if(button.dataset.open){activeNote=button.dataset.open==='new'?null:Number(button.dataset.open);noteEditing=true;render();el('edit-title').focus();}
   if(button.hasAttribute('data-new-note')){
     if(!entries.some(note=>note.id===null))entries.unshift({id:null,kind:'note',title:'',body:'',category:noteCategory==='all'?'none':noteCategory});
-    noteQuery=''; activeNote=null;noteEditing=true;formatted=false;render();el('edit-title').focus();
+    noteQuery=''; activeNote=null;noteEditing=true;render();el('edit-title').focus();
   }
-  if(button.dataset.mark){
-    const field=el('edit-body'); if(!field)return;
-    const markers={heading:['## ',''],bold:['**','**'],italic:['*','*'],sup:['^','^'],sub:['~','~'],image:['',''],link:['',''],list:['- ',''],check:['- [ ] ','']};
-    const [before,after]=markers[button.dataset.mark];
-    let selected=field.value.slice(field.selectionStart,field.selectionEnd);
-    if(['image','link'].includes(button.dataset.mark)){
-      const image=button.dataset.mark==='image';
-      const raw=prompt(image?'URL gambar (HTTPS)':'URL tautan (HTTPS)');
-      if(!raw)return;
-      let url;
-      try { url=new URL(raw); if(url.protocol!=='https:')throw Error(); } catch { alert('Masukkan URL HTTPS yang valid.'); return; }
-      selected=(image?'!':'')+'['+(selected.replace(/[\[\]\n]/g,'')||(image?'Gambar':'Tautan'))+']('+url.href.replace(/\)/g,'%29')+')';
-    }
-    if(field.value.length-(field.selectionEnd-field.selectionStart)+selected.length+before.length+after.length<=field.maxLength){
-      field.setRangeText(before+selected+after,field.selectionStart,field.selectionEnd,'end');
-      field.dispatchEvent(new Event('input',{bubbles:true}));
-    }
-    field.focus();
-  }
+  if(button.dataset.mark) editFormat(button.dataset.mark, el('edit-body'));
 
   if(button.id==='add-category' || button.id==='save-note'){
     const note=entries.find(item=>item.id===activeNote);
@@ -95,6 +181,10 @@ document.addEventListener('click', async event=>{
     if(button.id==='add-category' && !name)return;
     if(name && Object.values(noteCategories).some(label=>label.toLowerCase()===name.toLowerCase())){message('Kategori sudah ada.');return;}
     if(!name && !note?.title.trim()){message('Isi judul sebelum menyimpan.');el('edit-title').focus();return;}
+    if (!name && note.body.length > 10000) {
+      message('Catatan terlalu panjang. Kurangi isi atau jumlah format sebelum menyimpan.');
+      return;
+    }
     busy=true;
     el('view').inert=true;
     message(name?'Membuat kategori…':'Menyimpan catatan…');
@@ -120,19 +210,13 @@ document.addEventListener('change', event=>{
     if(target.id==='note-from')fromTime=target.value;else toTime=target.value;
     renderNoteIndex();
   }
-  if(target.id==='insert-date' && target.value && el('edit-body')){
-    const field=el('edit-body');
-    if(field.value.length-(field.selectionEnd-field.selectionStart)+target.value.length<=field.maxLength){
-      field.setRangeText(target.value,field.selectionStart,field.selectionEnd,'end');
-      field.dispatchEvent(new Event('input',{bubbles:true}));
-      target.value='';field.focus();
-    }
+  if(target.id==='insert-date' && target.value){
+    focusEditor(el('edit-body'));
+    document.execCommand('insertText', false, target.value);
+    target.value='';
   }
-  if(target.dataset.check!==undefined){
-    const item=entries.find(entry=>entry.id===activeNote), lines=item.body.split('\n');
-    const i=Number(target.dataset.check);
-    lines[i]=lines[i].replace(/^- \[[ xX]\]/,target.checked?'- [x]':'- [ ]');
-    item.body=lines.join('\n');dirty.add(item);renderNoteIndex();
+  if(target.matches('#edit-body input[type="checkbox"]')){
+    el('edit-body').dispatchEvent(new Event('input', {bubbles:true}));
   }
 
   if(target.id==='note-category'){
@@ -144,8 +228,40 @@ document.addEventListener('input', event=>{
   if(event.target.id==='note-query'){noteQuery=event.target.value;renderNoteIndex();return;}
   if(!['edit-title','edit-body'].includes(event.target.id))return;
   const note=entries.find(item=>item.id===activeNote);
-  note[event.target.id==='edit-title'?'title':'body']=event.target.value;
+  if (event.target.id === 'edit-title') note.title = event.target.value;
+  else note.body = serializeNote(event.target);
   dirty.add(note);renderNoteIndex();message('Perubahan belum disimpan.');
+});
+document.addEventListener('selectionchange', () => {
+  const selection = getSelection();
+  const editor = el('edit-body');
+  if (selection.rangeCount && editor?.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+    editorRange = selection.getRangeAt(0).cloneRange();
+    for (const button of document.querySelectorAll('[data-mark="bold"], [data-mark="italic"]')) {
+      button.setAttribute('aria-pressed', String(document.queryCommandState(button.dataset.mark)));
+    }
+  }
+});
+document.addEventListener('mousedown', event => {
+  if (event.target.closest('.note-toolbar [data-mark]')) event.preventDefault();
+});
+document.addEventListener('paste', event => {
+  if (!event.target.closest('#edit-body')) return;
+  event.preventDefault();
+  document.execCommand('insertText', false, event.clipboardData.getData('text/plain'));
+});
+document.addEventListener('drop', event => {
+  if (event.target.closest('#edit-body')) event.preventDefault();
+});
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Enter' || !event.target.matches('#edit-body')) return;
+  const selection = getSelection();
+  const item = selection.anchorNode?.parentElement?.closest('.note-check');
+  if (!item) return;
+  event.preventDefault();
+  if (!item.nextSibling) item.after(document.createElement('div'));
+  if (!item.nextSibling.hasChildNodes()) item.nextSibling.append(document.createElement('br'));
+  selection.collapse(item.nextSibling, 0);
 });
 window.addEventListener('beforeunload',event=>{if(dirty.size){event.preventDefault();event.returnValue='';}});
 request().then(data=>{
