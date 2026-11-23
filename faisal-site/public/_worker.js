@@ -538,10 +538,24 @@ async function renderWorkroomReview(db, url, env) {
       headers: { ...privateHeaders, 'Content-Type': 'application/json; charset=utf-8' },
     });
   }
-  const [{ results: activity }, { results: tasks }, google] = await Promise.all([
+  const fromSeconds = Date.parse(start + 'T00:00:00+08:00') / 1000;
+  const toSeconds = Date.parse(end + 'T00:00:00+08:00') / 1000;
+  const [{ results: activity }, [{ results: tasks }, { results: completed }], google] = await Promise.all([
     activityRequest,
-    db.prepare("SELECT id, kind, title, due FROM workroom_entries WHERE kind = 'task' AND status <> 'done' AND (due = '' OR (due >= ? AND due < ?)) ORDER BY due = '', due, id DESC")
-      .bind(start, end).all(),
+    db.batch([
+      db.prepare("SELECT id, kind, title, due FROM workroom_entries WHERE kind = 'task' AND status <> 'done' AND (due = '' OR (due >= ? AND due < ?)) ORDER BY due = '', due, id DESC")
+        .bind(start, end),
+      db.prepare(`SELECT task.title, event.occurred
+        FROM workroom_entries AS task
+        JOIN workroom_activity AS event ON event.id = (
+          SELECT id FROM workroom_activity
+          WHERE entry_id = task.id AND kind = 'task' AND action IN ('completed', 'reopened')
+          ORDER BY occurred DESC, id DESC LIMIT 1
+        )
+        WHERE task.kind = 'task' AND task.status = 'done'
+          AND event.action = 'completed' AND event.occurred >= ? AND event.occurred < ?
+        ORDER BY event.occurred DESC, event.id DESC`).bind(fromSeconds, toSeconds),
+    ]),
     googleRequest,
   ]);
   const awaitGoogle = google.status === 'loading';
@@ -555,8 +569,6 @@ async function renderWorkroomReview(db, url, env) {
   const current = today >= start && today < end;
   const created = new Set(activity.filter(item => item.kind === 'task' && item.action === 'created').map(item => item.entry_id));
   const open = tasks.filter(task => task.due || current || created.has(task.id));
-  const completed = [...new Map(activity.filter(item => item.action === 'completed')
-    .reverse().map(item => [item.entry_id, item])).values()].sort((a, b) => b.occurred - a.occurred);
 
   const last = new Date(Date.parse(end + 'T12:00:00Z') - 86400000).toISOString().slice(0, 10);
   const href = (length, date) => workroomPages.review.path + '?' + e(new URLSearchParams({period: length, day: date}));
@@ -581,7 +593,7 @@ async function renderWorkroomReview(db, url, env) {
         ${completed.length ? '<ul class="review-list">' + completed.map(item =>
           `<li><strong>${e(item.title)}</strong><small>${label(workroomDay.format(new Date(item.occurred * 1000)))}</small></li>`).join('') + '</ul>'
           : '<p>Belum ada penyelesaian yang tercatat di periode ini.</p>'}
-        <p class="review-hint">Tugas yang selesai sebelum pencatatan Review dimulai tidak punya tanggal penyelesaian.</p>
+        <p class="review-hint">Menampilkan tugas yang masih berstatus selesai dan terakhir diselesaikan dalam periode ini. Tugas tanpa tanggal penyelesaian tercatat tidak muncul di sini.</p>
       </section>
       <section class="collection">
         <h2>Tugas belum selesai <span>${open.length}</span></h2>
