@@ -37,7 +37,7 @@ function workroomPage(content, status = 200, page = null) {
   </nav>` : '';
   return new Response(`<!doctype html><html lang="id"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${page && page !== 'home' ? workroomPages[page].title + ' · ' : ''}Workroom · abangfaisal</title><link rel="stylesheet" href="/workroom.css"></head>
+    <title>${page && page !== 'home' ? workroomPages[page].title + ' · ' : ''}Workroom · abangfaisal</title><link rel="icon" type="image/svg+xml" href="/workroom-favicon.svg"><link rel="stylesheet" href="/workroom.css"></head>
     <body${page ? ' class="workroom-layout"' : ''}>${sidebar}
     <header class="workroom-header">
       <a class="workroom-wordmark" href="/">abanggfaisal.</a>
