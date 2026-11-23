@@ -18,7 +18,7 @@ def asset(name):
     return '/'+versioned
 workroom_worker = D / '_worker.js'
 workroom_source = workroom_worker.read_text(encoding='utf-8')
-for workroom_asset in ('workroom.css', 'workroom-notes.js', 'workroom-greeting.js', 'workroom-hero.webp', 'workroom-favicon.svg'):
+for workroom_asset in ('workroom.css', 'workroom-notes.js', 'workroom-greeting.js', 'workroom-calendar.js', 'workroom-hero.webp', 'workroom-favicon.svg'):
     workroom_source = workroom_source.replace(
         f'"/{workroom_asset}"', f'"{asset(workroom_asset)}"'
     )
