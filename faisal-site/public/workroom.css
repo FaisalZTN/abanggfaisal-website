@@ -222,3 +222,16 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-index details button { color:var(--muted); }
 .note-check input { width:auto; }
 #note-status { min-height:1.5rem;color:var(--muted); }
+
+.note-toolbar [data-mark] { display:inline-grid; place-items:center; }
+.note-toolbar [data-mark][aria-pressed="true"] { background:var(--green); }
+.note-toolbar svg { width:20px; height:20px; }
+.note-toolbar #insert-date { width:auto; max-width:100%; padding-inline:.45rem; }
+.note-rendered { cursor:text; white-space:pre-wrap; }
+.note-rendered:has(> div:only-child > br:only-child)::before,
+.note-rendered:empty::before { content:attr(data-placeholder); color:var(--muted); pointer-events:none; }
+.note-rendered h2 { margin-block:.55rem; }
+.note-rendered ul { margin-block:.3rem; padding-inline-start:1.5rem; }
+.note-rendered .note-check { align-items:baseline; min-height:1.6rem; }
+.note-rendered .note-check input { cursor:pointer; min-height:0; width:1.05rem; height:1.05rem; accent-color:#d3e4b5; flex:none; }
+.note-rendered .note-check span { flex:1; min-width:0; }
