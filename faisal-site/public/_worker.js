@@ -1,3 +1,5 @@
+import { notePreview } from './workroom-note-format.js';
+
 const WORKROOM = '/workroom/';
 const workroomKinds = {
   task: { title: 'Tugas', statuses: { active: 'Belum mulai', doing: 'Dikerjakan', done: 'Selesai' } },
@@ -99,7 +101,7 @@ function workroomForm(kind, entry, projects, standalone = false) {
     <input type="hidden" name="kind" value="${kind}">
     <input type="hidden" name="id" value="${entry?.id ?? ''}">
     <label>Judul<input name="title" required maxlength="160" value="${e(entry?.title)}"></label>
-    <label>${kind === 'note' ? 'Isi catatan' : 'Detail'}<textarea name="body" rows="${standalone ? 12 : 3}" maxlength="10000">${e(entry?.body)}</textarea></label>
+    <label>${kind === 'note' ? 'Isi catatan (Markdown)' : 'Detail'}<textarea name="body" rows="${standalone ? 12 : 3}" maxlength="10000">${e(entry?.body)}</textarea></label>
     <div class="fields">
     ${kind !== 'note' ? `<label>Status<select name="status">${statuses}</select></label>
       <label>Tenggat<input type="date" name="due" value="${e(entry?.due)}"></label>` : ''}
@@ -328,10 +330,10 @@ function workroomWorkspace(entries, params) {
     <select name="status" aria-label="Status ${e(entry.title)}">${statuses.map(([value, label]) =>
       `<option value="${value}"${entry.status === value ? ' selected' : ''}>${label}</option>`).join('')}</select>
     <button name="action" value="status">Ubah</button></form>`;
-  const table = `<div class="task-table"><table><thead><tr><th>Judul</th><th>Tenggat</th><th>Status</th></tr></thead>
-    <tbody>${tasks.map(entry => `<tr><td>${editLink(entry)}</td><td>${e(entry.due || '—')}</td><td>${statusForm(entry)}</td></tr>`).join('')}</tbody></table></div>`;
-  const board = `<div class="task-board">${statuses.map(([status, label]) => `<section><h3>${label}</h3>
-    ${tasks.filter(entry => entry.status === status).map(entry => `<article>${editLink(entry)}${statusForm(entry)}</article>`).join('') || '<p>Belum ada tugas.</p>'}</section>`).join('')}</div>`;
+  const table = view === 'table' ? `<div class="task-table"><table><thead><tr><th>Judul</th><th>Tenggat</th><th>Status</th></tr></thead>
+    <tbody>${tasks.map(entry => `<tr><td>${editLink(entry)}</td><td>${e(entry.due || '—')}</td><td>${statusForm(entry)}</td></tr>`).join('')}</tbody></table></div>` : '';
+  const board = view === 'board' ? `<div class="task-board">${statuses.map(([status, label]) => `<section><h3>${label}</h3>
+    ${tasks.filter(entry => entry.status === status).map(entry => `<article>${editLink(entry)}${statusForm(entry)}</article>`).join('') || '<p>Belum ada tugas.</p>'}</section>`).join('')}</div>` : '';
   const views = Object.entries({table: 'Tabel', board: 'Papan'}).map(([key, label]) => {
     const query = new URLSearchParams({view: key});
     if (Object.hasOwn(workroomKinds.task.statuses, filter)) query.set('status', filter);
@@ -393,26 +395,13 @@ function reviewPeriod(params, today) {
   return { monthly, anchor, start: shift(0), end: shift(1), previous: shift(-1) };
 }
 
-async function renderWorkroomReview(db, url, env) {
-  const e = escapeWorkroom;
-  const today = workroomDay.format(new Date());
-  const period = reviewPeriod(url.searchParams, today);
-  const { monthly, anchor, start, end, previous } = period;
-  const fromSeconds = Date.parse(start + 'T00:00:00+08:00') / 1000;
-  const toSeconds = Date.parse(end + 'T00:00:00+08:00') / 1000;
-  const [{ results: activity }, { results: tasks }, google] = await Promise.all([
-    db.prepare('SELECT entry_id, kind, title, action, occurred FROM workroom_activity WHERE occurred >= ? AND occurred < ? ORDER BY occurred DESC, id DESC')
-      .bind(fromSeconds, toSeconds).all(),
-    db.prepare("SELECT * FROM workroom_entries WHERE kind = 'task' AND status <> 'done' AND (due = '' OR (due >= ? AND due < ?)) ORDER BY due = '', due, id DESC")
-      .bind(start, end).all(),
-    googleCalendarRange(env, start, end),
-  ]);
-  const current = today >= start && today < end;
-  const created = new Set(activity.filter(item => item.kind === 'task' && item.action === 'created').map(item => item.entry_id));
-  const open = tasks.filter(task => task.due || current || created.has(task.id));
-  const completed = [...new Map(activity.filter(item => item.action === 'completed')
-    .reverse().map(item => [item.entry_id, item])).values()].sort((a, b) => b.occurred - a.occurred);
+function reviewDateLabel(date) {
+  return new Intl.DateTimeFormat('id-ID', { dateStyle: 'long', timeZone: 'UTC' })
+    .format(new Date(date + 'T12:00:00Z'));
+}
 
+function reviewTimeline(activity, google) {
+  const e = escapeWorkroom;
   const timeline = new Map(google.entries);
   const actionLabels = { created: 'Dibuat', completed: 'Diselesaikan', reopened: 'Dibuka lagi', edited: 'Diedit' };
   for (const item of activity) {
@@ -425,18 +414,68 @@ async function renderWorkroomReview(db, url, env) {
     });
     timeline.set(date, entries);
   }
-  const formatDate = new Intl.DateTimeFormat('id-ID', { dateStyle: 'long', timeZone: 'UTC' });
-  const label = date => formatDate.format(new Date(date + 'T12:00:00Z'));
-  const last = new Date(Date.parse(end + 'T12:00:00Z') - 86400000).toISOString().slice(0, 10);
-  const href = (length, date) => workroomPages.review.path + '?' + e(new URLSearchParams({period: length, day: date}));
-  const length = monthly ? 'month' : 'week';
-  const periodLabel = monthly ? 'Bulan' : 'Minggu';
   const googleStatus = {
     disabled: 'Google Calendar belum dikonfigurasi.',
     disconnected: 'Google Calendar belum dihubungkan.',
     partial: 'Sebagian kalender Google belum bisa dimuat.',
     error: 'Google Calendar belum bisa dimuat. Muat ulang untuk mencoba lagi.',
   }[google.status];
+  return `${googleStatus ? `<p class="review-hint">${googleStatus}</p>` : ''}
+      ${timeline.size ? [...timeline].sort(([a], [b]) => a.localeCompare(b)).map(([date, entries]) => `
+        <section><h3>${reviewDateLabel(date)}</h3><ul class="review-list">
+          ${entries.sort((a, b) => a.start - b.start).map(item => `<li>
+            <small>${e(item.time)}</small><div><strong>${e(item.title)}</strong><small>${e(item.source || 'Google Calendar')}</small></div>
+          </li>`).join('')}
+        </ul></section>`).join('') : '<p>Tidak ada kegiatan atau jadwal yang tercatat di periode ini.</p>'}`;
+}
+
+function reviewActivity(db, start, end) {
+  const fromSeconds = Date.parse(start + 'T00:00:00+08:00') / 1000;
+  const toSeconds = Date.parse(end + 'T00:00:00+08:00') / 1000;
+  return db.prepare('SELECT entry_id, kind, title, action, occurred FROM workroom_activity WHERE occurred >= ? AND occurred < ? ORDER BY occurred DESC, id DESC')
+    .bind(fromSeconds, toSeconds).all();
+}
+
+async function renderWorkroomReview(db, url, env) {
+  const e = escapeWorkroom;
+  const today = workroomDay.format(new Date());
+  const period = reviewPeriod(url.searchParams, today);
+  const { monthly, anchor, start, end, previous } = period;
+  const mode = url.searchParams.get('timeline');
+  const activityRequest = reviewActivity(db, start, end);
+  const googleRequest = mode === 'full' || mode === 'data'
+    ? googleCalendarRange(env, start, end)
+    : Promise.resolve({ entries: new Map(), status: googleConfigured(env) ? 'loading' : 'disabled' });
+  if (mode === 'data') {
+    const [{ results: activity }, google] = await Promise.all([activityRequest, googleRequest]);
+    return Response.json({ html: reviewTimeline(activity, google) }, {
+      headers: { ...privateHeaders, 'Content-Type': 'application/json; charset=utf-8' },
+    });
+  }
+  const [{ results: activity }, { results: tasks }, google] = await Promise.all([
+    activityRequest,
+    db.prepare("SELECT id, kind, title, due FROM workroom_entries WHERE kind = 'task' AND status <> 'done' AND (due = '' OR (due >= ? AND due < ?)) ORDER BY due = '', due, id DESC")
+      .bind(start, end).all(),
+    googleRequest,
+  ]);
+  const awaitGoogle = google.status === 'loading';
+  const timelineLink = timeline => {
+    const params = new URLSearchParams({ period: monthly ? 'month' : 'week', day: anchor, timeline });
+    return workroomPages.review.path + '?' + params;
+  };
+  const timelineUrl = timelineLink('data');
+  const fullUrl = timelineLink('full');
+  const label = reviewDateLabel;
+  const current = today >= start && today < end;
+  const created = new Set(activity.filter(item => item.kind === 'task' && item.action === 'created').map(item => item.entry_id));
+  const open = tasks.filter(task => task.due || current || created.has(task.id));
+  const completed = [...new Map(activity.filter(item => item.action === 'completed')
+    .reverse().map(item => [item.entry_id, item])).values()].sort((a, b) => b.occurred - a.occurred);
+
+  const last = new Date(Date.parse(end + 'T12:00:00Z') - 86400000).toISOString().slice(0, 10);
+  const href = (length, date) => workroomPages.review.path + '?' + e(new URLSearchParams({period: length, day: date}));
+  const length = monthly ? 'month' : 'week';
+  const periodLabel = monthly ? 'Bulan' : 'Minggu';
   return workroomPage(`<div class="dashboard-content workroom-review">
     <div class="review-heading">
       <div><h1>Review ${monthly ? 'bulanan' : 'mingguan'}</h1><p>${label(start)} – ${label(last)} · WITA</p></div>
@@ -468,21 +507,48 @@ async function renderWorkroomReview(db, url, env) {
     </div>
     <section class="collection review-timeline">
       <h2>Kegiatan dan jadwal</h2>
-      ${googleStatus ? `<p class="review-hint">${googleStatus}</p>` : ''}
-      ${timeline.size ? [...timeline].sort(([a], [b]) => a.localeCompare(b)).map(([date, entries]) => `
-        <section><h3>${label(date)}</h3><ul class="review-list">
-          ${entries.sort((a, b) => a.start - b.start).map(item => `<li>
-            <small>${e(item.time)}</small><div><strong>${e(item.title)}</strong><small>${e(item.source || 'Google Calendar')}</small></div>
-          </li>`).join('')}
-        </ul></section>`).join('') : '<p>Tidak ada kegiatan atau jadwal yang tercatat di periode ini.</p>'}
+      <div id="review-timeline-content" data-url="${awaitGoogle ? e(timelineUrl) : ''}">${reviewTimeline(activity, google)}</div>
+      ${awaitGoogle ? `<p id="review-calendar-status" role="status" hidden>Memuat Google Calendar…</p>
+        <noscript><p><a href="${e(fullUrl)}">Muat Google Calendar</a></p></noscript>
+        <script src="/workroom-review.js" defer></script>` : ''}
     </section>
   </div>`, 200, 'review');
 }
 
 async function renderWorkroom(db, page, url, env) {
   const e = escapeWorkroom;
-  const { results: entries } = await db.prepare('SELECT * FROM workroom_entries ORDER BY id DESC').all();
   const params = url.searchParams;
+  const edit = params.get('edit');
+  if (page === 'home' && edit) {
+    const selected = await db.prepare('SELECT id, kind FROM workroom_entries WHERE id = ?').bind(edit).first();
+    if (selected && String(selected.id) === edit) return workroomRedirect(url, workroomEntryLink(selected));
+  }
+  if (page === 'home' && params.get('add') === 'task') {
+    return workroomRedirect(url, workroomPages.task.path + '?add=task#add-task');
+  }
+  let entries, counts;
+  if (page === 'home') {
+    const [tasks, notes, totals] = await db.batch([
+      db.prepare("SELECT id, kind, title, status, due FROM workroom_entries WHERE kind = 'task' AND status <> 'done' AND due <> '' ORDER BY id DESC"),
+      db.prepare("SELECT id, kind, title, body FROM workroom_entries WHERE kind = 'note' ORDER BY id DESC LIMIT 3"),
+      db.prepare(`SELECT
+        COUNT(CASE WHEN kind = 'task' AND status <> 'done' THEN 1 END) AS tasks,
+        COUNT(CASE WHEN kind = 'project' AND status = 'active' THEN 1 END) AS projects,
+        COUNT(CASE WHEN kind = 'goal' AND status = 'active' THEN 1 END) AS goals,
+        COUNT(CASE WHEN kind = 'note' THEN 1 END) AS notes
+        FROM workroom_entries`),
+    ]);
+    entries = [...tasks.results, ...notes.results];
+    counts = totals.results[0];
+  } else if (page === 'task') {
+    ({ results: entries } = await db.prepare(`SELECT id, kind, title, status, due, priority, project_id,
+      CASE WHEN kind = 'task' AND CAST(id AS TEXT) = ? THEN body END AS body
+      FROM workroom_entries WHERE kind IN ('task', 'project') ORDER BY id DESC`).bind(edit).all());
+  } else {
+    ({ results: entries } = await db.prepare(`SELECT id, kind, title, status, due, priority, project_id,
+      CASE WHEN kind = ? THEN body END AS body
+      FROM workroom_entries WHERE kind IN (?, 'project') ORDER BY id DESC`).bind(page, page).all());
+  }
   const notice = params.has('saved') ? '<p class="save-notice" role="status">Perubahan tersimpan.</p>' : '';
   const projects = entries.filter(entry => entry.kind === 'project');
   const collection = kind => {
@@ -503,9 +569,6 @@ async function renderWorkroom(db, page, url, env) {
       ${notice}${collection(page)}${page === 'task' ? workroomWorkspace(entries, params) : ''}</div>`, 200, page);
   }
 
-  const selected = entries.find(entry => String(entry.id) === params.get('edit'));
-  if (selected) return workroomRedirect(url, workroomEntryLink(selected));
-  if (params.get('add') === 'task') return workroomRedirect(url, workroomPages.task.path + '?add=task#add-task');
   const selectedDay = params.get('day');
   const today = workroomDay.format(new Date());
   const day = validWorkroomDay(selectedDay) ? selectedDay : today;
@@ -516,9 +579,6 @@ async function renderWorkroom(db, page, url, env) {
     .sort((a, b) => a.due.localeCompare(b.due));
   const isDue = entry => day === today ? entry.due <= today : entry.due === day;
   const due = tasks.filter(isDue);
-  const openTasks = entries.filter(entry => entry.kind === 'task' && entry.status !== 'done').length;
-  const activeProjects = projects.filter(project => project.status === 'active').length;
-  const activeGoals = entries.filter(entry => entry.kind === 'goal' && entry.status === 'active').length;
   const now = new Date();
   const dateLabel = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full', timeZone: workroomTimeZone }).format(now);
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: workroomTimeZone, hour: '2-digit', hourCycle: 'h23' }).format(now));
@@ -546,10 +606,10 @@ async function renderWorkroom(db, page, url, env) {
           </form>
         </section>
         <div class="dashboard-stats">
-          <a href="${workroomPages.task.path}">Tugas terbuka<strong>${openTasks}</strong></a>
-          <a href="${workroomPages.project.path}">Proyek aktif<strong>${activeProjects}</strong></a>
-          <a href="${workroomPages.note.path}">Catatan<strong>${entries.filter(entry => entry.kind === 'note').length}</strong></a>
-          <a href="${workroomPages.goal.path}">Goals aktif<strong>${activeGoals}</strong></a>
+          <a href="${workroomPages.task.path}">Tugas terbuka<strong>${counts.tasks}</strong></a>
+          <a href="${workroomPages.project.path}">Proyek aktif<strong>${counts.projects}</strong></a>
+          <a href="${workroomPages.note.path}">Catatan<strong>${counts.notes}</strong></a>
+          <a href="${workroomPages.goal.path}">Goals aktif<strong>${counts.goals}</strong></a>
         </div>
         <div class="collection calendar-agenda" id="agenda" data-day="${day}" data-today="${today}" data-google="${showGoogle}"${fullCalendar ? ' data-calendar-full' : ''}>
           ${workroomCalendar(day, tasks, today, google.entries, fullCalendar)}
@@ -571,8 +631,10 @@ async function renderWorkroom(db, page, url, env) {
           </section>
         </div>
         <section class="collection recent-notes"><h2>Catatan terbaru</h2>
-          ${entries.some(entry => entry.kind === 'note') ? '<ul>' + entries.filter(entry => entry.kind === 'note').slice(0,3).map(note =>
-            `<li><a href="${workroomEntryLink(note)}"><strong>${e(note.title)}</strong>${note.body ? '<small>' + e(note.body.slice(0,120)) + '</small>' : ''}</a></li>`).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
+          ${entries.some(entry => entry.kind === 'note') ? '<ul>' + entries.filter(entry => entry.kind === 'note').slice(0,3).map(note => {
+            const preview = notePreview(note.body);
+            return `<li><a href="${workroomEntryLink(note)}"><strong>${e(note.title)}</strong>${preview ? '<small>' + e(preview) + '</small>' : ''}</a></li>`;
+          }).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
           <a href="${workroomPages.note.path}">Semua catatan</a>
         </section>
       </div>
@@ -581,11 +643,7 @@ async function renderWorkroom(db, page, url, env) {
 
 const builtInNoteCategories = ['belajar', 'ide', 'pribadi', 'referensi'];
 
-async function workroomNotesData(request, db) {
-  const reply = (value, status = 200) => Response.json(value, {status, headers: {
-    'Cache-Control': 'private, no-store',
-    'X-Content-Type-Options': 'nosniff',
-  }});
+async function ensureWorkroomNotes(db) {
   const columns = async () => (await db.prepare('PRAGMA table_info(workroom_entries)').all()).results;
   const current = await columns();
   for (const [name, type] of [['note_category', 'TEXT'], ['note_updated', 'INTEGER']]) {
@@ -597,13 +655,23 @@ async function workroomNotesData(request, db) {
     }
   }
   await db.prepare('CREATE TABLE IF NOT EXISTS workroom_note_categories (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE)').run();
-  if (request.method === 'GET') {
-    const [notes, categories] = await db.batch([
-      db.prepare("SELECT id, kind, title, body, note_category AS category, note_updated AS updated FROM workroom_entries WHERE kind = 'note' ORDER BY id DESC"),
-      db.prepare('SELECT id, name FROM workroom_note_categories ORDER BY name'),
-    ]);
-    return reply({notes: notes.results, categories: categories.results});
-  }
+}
+
+async function readWorkroomNotes(db) {
+  const [notes, categories] = await db.batch([
+    db.prepare("SELECT id, kind, title, body, note_category AS category, note_updated AS updated FROM workroom_entries WHERE kind = 'note' ORDER BY id DESC"),
+    db.prepare('SELECT id, name FROM workroom_note_categories ORDER BY name'),
+  ]);
+  return { notes: notes.results, categories: categories.results };
+}
+
+async function workroomNotesData(request, db) {
+  const reply = (value, status = 200) => Response.json(value, {status, headers: {
+    'Cache-Control': 'private, no-store',
+    'X-Content-Type-Options': 'nosniff',
+  }});
+  await ensureWorkroomNotes(db);
+  if (request.method === 'GET') return reply(await readWorkroomNotes(db));
   let data;
   try { data = await request.json(); } catch { return reply({error:'Permintaan tidak valid.'}, 400); }
   if (!data || typeof data !== 'object') return reply({error:'Permintaan tidak valid.'}, 400);
@@ -690,7 +758,9 @@ async function handleWorkroom(request, env, url) {
       return workroomRedirect(url, workroomPages.note.path + url.search);
     }
     if (page === 'note' && !url.searchParams.has('basic')) {
-      return workroomPage('<div id="view" aria-busy="true">Memuat catatan…</div><p id="note-status" role="status"></p><noscript>Aktifkan JavaScript untuk membuka editor. <a href="?basic">Buka daftar catatan dasar</a></noscript><script src="/workroom-notes.js" defer></script>', 200, page);
+      await ensureWorkroomNotes(db);
+      const notes = escapeWorkroom(JSON.stringify(await readWorkroomNotes(db)));
+      return workroomPage(`<div id="view" aria-busy="true">Memuat catatan…</div><p id="note-status" role="status"></p><div hidden id="workroom-notes-data">${notes}</div><noscript>Aktifkan JavaScript untuk membuka editor. <a href="?basic">Buka daftar catatan dasar</a></noscript><script type="module" src="/workroom-notes.js"></script>`, 200, page);
     }
     return renderWorkroom(db, page, url, env);
   }

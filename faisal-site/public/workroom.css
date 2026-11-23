@@ -442,27 +442,27 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   ::view-transition-new(root) { animation: none; }
 
   ::view-transition-group(workroom-content) {
-    animation-duration: .48s;
+    animation-duration: .16s;
     animation-timing-function: cubic-bezier(.22, 1, .36, 1);
   }
   ::view-transition-old(workroom-content) {
     mix-blend-mode: normal;
-    animation: workroom-page-cover .32s ease both reverse;
+    animation: workroom-page-cover .1s ease both reverse;
   }
   ::view-transition-new(workroom-content) {
     mix-blend-mode: normal;
-    animation: workroom-page-cover .48s cubic-bezier(.22, 1, .36, 1) both;
+    animation: workroom-page-cover .16s cubic-bezier(.22, 1, .36, 1) both;
   }
 
   ::view-transition-group(workroom-active-destination) {
     z-index: 1;
     overflow: hidden;
     border-radius: .65rem;
-    animation-duration: .48s;
+    animation-duration: .16s;
     animation-timing-function: cubic-bezier(.22, 1, .36, 1);
   }
   ::view-transition-old(workroom-active-destination),
-  ::view-transition-new(workroom-active-destination) { animation-duration: .24s; }
+  ::view-transition-new(workroom-active-destination) { animation-duration: .12s; }
 
   @keyframes workroom-page-cover {
     from { opacity: 0; }

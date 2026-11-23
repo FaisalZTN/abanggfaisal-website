@@ -10,15 +10,27 @@ D=P/'dist'
 if D.exists(): shutil.rmtree(D)
 shutil.copytree(P/'public',D)
 optimize(P/'public',D)
-def asset(name):
-    data=(P/'public'/name).read_bytes()
+def asset(name, data=None):
+    if data is None: data=(P/'public'/name).read_bytes()
     path=pathlib.Path(name)
     versioned=path.stem+'.'+hashlib.sha256(data).hexdigest()[:12]+path.suffix
     (D/versioned).write_bytes(data)
     return '/'+versioned
 workroom_worker = D / '_worker.js'
 workroom_source = workroom_worker.read_text(encoding='utf-8')
-for workroom_asset in ('workroom.css', 'workroom-notes.js', 'workroom-greeting.js', 'workroom-calendar.js', 'workroom-hero.webp', 'workroom-favicon.svg'):
+workroom_note_format = asset('workroom-note-format.js')
+workroom_source = workroom_source.replace(
+    "import { notePreview } from './workroom-note-format.js';",
+    (P / 'public/workroom-note-format.js').read_text(encoding='utf-8').replace('export function ', 'function '),
+)
+workroom_notes = D / 'workroom-notes.js'
+workroom_notes_source = workroom_notes.read_text(encoding='utf-8').replace(
+    "'./workroom-note-format.js'", f"'.{workroom_note_format}'"
+)
+workroom_notes.write_text(workroom_notes_source, encoding='utf-8')
+workroom_notes_url = asset('workroom-notes.js', workroom_notes_source.encode('utf-8'))
+workroom_source = workroom_source.replace('"/workroom-notes.js"', f'"{workroom_notes_url}"')
+for workroom_asset in ('workroom.css', 'workroom-greeting.js', 'workroom-calendar.js', 'workroom-review.js', 'workroom-hero.webp', 'workroom-favicon.svg'):
     workroom_source = workroom_source.replace(
         f'"/{workroom_asset}"', f'"{asset(workroom_asset)}"'
     )
