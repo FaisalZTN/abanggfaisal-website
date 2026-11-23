@@ -9,6 +9,7 @@ const workroomKinds = {
 };
 const workroomPages = {
   home: { path: WORKROOM, title: 'Ringkasan', icon: 'M3 10l9-7 9 7v10H3z M9 20v-7h6v7' },
+  today: { path: WORKROOM + 'today/', title: 'Hari Ini', icon: 'M5 5h14v15H5z M8 3v4m8-4v4M5 10h14m-11 5 2 2 4-4' },
   task: { path: WORKROOM + 'tasks/', title: 'Tugas', icon: 'M20 12v8H4V4h12 M8 11l4 4 9-10' },
   note: { path: WORKROOM + 'notes/', title: 'Catatan', icon: 'M6 3h8l4 4v14H6z M14 3v5h4 M9 12h6 M9 16h6' },
   project: { path: WORKROOM + 'projects/', title: 'Proyek', icon: 'M3 6h7l2 3h9v11H3z' },
@@ -289,9 +290,9 @@ function validWorkroomDay(value) {
   return Number.isFinite(+date) && date.toISOString().slice(0, 10) === value;
 }
 
-function workroomDueTask(entry, today) {
+function workroomDueTask(entry, today, action = WORKROOM) {
   const title = escapeWorkroom(entry.title);
-  return `<li data-due="${escapeWorkroom(entry.due)}"><form method="post" action="${WORKROOM}">
+  return `<li data-due="${escapeWorkroom(entry.due)}"><form method="post" action="${action}">
     <input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${entry.id}">
     <button name="action" value="complete" aria-label="Tandai selesai: ${title}">✓</button>
     </form><div><a href="${workroomEntryLink(entry)}">${title}</a><small>${entry.due < today ? 'Lewat tenggat · ' : ''}${escapeWorkroom(entry.due)}</small></div></li>`;
@@ -616,6 +617,92 @@ async function renderWorkroomReview(db, url, env) {
   </div>`, 200, 'review');
 }
 
+async function workroomToday(request, url, env) {
+  const db = env.WORKROOM_DB;
+  const today = workroomDay.format(new Date());
+  const path = workroomPages.today.path;
+  const mode = url.searchParams.get('agenda');
+  const nextDate = new Date(today + 'T12:00:00Z');
+  nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+  const tomorrow = nextDate.toISOString().slice(0, 10);
+  const renderAgenda = async () => googleAgenda(await googleCalendarRange(env, today, tomorrow), today);
+  if (request.method === 'GET' && mode === 'data') {
+    return Response.json({ html: await renderAgenda() }, {
+      headers: { ...privateHeaders, 'Content-Type': 'application/json; charset=utf-8' },
+    });
+  }
+
+  await db.prepare(`CREATE TABLE IF NOT EXISTS workroom_daily_focus (
+    day TEXT PRIMARY KEY, items TEXT NOT NULL
+  )`).run();
+  if (request.method === 'POST') {
+    const data = await request.formData();
+    if (data.get('action') === 'focus') {
+      const items = ['focus-1', 'focus-2', 'focus-3'].map(name => String(data.get(name) ?? '').trim());
+      if (data.get('day') !== today || items.some(item => item.length > 160)) {
+        return workroomPage('<h1>Fokus belum tersimpan</h1><p>Periksa tanggal dan panjang setiap fokus.</p><a href="/workroom/today/">Kembali ke Hari Ini</a>', 400, 'today');
+      }
+      await db.prepare('INSERT INTO workroom_daily_focus (day, items) VALUES (?, ?) ON CONFLICT(day) DO UPDATE SET items = excluded.items')
+        .bind(today, JSON.stringify(items)).run();
+    } else if (data.get('action') === 'complete' && /^[1-9]\d*$/.test(String(data.get('id')))) {
+      await ensureWorkroomActivity(db);
+      await db.prepare("UPDATE workroom_entries SET status = 'done' WHERE id = ? AND kind = 'task'").bind(data.get('id')).run();
+    } else {
+      return workroomPage('<h1>Permintaan tidak valid</h1><a href="/workroom/today/">Kembali ke Hari Ini</a>', 400, 'today');
+    }
+    return workroomRedirect(url, path + '?saved', 303);
+  }
+
+  nextDate.setUTCDate(nextDate.getUTCDate() + 6);
+  const through = nextDate.toISOString().slice(0, 10);
+  const [[focus, tasks], agenda] = await Promise.all([
+    db.batch([
+      db.prepare('SELECT items FROM workroom_daily_focus WHERE day = ?').bind(today),
+      db.prepare("SELECT id, kind, title, due FROM workroom_entries WHERE kind = 'task' AND status <> 'done' AND due <> '' AND due <= ? ORDER BY due, id DESC").bind(through),
+    ]),
+    mode === 'full' ? renderAgenda() : '',
+  ]);
+  const items = JSON.parse(focus.results[0]?.items ?? '[]');
+  const e = escapeWorkroom;
+  const date = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full', timeZone: 'UTC' })
+    .format(new Date(today + 'T12:00:00Z'));
+  const due = tasks.results.filter(task => task.due <= today);
+  const upcoming = tasks.results.filter(task => task.due > today);
+  const list = (entries, empty) => entries.length
+    ? `<ul class="due-list">${entries.map(task => workroomDueTask(task, today, path)).join('')}</ul>`
+    : `<p>${empty}</p>`;
+  const deferred = googleConfigured(env) && mode !== 'full';
+  return workroomPage(`<div class="dashboard-content workroom-today">
+    <div><h1>Hari Ini</h1><p>${e(date)} · WITA</p></div>
+    ${url.searchParams.has('saved') ? '<p class="save-notice" role="status">Perubahan tersimpan.</p>' : ''}
+    <div class="today-workspace-grid">
+      <section class="collection"><h2>Fokus hari ini</h2>
+        <form method="post" action="${path}">
+          <input type="hidden" name="action" value="focus"><input type="hidden" name="day" value="${today}">
+          ${[1, 2, 3].map(number => `<label>Fokus ${number}<input name="focus-${number}" maxlength="160" value="${e(items[number - 1])}"></label>`).join('')}
+          <button>Simpan fokus</button>
+        </form>
+      </section>
+      <section class="collection"><h2>Agenda hari ini</h2>
+        <div data-workroom-deferred data-url="${deferred ? path + '?agenda=data' : ''}" data-retry="${path}?agenda=full">
+          <div data-deferred-content>${agenda || (!deferred ? '<p>Google Calendar belum dikonfigurasi.</p>' : '')}</div>
+          ${deferred ? `<p data-deferred-status role="status">Memuat Google Calendar…</p>
+            <noscript><a href="${path}?agenda=full">Muat Google Calendar</a></noscript>` : ''}
+        </div>
+      </section>
+      <section class="collection"><h2>Hari ini dan lewat tenggat</h2>
+        ${list(due, 'Tidak ada tugas yang jatuh tempo.')}
+        <a href="${workroomPages.task.path}?add=task&amp;due=${today}#add-task">+ Tambah tugas hari ini</a>
+      </section>
+      <section class="collection"><h2>7 hari ke depan</h2>
+        ${list(upcoming, 'Tidak ada tenggat dalam 7 hari ke depan.')}
+        <a href="${workroomPages.task.path}">Semua tugas</a>
+      </section>
+    </div>
+    ${deferred ? '<script src="/workroom-review.js" defer></script>' : ''}
+  </div>`, 200, 'today');
+}
+
 async function renderWorkroom(db, page, url, env) {
   const e = escapeWorkroom;
   const params = url.searchParams;
@@ -903,6 +990,7 @@ async function handleWorkroom(request, env, url) {
     note_category TEXT,
     note_updated INTEGER
   )`).run();
+  if (page === 'today') return workroomToday(request, url, env);
   if (request.method === 'POST' || page === 'review') await ensureWorkroomActivity(db);
   if (page === 'review' && request.method === 'GET') return renderWorkroomReview(db, url, env);
   if ((page === 'home' || page === 'note') && url.searchParams.has('notes-data')) {
