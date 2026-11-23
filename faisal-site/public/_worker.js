@@ -352,7 +352,11 @@ async function renderWorkroom(db, page, url, env) {
   const openTasks = entries.filter(entry => entry.kind === 'task' && entry.status !== 'done').length;
   const activeProjects = projects.filter(project => project.status === 'active').length;
   const activeGoals = entries.filter(entry => entry.kind === 'goal' && entry.status === 'active').length;
-  const dateLabel = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full', timeZone: 'Asia/Makassar' }).format(new Date());
+  const now = new Date();
+  const dateLabel = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full', timeZone: workroomTimeZone }).format(now);
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: workroomTimeZone, hour: '2-digit', hourCycle: 'h23' }).format(now));
+  const greetings = { morning: 'Good morning, Faisal!', afternoon: 'Good afternoon, Faisal!', night: 'Good night, Faisal!' };
+  const period = hour < 6 || hour >= 18 ? 'night' : hour < 12 ? 'morning' : 'afternoon';
   return workroomPage(`<div class="dashboard-content">
       <div class="workroom-hero">
         <img src="/workroom-hero.webp" width="1600" height="870" alt="" fetchpriority="high">
@@ -360,7 +364,12 @@ async function renderWorkroom(db, page, url, env) {
       </div>
       ${notice}
       <section class="today-panel" id="hari-ini">
-        <div class="today-heading"><div><p>${e(dateLabel)} · WITA</p><h2>Agenda Faisal</h2></div></div>
+        <div class="today-heading"><div>
+          <p>${e(dateLabel)} · WITA</p>
+          <h2 data-workroom-greeting data-morning="${greetings.morning}" data-afternoon="${greetings.afternoon}" data-night="${greetings.night}">${greetings[period]}</h2>
+          <p class="workroom-greeting-copy">Sudah siap ngopi, nugas, dan belajar?</p>
+        </div></div>
+        <script src="/workroom-greeting.js" defer></script>
         <form class="capture" method="post" action="${WORKROOM}">
           <input type="hidden" name="action" value="save"><input type="hidden" name="priority" value="normal">
           <select aria-label="Jenis entri" name="kind"><option value="task">Tugas</option><option value="note">Catatan</option></select>
