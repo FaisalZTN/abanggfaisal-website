@@ -5,6 +5,30 @@
 :root{color-scheme:dark;--bg:#141b17;--side:#1b241e;--panel:#202c24;--line:#37463a;--text:#f4efdf;--muted:#b5c0ae;--accent:#d3e4b5}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,sans-serif;display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100dvh}aside{background:var(--side);border-right:1px solid var(--line);padding:22px 16px;position:sticky;top:0;height:100dvh;overflow:auto}main{width:min(100%,1120px);padding:28px clamp(18px,5vw,72px) 72px;margin-inline:auto}h1,h2,p{margin:0}h1{font:clamp(36px,6vw,62px)/1 Georgia,serif;letter-spacing:-.045em}h2{font-size:19px}button,input,select,textarea{font:inherit;color:inherit;border:1px solid var(--line);border-radius:8px;background:var(--side);min-height:44px;padding:8px 12px}button,select{cursor:pointer}button:hover{background:#304236}button[aria-current="page"],button[aria-pressed="true"]{background:#354b3b}.primary{background:var(--accent);color:#162318;border-color:transparent;font-weight:700}.primary:hover{background:#e0edca}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.brand{font:25px Georgia;margin:4px 0 20px}.muted,small{color:var(--muted)}nav{display:grid;gap:4px;margin:14px 0}nav button{text-align:left;border-color:transparent;background:transparent}.search{width:100%;text-align:left}.top,.bar,.capture{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.top{justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:28px}.hero{background:linear-gradient(115deg,#2e4535,#1d2a23);border:1px solid var(--line);padding:clamp(20px,4vw,42px);border-radius:16px;margin:0 0 22px}.hero p{margin-top:12px;color:var(--muted)}.capture{margin-top:20px}.capture input{flex:1 1 170px;min-width:0}.grid,.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}.grid{grid-template-columns:1.5fr 1fr}.panel,.lane{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px;min-width:0}.row{display:flex;gap:8px;align-items:center;padding-block:6px;border-bottom:1px solid var(--line)}.row button:last-child{flex:1;text-align:left;overflow-wrap:anywhere}.bar{margin:20px 0 12px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}table{width:100%;border-collapse:collapse;min-width:490px}th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line)}th{color:var(--muted);background:var(--panel)}td button{border:0;text-align:left;overflow-wrap:anywhere}.card{display:grid;gap:8px;margin-top:8px}.card button{text-align:left;overflow-wrap:anywhere}.editor{display:grid;gap:12px;margin-top:16px}.editor label{display:grid;gap:4px}.editor textarea{min-height:220px;resize:vertical}.editor input,.editor textarea{width:100%}.editor .note-title{font:32px Georgia}.empty{padding:12px 0;color:var(--muted)}dialog{width:min(92vw,540px);border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:14px;padding:16px}dialog::backdrop{background:#101510b5}dialog input,dialog #results button{width:100%;text-align:left}#results{display:grid;gap:5px;margin-block:10px;max-height:55vh;overflow:auto}.sr{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
 @media(max-width:700px){body{display:block}aside{height:auto;position:static;border-right:0;border-bottom:1px solid var(--line);padding:12px 16px}.brand{margin:0 0 8px}nav{display:flex;flex-wrap:wrap;margin:8px 0 0}.top{margin-bottom:16px}.grid,.board{grid-template-columns:1fr}}
+
+body:has(.notes-desk) { grid-template-columns: 180px minmax(0,1fr); }
+main:has(.notes-desk) { width:100%; max-width:1600px; padding-inline:clamp(14px,2.5vw,36px) }
+.notes-head { display:flex; align-items:center; gap:16px; margin-bottom:20px }
+.notes-head h1 { font-size:clamp(33px,4vw,48px) }
+.notes-desk { display:grid; grid-template-columns:minmax(135px,.65fr) minmax(185px,1fr) minmax(265px,2fr); gap:12px; align-items:stretch; min-height:68vh }
+.note-categories,.note-index,.note-sheet { background:var(--panel); border:1px solid var(--line); border-radius:14px; min-width:0 }
+.note-categories,.note-index { padding:12px; }
+.note-categories h2 { margin:4px 8px 10px; font-size:14px;color:var(--muted) }
+.note-categories button,.note-index button { width:100%; text-align:left; background:transparent; border-color:transparent; overflow-wrap:anywhere }
+.note-categories button[aria-pressed=true],.note-index button[aria-current=true] { background:#354b3b }
+.note-categories button { display:flex; justify-content:space-between; gap:6px }
+.note-index input { width:100%; margin-bottom:10px }
+.note-index button { display:grid; gap:3px; border-bottom:1px solid var(--line); border-radius:6px }
+.note-index button small { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+.note-sheet { display:flex; flex-direction:column; padding:18px; gap:12px }
+.note-sheet input { font:clamp(22px,3vw,36px) Georgia,serif; min-width:0 }
+.note-sheet textarea { width:100%; flex:1; min-height:260px; resize:vertical }
+.note-toolbar,.note-footer { display:flex; flex-wrap:wrap; gap:6px; align-items:center }
+.note-footer { justify-content:space-between }
+.note-footer label { display:flex; gap:8px; align-items:center }
+.note-back { display:none }
+@media(max-width:1000px) { .notes-desk { grid-template-columns:minmax(0,1fr) minmax(0,2fr) } .note-categories { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:4px; align-items:center } .note-categories button { width:auto } }
+@media(max-width:700px) { .notes-desk { grid-template-columns:minmax(0,1fr) } .notes-desk.is-editing :is(.note-categories,.note-index),.notes-desk:not(.is-editing) .note-sheet { display:none } .note-back { display:inline-flex } }
 </style>
 <aside><div class="brand">Workroom</div><button class="search" id="search">⌕ Cari di Workroom <small> · Ctrl/⌘ K</small></button><nav id="nav" aria-label="Workroom"></nav><small>Demo dengan data contoh</small></aside>
 <main><div class="top"><span id="crumb"></span><small>Perubahan tersimpan di browser ini</small></div><div id="view"></div><p id="announce" class="sr" role="status"></p></main>
@@ -21,14 +45,16 @@ let entries;
 try { entries = JSON.parse(localStorage.getItem(key)) ?? seed; } catch { entries = seed; }
 const statusNames = {todo:'Belum mulai',doing:'Dikerjakan',done:'Selesai'};
 const pages = {home:'Beranda',tasks:'Tugas',notes:'Catatan'};
-let page = 'home', mode = 'table', filter = 'all', activeNote;
+const noteCategories = {all:'Semua',belajar:'Belajar',ide:'Ide',pribadi:'Pribadi',referensi:'Referensi',none:'Tanpa kategori'};
+let noteCategory = 'all', noteQuery = '', noteEditing = false;
+let page = new URLSearchParams(location.search).has('catatan') ? 'notes' : 'home', mode = 'table', filter = 'all', activeNote;
 const el = id => document.getElementById(id);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function save() {
   try { localStorage.setItem(key,JSON.stringify(entries)); }
   catch { document.querySelector('.top small').textContent = 'Perubahan tersimpan selama halaman terbuka'; }
 }
-function openPage(next, note) { page=next; activeNote=note; render(); }
+function openPage(next, note) { page=next; activeNote=note; noteEditing=Boolean(note); render(); }
 function add(kind,title) {
   const item={id:crypto.randomUUID(),kind,title,status:'todo',body:''};
   entries=[item,...entries]; save(); return item;
@@ -52,13 +78,43 @@ function render() {
     const board=Object.entries(statusNames).filter(([status])=>filter==='all'||filter===status).map(([status,label])=>'<section class="lane"><h2>'+label+'</h2>'+visible.filter(item=>item.status===status).map(item=>'<div class="card">'+openButton(item)+statusSelect(item)+'</div>').join('')+'</section>').join('');
     el('view').innerHTML='<h1>Tugas</h1><div class="bar"><button data-mode="table" aria-pressed="'+(mode==='table')+'">Tabel</button><button data-mode="board" aria-pressed="'+(mode==='board')+'">Papan</button><select id="filter" aria-label="Filter status"><option value="all">Semua status</option>'+Object.entries(statusNames).map(([value,label])=>'<option value="'+value+'" '+(value===filter?'selected':'')+'>'+label+'</option>').join('')+'</select></div><form class="capture" id="capture"><input type="hidden" name="kind" value="task"><input name="title" required maxlength="160" aria-label="Judul" placeholder="Judul tugas"><button class="primary">Tambah tugas</button></form><div class="bar"></div>'+(mode==='table'?'<div class="table-wrap"><table><thead><tr><th>Judul</th><th>Status</th></tr></thead><tbody>'+visible.map(row).join('')+'</tbody></table></div>':'<div class="board">'+board+'</div>')+(visible.length?'':'<p class="empty">Tidak ada tugas untuk filter ini.</p>');
   } else if(page==='notes'){
-    el('view').innerHTML='<h1>Catatan</h1><div class="bar"><button class="primary" data-new-note>Catatan baru</button></div><section class="panel">'+notes.map(item=>'<div class="row">'+openButton(item)+'</div>').join('')+'</section>';
+    renderNotes(notes);
   } else {
     const item=entries.find(item=>item.id===activeNote);
     el('view').innerHTML='<button data-page="'+(item.kind==='note'?'notes':'tasks')+'">← '+(item.kind==='note'?'Catatan':'Tugas')+'</button><div class="editor"><label>Judul<input class="note-title" id="edit-title" maxlength="160" value="'+escape(item.title)+'"></label>'+(item.kind==='task'?statusSelect(item):'')+'<label>'+ (item.kind==='note'?'Isi catatan':'Detail tugas')+'<textarea id="edit-body" maxlength="10000" placeholder="Mulai menulis…">'+escape(item.body)+'</textarea></label></div>';
   }
 }
-function showItem(id) { el('finder').close(); openPage('editor',id); el('edit-title').focus(); }
+function renderNoteIndex() {
+  const q = noteQuery.trim().toLocaleLowerCase('id');
+  const notes = entries.filter(item => item.kind === 'note' &&
+    (noteCategory === 'all' || (item.category || 'none') === noteCategory) &&
+    (item.title + ' ' + item.body).toLocaleLowerCase('id').includes(q));
+  el('note-list').innerHTML = notes.map(note => `<button data-open="${note.id}"${note.id === activeNote ? ' aria-current="true"' : ''}>
+    <strong>${escape(note.title)}</strong><small>${escape(note.body || 'Catatan kosong')}</small><small>${noteCategories[note.category || 'none']}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
+}
+function renderNotes(notes) {
+  const note = notes.find(item => item.id === activeNote) || notes[0];
+  activeNote = note?.id;
+  const options = Object.entries(noteCategories).filter(([key]) => key !== 'all');
+  el('view').innerHTML = `<div class="notes-head"><h1>Catatan</h1><button class="primary" data-new-note>+ Catatan baru</button></div>
+    <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
+      <section class="note-categories" aria-label="Kategori"><h2>Kategori</h2>${Object.entries(noteCategories).map(([key, label]) =>
+        `<button data-category="${key}" aria-pressed="${key === noteCategory}">${label} <small>${notes.filter(item => key === 'all' || (item.category || 'none') === key).length}</small></button>`).join('')}</section>
+      <section class="note-index" aria-label="Daftar catatan"><input type="search" id="note-query" aria-label="Cari catatan" placeholder="Cari catatan…" value="${escape(noteQuery)}"><div id="note-list"></div></section>
+      <section class="note-sheet" aria-label="Editor catatan">${note ? `<div><button class="note-back" id="note-back">← Daftar catatan</button></div>
+        <input id="edit-title" aria-label="Judul catatan" maxlength="160" value="${escape(note.title)}">
+        <div class="note-toolbar" aria-label="Sisipkan Markdown"><button data-mark="heading">Judul bagian</button><button data-mark="bold">Tebal</button><button data-mark="list">Daftar</button><button data-mark="check">Checklist</button></div>
+        <textarea id="edit-body" aria-label="Isi catatan" maxlength="10000" placeholder="Tulis ide kamu di sini…">${escape(note.body)}</textarea>
+        <div class="note-footer"><small>Markdown · simpan otomatis</small><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${label}</option>`).join('')}</select></label></div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
+    </div>`;
+  renderNoteIndex();
+}
+function showItem(id) {
+  el('finder').close();
+  const item = entries.find(entry => entry.id === id);
+  openPage(item.kind === 'note' ? 'notes' : 'editor', id);
+  el('edit-title').focus();
+}
 function search() {
   const q=el('query').value.trim().toLocaleLowerCase('id');
   const matches=entries.filter(item=>(item.title+' '+item.body).toLocaleLowerCase('id').includes(q));
@@ -72,23 +128,39 @@ document.addEventListener('click',event=>{
   const button=event.target.closest('button'); if(!button)return;
   const {page:next,open,mode:nextMode,complete,newNote}=button.dataset;
   if(next)openPage(next);
+  if(button.dataset.category){noteCategory=button.dataset.category;noteEditing=false;render();}
+  if(button.id==='note-back'){noteEditing=false;render();el('note-query').focus();}
+  if(button.dataset.mark){
+    const field=el('edit-body');
+    const markers={heading:['## ',''],bold:['**','**'],list:['- ',''],check:['- [ ] ','']};
+    const [before,after]=markers[button.dataset.mark];
+    const selected=field.value.slice(field.selectionStart,field.selectionEnd);
+    if(field.value.length+before.length+after.length<=field.maxLength){
+      field.setRangeText(before+selected+after,field.selectionStart,field.selectionEnd,'end');
+      field.dispatchEvent(new Event('input',{bubbles:true}));
+    }
+    field.focus();
+  }
   if(open)showItem(open);
   if(nextMode){mode=nextMode;render();document.querySelector('[data-mode="'+mode+'"]').focus();}
   if(complete){entries.find(item=>item.id===complete).status='done';save();render();el('announce').textContent='Tugas selesai.';}
-  if(newNote!==undefined)showItem(add('note','Catatan baru').id);
+  if(newNote!==undefined){const item=add('note','Catatan baru');if(noteCategory!=='all')item.category=noteCategory;noteQuery='';save();showItem(item.id);}
 });
 document.addEventListener('change',event=>{
   const target=event.target;
   if(target.id==='filter'){filter=target.value;render();el('filter').focus();}
+  if(target.id==='note-category'){entries.find(item=>item.id===activeNote).category=target.value;save();render();el('note-category').focus();}
   const id=target.dataset.status;
   if(id){entries.find(item=>item.id===id).status=target.value;save();if(page==='tasks'){render();(document.querySelector('[data-status="'+id+'"]')||el('filter')).focus();}}
 });
 document.addEventListener('input',event=>{
+  if(event.target.id==='note-query'){noteQuery=event.target.value;renderNoteIndex();return;}
   if(!['edit-title','edit-body'].includes(event.target.id))return;
   const item=entries.find(item=>item.id===activeNote);
   if(event.target.id==='edit-title')item.title=event.target.value.trim()|| (item.kind==='note'?'Catatan baru':'Tugas baru');
   else item.body=event.target.value;
   save();
+  if(page==='notes')renderNoteIndex();
 });
 document.addEventListener('submit',event=>{
   if(event.target.id!=='capture')return;
