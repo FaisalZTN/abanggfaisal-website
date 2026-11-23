@@ -2,14 +2,21 @@ const escapeNoteHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'
 
 export function noteInline(text, plain = false) {
   const emit = plain ? value => value : escapeNoteHtml;
-  const tokens = /(!?)\[([^\]]*)\]\((https:\/\/[^\s)]+)\)|\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*([^*]+)\*|\^([^^]+)\^|~([^~]+)~/g;
+  const tokens = /(!?)\[([^\]]*)\]\((https:\/\/[^\s)]+)\)|\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*([^*]+)\*|\^([^^]+)\^|~([^~]+)~|(https?:\/\/[^\s<>"'\[\]{}]+)/g;
   let html = '', offset = 0;
   for (const match of text.matchAll(tokens)) {
-    const [token, image, label, url, both, bold, italic, sup, sub] = match;
+    const [token, image, label, url, both, bold, italic, sup, sub, bare] = match;
     html += emit(text.slice(offset, match.index));
     if (url) {
-      html += plain ? (label || (image ? 'Gambar' : url)) : image ? `<img src="${escapeNoteHtml(url)}" alt="${escapeNoteHtml(label)}" referrerpolicy="no-referrer">`
+      html += plain ? (label || (image ? 'Gambar' : url)) : image ? `<img src="${escapeNoteHtml(url)}" alt="${escapeNoteHtml(label)}" referrerpolicy="no-referrer" loading="lazy" decoding="async">`
         : `<a href="${escapeNoteHtml(url)}" rel="noopener noreferrer">${escapeNoteHtml(label)}</a>`;
+    } else if (bare) {
+      const label = bare.replace(/[.,;:!?]+$/, '').replace(/\)+$/, ending => {
+        const opens = (bare.match(/\(/g) || []).length;
+        const closes = (bare.match(/\)/g) || []).length;
+        return ending.slice(Math.max(0, closes - opens));
+      });
+      html += plain ? bare : `<a data-note-autolink href="${escapeNoteHtml(label)}" rel="noopener noreferrer">${escapeNoteHtml(label)}</a>${escapeNoteHtml(bare.slice(label.length))}`;
     } else if (both) {
       const content = noteInline(both, plain);
       html += plain ? content : `<strong><em>${content}</em></strong>`;
