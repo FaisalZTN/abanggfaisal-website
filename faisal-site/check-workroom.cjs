@@ -106,10 +106,16 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(await page.getByRole('radio', { name: 'Terang' }).isChecked(), true);
     assert.equal(await page.evaluate(() => window.testDocument), true);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 360);
+    await page.getByRole('radio', { name: 'Mona Sans' }).check();
+    assert.match(await page.locator('main h1').evaluate(element => getComputedStyle(element).fontFamily), /Mona Sans/);
+    await page.getByRole('radio', { name: 'Plus Jakarta Sans' }).check();
     await page.reload();
     await page.getByRole('radio', { name: 'Terang' }).waitFor();
     assert.equal(await page.getByRole('radio', { name: 'Terang' }).isChecked(), true);
     assert.equal(await page.locator('html').getAttribute('data-workroom-theme'), 'light');
+    assert.equal(await page.getByRole('radio', { name: 'Plus Jakarta Sans' }).isChecked(), true);
+    await page.evaluate(() => document.fonts.load('400 16px "Plus Jakarta Sans"'));
+    assert.match(await page.locator('main h1').evaluate(element => getComputedStyle(element).fontFamily), /Plus Jakarta Sans/);
     assert.deepEqual(errors, []);
     console.log('Authenticated worker and Chromium: all Workroom panels, history, draft protection, mobile menu and persisted themes');
   } finally {

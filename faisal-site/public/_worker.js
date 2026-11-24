@@ -1284,6 +1284,16 @@ async function handleWorkroom(request, env, url) {
             </label>`).join('')}
         </div>
       </fieldset>
+      <fieldset class="collection workroom-themes">
+        <legend>Font Workroom</legend>
+        <div class="workroom-theme-grid">
+          ${[['inter', 'Inter'], ['mona', 'Mona Sans'], ['jakarta', 'Plus Jakarta Sans']].map(([font, title]) => `
+            <label class="workroom-theme-option">
+              <input type="radio" name="workroom-font" value="${font}"${font === 'inter' ? ' checked' : ''}>
+              <span>${title}</span>
+            </label>`).join('')}
+        </div>
+      </fieldset>
     </div>`, 200, page);
   }
 
