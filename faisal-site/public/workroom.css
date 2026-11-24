@@ -930,7 +930,7 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-block-menu button:is(:hover, [aria-selected="true"]) { background: var(--selected); }
 .note-toolbar #note-text-color { width: 44px; padding: .25rem; }
 .note-toolbar #note-text-size { width: auto; }
-.note-toolbar [data-note-layout] { width: auto; max-width: 100%; }
+.note-toolbar [data-layout-trigger] { display: inline-grid; place-items: center; }
 .note-rendered [data-note-alignment="left"] { text-align: left; }
 .note-rendered [data-note-alignment="center"] { text-align: center; }
 .note-rendered [data-note-alignment="right"] { text-align: right; }
@@ -941,3 +941,21 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-rendered .tiptap [data-note-spacing="none"] { margin-block: 0; }
 .note-rendered .tiptap [data-note-spacing="normal"] { margin-block: .45rem; }
 .note-rendered .tiptap [data-note-spacing="wide"] { margin-block: 1rem; }
+.note-layout-popover {
+  position: fixed; inset: auto; margin: 0; width: min(13rem, calc(100vw - 16px));
+  max-height: min(16rem, calc(100dvh - 16px)); overflow: auto;
+  padding: .25rem; background: var(--card); color: var(--ink);
+  border: 1px solid var(--line); border-radius: .5rem; box-shadow: 0 .5rem 1.5rem #0005;
+}
+.note-layout-popover button { display: flex; align-items: center; gap: .5rem; width: 100%; border-radius: .35rem; text-align: start; }
+.note-layout-popover button[aria-pressed="true"] { background: var(--selected); }
+.note-layout-popover button span { width: 1rem; visibility: hidden; }
+.note-layout-popover button[aria-pressed="true"] span { visibility: visible; color: var(--accent); }
+.note-rendered [data-note-leading="1"] { line-height: 1; }
+.note-rendered [data-note-leading="1.15"] { line-height: 1.15; }
+.note-rendered [data-note-leading="1.5"] { line-height: 1.5; }
+.note-rendered [data-note-leading="2"] { line-height: 2; }
+.note-rendered [data-note-leading="2.5"] { line-height: 2.5; }
+.note-rendered [data-note-leading="3"] { line-height: 3; }
+
+.note-layout-popover button[hidden] { display: none; }

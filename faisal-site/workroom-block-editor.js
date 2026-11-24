@@ -10,7 +10,7 @@ import Subscript from '@tiptap/extension-subscript';
 
 const paragraphOptions = {
   alignment: ['left', 'center', 'right', 'justify'],
-  leading: ['compact', 'normal', 'wide'],
+  leading: ['compact', 'normal', 'wide', '1', '1.15', '1.5', '2', '2.5', '3'],
   spacing: ['none', 'normal', 'wide'],
 };
 const paragraphTypes = ['paragraph', 'heading'];
@@ -72,7 +72,7 @@ const SafeImage = Image.extend({
   },
 });
 
-export function mountBlockEditor(root, content, onChange) {
+export function mountBlockEditor(root, content, onChange, onSelection) {
   const popup = document.createElement('div');
   popup.className = 'note-block-menu';
   popup.setAttribute('role', 'listbox');
@@ -179,7 +179,10 @@ export function mountBlockEditor(root, content, onChange) {
       },
     },
     onTransaction({ transaction }) {
-      if (editor && (transaction.docChanged || transaction.selectionSet)) draw(transaction.docChanged);
+      if (editor && (transaction.docChanged || transaction.selectionSet)) {
+        draw(transaction.docChanged);
+        onSelection(editor.state.selection.$from.parent.attrs);
+      }
     },
     onUpdate: ({ editor }) => onChange(editor.getJSON()),
   });
