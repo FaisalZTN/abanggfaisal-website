@@ -121,6 +121,27 @@ def build_study(root, output, write, head, escape, render_article, preview=False
     comments = []
     if comments_path.is_file():
         comments = json.loads(comments_path.read_text(encoding='utf-8')).get('entries') or []
+    schedule = defaultdict(list)
+    published = sorted(
+        (item for item in lectures.values()
+         if item['status'] == 'published' and item.get('lecture_date')
+         and blocks[entry_block(item)]['status'] == 'active'),
+        key=lambda item: (item['lecture_date'], item.get('lecture_start') or '99:99', item['number']),
+    )
+    for item in published:
+        block_id = entry_block(item)
+        schedule[item['lecture_date']].append({
+            'title': item['title'],
+            'start': item.get('lecture_start') or '',
+            'end': item.get('lecture_end') or '',
+            'location': item.get('lecture_location') or '',
+            'block': blocks[block_id]['title'],
+            'url': block_path(block_id) + '#' + item['id'],
+        })
+    (output / 'study-schedule.json').write_text(
+        json.dumps(schedule, ensure_ascii=False, separators=(',', ':')), encoding='utf-8',
+    )
+
     ordered = sorted(blocks.values(), key=lambda b: (b['id'] != DEFAULT_BLOCK,
                                                      b['status'] == 'coming-soon', b['title'].casefold()))
     for block in ordered:
