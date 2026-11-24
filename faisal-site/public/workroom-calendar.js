@@ -74,7 +74,7 @@ export function mount(panel, signal) {
 
   function loadMonth(month) {
     if (!pending.has(month)) {
-      const request = fetch(calendarPath + '?calendar-data=' + month + '-01', { cache: 'no-store' })
+      const request = fetch(calendarPath + '?calendar-data=' + month + '-01', { cache: 'no-store', signal })
         .then(response => {
           if (!response.ok) throw new Error('Calendar request failed');
           return response.json();
