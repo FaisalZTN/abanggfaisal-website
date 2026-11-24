@@ -84,6 +84,7 @@ def grid(items,kind,heading=3):return '<div class="grid">'+''.join(card(x,kind,h
 def head(eyebrow,title,desc):return f'<section class="page-hero"><div class="eyebrow">{eyebrow}</div><h1>{title}</h1><p class="intro">{desc}</p></section>'
 def write(path,title,desc,body,section='home',item=None):
     item=item or {}
+    brand = 'Faysaruworks' if section == 'shop' else 'abangfaisal'
     title=item.get('seo_title') or title
     desc=item.get('seo_description') or desc
     extra=''
@@ -94,16 +95,16 @@ def write(path,title,desc,body,section='home',item=None):
     extra+='<meta name="twitter:card" content="summary_large_image">'
     canonical='https://abanggfaisal.my.id'+path
     nav=''.join(f'<a href="{url}"'+(' aria-current="page"' if section==key else '')+f'>{name}</a>' for key,url,name in [('home','/','Home'),('journal','/journal/','Journal'),('study','/ruang-belajar/','Ruang Belajar'),('shop','/shop/','Shop'),('about','/about/','About')])
-    page=f'''<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{e(title)} — abangfaisal.</title><meta name="description" content="{e(desc)}"><link rel="canonical" href="{canonical}"><meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{canonical}"><meta property="og:type" content="{'article' if section=='journal' and item else 'website'}">{extra}<meta name="theme-color" content="#f6f4ed">{theme_bootstrap}<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="{style_url}"><script src="{script_url}" defer></script>{'<meta name="robots" content="noindex,nofollow">' if noindex or path=='/404.html' else ''}</head><body><a class="skip" href="#main">Lewati ke konten</a><header><div class="container header-inner"><a class="brand" href="/">abangfaisal<span>.</span></a><button id="menu" aria-controls="nav" aria-expanded="false">Menu ☰</button><nav id="nav" aria-label="Navigasi utama">{nav}<a href="https://abanggfaisal.my.id/workroom/">Workroom</a></nav><button id="theme" aria-label="Aktifkan mode gelap">◐</button></div></header><main id="main" class="container">{'<p class="notice">PRATINJAU · Termasuk konten draft untuk pemeriksaan.</p>' if preview else ''}{body}</main><footer class="container site-footer">
+    page=f'''<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{e(title)} — {brand}.</title><meta name="description" content="{e(desc)}"><link rel="canonical" href="{canonical}"><meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{canonical}"><meta property="og:type" content="{'article' if section=='journal' and item else 'website'}">{extra}<meta name="theme-color" content="#f6f4ed">{theme_bootstrap}<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="{style_url}"><script src="{script_url}" defer></script>{'<meta name="robots" content="noindex,nofollow">' if noindex or path=='/404.html' else ''}</head><body><a class="skip" href="#main">Lewati ke konten</a><header><div class="container header-inner"><a class="brand" href="/">{brand}<span>.</span></a><button id="menu" aria-controls="nav" aria-expanded="false">Menu ☰</button><nav id="nav" aria-label="Navigasi utama">{nav}<a href="https://abanggfaisal.my.id/workroom/">Workroom</a></nav><button id="theme" aria-label="Aktifkan mode gelap">◐</button></div></header><main id="main" class="container">{'<p class="notice">PRATINJAU · Termasuk konten draft untuk pemeriksaan.</p>' if preview else ''}{body}</main><footer class="container site-footer">
       <div class="site-footer-main">
         <div class="site-footer-brand">
-          <a class="brand" href="/">abangfaisal<span>.</span></a>
+          <a class="brand" href="/">{brand}<span>.</span></a>
           <p>Catatan, proses, dan karya yang terus bertumbuh.</p>
         </div>
         <nav aria-label="Navigasi footer">{nav}</nav>
       </div>
       <div class="site-footer-bottom">
-        <small>© 2026 abangfaisal.</small>
+        <small>© 2026 {brand}.</small>
         <a class="site-footer-social" href="https://www.instagram.com/abanggfaisal/">
           {site_icon("brand-instagram")}
           <span><span class="site-footer-platform">Instagram</span> @abanggfaisal</span>
