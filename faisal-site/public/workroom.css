@@ -957,3 +957,5 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-rendered [data-note-leading="2"] { line-height: 2; }
 .note-rendered [data-note-leading="2.5"] { line-height: 2.5; }
 .note-rendered [data-note-leading="3"] { line-height: 3; }
+
+.note-layout-popover button[hidden] { display: none; }
