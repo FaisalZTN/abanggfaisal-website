@@ -1,4 +1,4 @@
-import { Editor } from '@tiptap/core';
+import { Editor, Extension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { TaskList, TaskItem } from '@tiptap/extension-list';
 import { TableKit } from '@tiptap/extension-table';
@@ -7,6 +7,49 @@ import DragHandle from '@tiptap/extension-drag-handle';
 import { TextStyleKit } from '@tiptap/extension-text-style';
 import Superscript from '@tiptap/extension-superscript';
 import Subscript from '@tiptap/extension-subscript';
+
+const paragraphOptions = {
+  alignment: ['left', 'center', 'right', 'justify'],
+  leading: ['compact', 'normal', 'wide'],
+  spacing: ['none', 'normal', 'wide'],
+};
+const paragraphTypes = ['paragraph', 'heading'];
+
+const ParagraphLayout = Extension.create({
+  name: 'paragraphLayout',
+  addGlobalAttributes() {
+    return [{
+      types: paragraphTypes,
+      attributes: Object.fromEntries(Object.entries(paragraphOptions).map(([name, values]) => {
+        const attribute = 'data-note-' + name;
+        return [name, {
+          default: null,
+          parseHTML: element => {
+            const value = element.getAttribute(attribute);
+            return values.includes(value) ? value : null;
+          },
+          renderHTML: attrs => values.includes(attrs[name]) ? { [attribute]: attrs[name] } : {},
+        }];
+      })),
+    }];
+  },
+  addCommands() {
+    return {
+      setParagraphLayout: (name, value) => ({ tr, dispatch }) => {
+        if (!paragraphOptions[name]?.includes(value)) return false;
+        const { from, to, $from } = tr.selection;
+        const update = (node, pos) => {
+          if (paragraphTypes.includes(node.type.name) && dispatch) {
+            tr.setNodeMarkup(pos, undefined, { ...node.attrs, [name]: value });
+          }
+        };
+        if (from === to && $from.depth) update($from.parent, $from.before());
+        else tr.doc.nodesBetween(from, to, update);
+        return true;
+      },
+    };
+  },
+});
 
 const blocks = [
   ['Paragraf', 'text paragraph', chain => chain.setParagraph()],
@@ -117,7 +160,7 @@ export function mountBlockEditor(root, content, onChange) {
     injectCSS: false,
     extensions: [
       StarterKit.configure({ link: { openOnClick: false, defaultProtocol: 'https' } }),
-      TaskList, TaskItem.configure({ nested: true }), TableKit, TextStyleKit, Superscript, Subscript,
+      ParagraphLayout, TaskList, TaskItem.configure({ nested: true }), TableKit, TextStyleKit, Superscript, Subscript,
       SafeImage.configure({ allowBase64: false, HTMLAttributes: { loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer' } }),
       DragHandle.configure({ render: () => handle, computePositionConfig: { placement: 'left-start' } }),
     ],
