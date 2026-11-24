@@ -50,6 +50,13 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.evaluate(()=>{ window.testDocument = true; });
     await page.locator('.workroom-nav > a[aria-label="Catatan"]').click();
     await page.waitForSelector('#note-query');
+    await page.evaluate(() => document.fonts.ready);
+    assert.match(await page.locator('.notes-head h1').evaluate(element => getComputedStyle(element).fontFamily), /Source Serif 4/);
+    const newNote = page.locator('[data-new-note]');
+    const [icon, label] = await Promise.all([
+      newNote.locator('svg').boundingBox(), newNote.locator('span').boundingBox(),
+    ]);
+    assert.ok(Math.abs((icon.y + icon.height / 2) - (label.y + label.height / 2)) <= 1);
     assert.equal(await page.evaluate(()=>window.testDocument), true);
     await page.locator('[data-new-note]').click();
     await page.locator('#edit-title').fill('Draf yang belum disimpan');
