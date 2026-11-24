@@ -41,7 +41,7 @@ function taskCheckboxIcons() {
 }
 
 function workroomPage(content, status = 200, page = null) {
-  const wordmark = '<a class="workroom-wordmark" href="/">abanggfaisal.</a>';
+  const wordmark = '<a class="workroom-wordmark" href="/">Faysaruworks.</a>';
   const currentPage = page === 'privateNotes' ? 'note' : page;
   const secondaryPages = ['project', 'goal', 'review'];
   const sidebarLink = ([key, { path, title, icon }], extra = false) => {
@@ -66,7 +66,7 @@ function workroomPage(content, status = 200, page = null) {
   </nav><script src="/workroom-nav.js" defer></script>` : '';
   return new Response(`<!doctype html><html lang="id"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${page && page !== 'home' ? workroomPages[page].title + ' · ' : ''}Workroom · abangfaisal</title><link rel="icon" type="image/svg+xml" href="/workroom-favicon.svg"><link rel="stylesheet" href="/workroom.css"></head>
+    <title>${page && page !== 'home' ? workroomPages[page].title + ' · ' : ''}Workroom · Faysaruworks.</title><link rel="icon" type="image/svg+xml" href="/workroom-favicon.svg"><link rel="stylesheet" href="/workroom.css"></head>
     <body${page ? ' class="workroom-layout"' : ''}>${sidebar}
     ${page === 'home' || page === 'today' ? '<script src="/workroom-agenda-check.js" defer></script>' : ''}
     <header class="workroom-header">
