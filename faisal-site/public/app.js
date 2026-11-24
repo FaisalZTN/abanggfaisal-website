@@ -569,6 +569,12 @@ function replacePage(destination, page, main, restoring) {
     if (element && next) element.replaceWith(document.importNode(next, true));
   }
 
+  for (const selector of ['.header-inner .brand', '.site-footer-brand .brand', '.site-footer-bottom > small']) {
+    const current = document.querySelector(selector);
+    const next = page.querySelector(selector);
+    if (current && next && !current.isEqualNode(next)) current.replaceWith(document.importNode(next, true));
+  }
+
   for (const link of document.querySelectorAll('header nav a, footer nav a')) {
     if (link.pathname === renderedPath) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
