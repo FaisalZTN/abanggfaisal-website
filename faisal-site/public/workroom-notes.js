@@ -150,7 +150,13 @@ function renderNotes(notes) {
     <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
       <section class="note-categories" aria-label="Kategori"><div class="category-head"><h2>Kategori</h2><button id="add-category" aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('M12 5v14M5 12h14')}</button></div>${Object.entries(noteCategories).map(([key, label]) =>
         `<button data-category="${key}" aria-pressed="${key === noteCategory}"><span>${escape(label)}</span><small class="note-category-count">${notes.filter(item => key === 'all' || (item.category || 'none') === key).length}</small></button>`).join('')}</section>
-      <section class="note-index" aria-label="Daftar catatan"><input type="search" id="note-query" aria-label="Cari catatan" placeholder="Cari catatan…" value="${escape(noteQuery)}"><details ${fromTime || toTime ? "open" : ""}><summary>Filter waktu<span class="muted"> · WITA</span></summary><label>Dari<input type="datetime-local" id="note-from" value="${escape(fromTime)}"></label><label>Sampai<input type="datetime-local" id="note-to" value="${escape(toTime)}"></label><button id="clear-time">Hapus filter waktu</button></details><div id="note-list"></div></section>
+      <section class="note-index" aria-label="Daftar catatan"><input type="search" id="note-query" aria-label="Cari catatan" placeholder="Cari catatan…" value="${escape(noteQuery)}"><div class="note-mobile-category">
+        <label><span class="note-sr-only">Kategori</span>${noteActionIcon('M4 6h16l-6 7v5l-4 2v-7z')}
+          <select id="note-category-filter">${Object.entries(noteCategories).map(([key, label]) =>
+            `<option value="${key}"${key === noteCategory ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select>
+        </label>
+        <button type="button" data-add-category aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('M12 5v14M5 12h14')}</button>
+      </div><details ${fromTime || toTime ? "open" : ""}><summary>Filter waktu<span class="muted"> · WITA</span></summary><label>Dari<input type="datetime-local" id="note-from" value="${escape(fromTime)}"></label><label>Sampai<input type="datetime-local" id="note-to" value="${escape(toTime)}"></label><button id="clear-time">Hapus filter waktu</button></details><div id="note-list"></div></section>
       <section class="note-sheet" aria-label="Editor catatan">${note ? `<div><button class="note-back" id="note-back">← Daftar catatan</button></div>
         <input id="edit-title" placeholder="Catatan baru" aria-label="Judul catatan" maxlength="160" value="${escape(note.title)}">
         <div class="note-toolbar" role="group" aria-label="Format catatan">${toolbar.map(([mark, label, icon]) =>
@@ -219,10 +225,11 @@ document.addEventListener('click', async event=>{
     return;
   }
 
-  if(button.id==='add-category' || button.id==='save-note'){
+  const addingCategory = button.id === 'add-category' || button.hasAttribute('data-add-category');
+  if(addingCategory || button.id==='save-note'){
     const note=entries.find(item=>item.id===activeNote);
-    const name=button.id==='add-category' ? prompt('Nama kategori baru')?.trim() : '';
-    if(button.id==='add-category' && !name)return;
+    const name=addingCategory ? prompt('Nama kategori baru')?.trim() : '';
+    if(addingCategory && !name)return;
     if(name && Object.values(noteCategories).some(label=>label.toLowerCase()===name.toLowerCase())){message('Kategori sudah ada.');return;}
     if(!name && !note?.title.trim()){message('Isi judul sebelum menyimpan.');el('edit-title').focus();return;}
     if (!name && note.body.length > 10000) {
@@ -250,6 +257,11 @@ document.addEventListener('click', async event=>{
 });
 document.addEventListener('change', event=>{
   const target=event.target;
+  if (target.id === 'note-category-filter') {
+    noteCategory = target.value;
+    renderNoteIndex();
+    return;
+  }
   if(target.id==='note-from' || target.id==='note-to'){
     if(target.id==='note-from')fromTime=target.value;else toTime=target.value;
     renderNoteIndex();

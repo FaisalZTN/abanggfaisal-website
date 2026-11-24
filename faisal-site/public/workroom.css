@@ -771,3 +771,36 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-selection-bar:not([hidden]) { position:fixed; z-index:20; display:flex; align-items:center; flex-wrap:wrap; gap:2px; max-width:calc(100vw - 16px); padding:5px; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:0 6px 24px #0005; }
 .note-selection-bar :is(select,input,button) { width:auto; min-height:40px; margin:0; color:var(--ink); background:var(--paper); }
 .note-selection-bar input[type=color] { width:42px; }
+
+.today-focus, .today-inbox { position: relative; padding-inline-end: 3.65rem; }
+.today-focus ol, .inbox-items { padding-inline-start: 1.25rem; overflow-wrap: anywhere; }
+.today-icon {
+  position: absolute;
+  inset: .5rem .5rem auto auto;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  padding: 0;
+  border-radius: .6rem;
+  list-style: none;
+}
+.today-icon::-webkit-details-marker { display: none; }
+.today-icon:hover, .today-icon:focus-visible { background: var(--selected); }
+.today-icon svg, .note-mobile-category svg { width: 1.15rem; height: 1.15rem; flex: none; }
+.today-icon svg { fill: none; stroke: currentColor; stroke-width: 1.7; }
+.today-inbox { margin-top: .75rem; }
+.inbox-items > li { margin-block: .5rem; }
+.inbox-items p { white-space: pre-wrap; }
+[data-agenda-task][data-agenda-completed] a { text-decoration: line-through; }
+[data-agenda-task] button[hidden], .due-list[hidden], [data-due-empty][hidden] { display: none; }
+[data-agenda-task][aria-busy] button { pointer-events: none; }
+.review-timeline details { margin-top: .5rem; }
+.note-mobile-category { display: none; }
+.note-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+@media (max-width: 700px) {
+  .notes-desk .note-categories { display: none; }
+  .note-mobile-category { display: flex; align-items: center; gap: .4rem; margin-block: .5rem; }
+  .note-mobile-category label { display: flex; flex: 1; align-items: center; gap: .4rem; min-width: 0; }
+  .note-mobile-category select { min-width: 0; }
+  .note-index .note-mobile-category button { display: grid; place-items: center; width: 44px; flex: none; }
+}
