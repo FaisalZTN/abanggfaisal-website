@@ -728,8 +728,8 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 
 .private-notes-panel { max-width: 28rem; }
 [data-private-notes-expires] > form { margin-bottom: .75rem; }
-.notes-private-entry { display: flex; justify-content: flex-end; padding-block-start: .5rem; }
-.notes-private-entry a, .private-notes-back {
+.notes-head-actions { display: flex; align-items: center; gap: .5rem; margin-inline-start: auto; }
+.notes-private-link, .private-notes-back {
   display: inline-flex;
   align-items: center;
   gap: .35rem;
@@ -737,7 +737,19 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   color: var(--muted);
   font-size: .875rem;
 }
-.notes-private-entry svg { width: 24px; height: 24px; flex: none; }
+.notes-private-link {
+  justify-content: center;
+  min-width: 44px;
+  padding-inline: .65rem;
+  border: 1px solid var(--line);
+  border-radius: 2rem;
+  text-decoration: none;
+}
+.notes-private-link:is(:hover, :focus-visible) { color: var(--ink); background: var(--selected); }
+.notes-private-link svg { width: 20px; height: 20px; flex: none; }
+@media (max-width: 640px) {
+  .notes-private-link span { display: none; }
+}
 
 .note-footer #pin-note, .note-footer #delete-note {
   display: grid;
