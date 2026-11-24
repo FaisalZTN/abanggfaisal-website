@@ -87,7 +87,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(await page.locator('.tiptap').count(),0);
     await page.goBack();
     await page.waitForSelector('#note-query');
-    assert.equal(await page.locator('.note-block-menu').count(),0);
+    assert.equal(await page.locator('.note-block-menu').count(),1);
     await page.getByRole('button', { name: /Catatan lama/ }).click();
     await editor.locator('strong').click();
     await page.keyboard.press('End');

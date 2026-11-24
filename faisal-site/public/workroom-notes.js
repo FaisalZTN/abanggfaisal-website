@@ -96,7 +96,6 @@ export function mount(panel, signal) {
     const options = Object.entries(noteCategories).filter(([key]) => key !== 'all');
     const deleteCategory = !['all', 'none'].includes(noteCategory) && Object.hasOwn(noteCategories, noteCategory)
       ? `<button type="button" data-delete-category aria-label="Hapus kategori" title="Hapus kategori">${noteActionIcon('trash')}</button>` : '';
-    editorRange = undefined;
     const trashPanel = `<details class="note-trash"${trashOpen ? ' open' : ''}>
       <summary>${noteActionIcon('trash')} Sampah <small>${trash.length + archivedCategories.length}</small></summary>
       ${trash.length ? '<ul>' + trash.map(note => `<li><span>${escape(note.title)}</span>
