@@ -4,3 +4,5 @@ faisal-site/dist/
 faisal-site/.openai/
 
 **/.build-deps/
+
+faisal-site/node_modules/

@@ -1,4 +1,4 @@
-import { notePreview } from './workroom-note-format.js';
+import { notePreview, readBlockNote, noteBodyText } from './workroom-note-format.js';
 
 const WORKROOM = '/workroom/';
 const workroomOverviewUrl = WORKROOM + '?view=overview';
@@ -151,11 +151,13 @@ function workroomForm(kind, entry, projects, standalone = false, defaultDue = ''
     `<option value="${key}"${entry?.status === key ? ' selected' : ''}>${label}</option>`).join('');
   const projectOptions = projects.map(project =>
     `<option value="${project.id}"${entry?.project_id === project.id ? ' selected' : ''}>${e(project.title)}</option>`).join('');
+  const blockBody = kind === 'note' && readBlockNote(entry?.body);
   return `<form method="post" action="${workroomPages[kind].path}">
     <input type="hidden" name="kind" value="${kind}">
     <input type="hidden" name="id" value="${entry?.id ?? ''}">
     <label>Judul<input name="title" required maxlength="160" value="${e(entry?.title)}"></label>
-    <label>${kind === 'note' ? 'Isi catatan (Markdown)' : 'Detail'}<textarea name="body" rows="${standalone ? 12 : 3}" maxlength="10000">${e(entry?.body)}</textarea></label>
+    <label>${kind === 'note' ? 'Isi catatan (Markdown)' : 'Detail'}<textarea name="body" rows="${standalone ? 12 : 3}" maxlength="10000"${blockBody ? ' disabled' : ''}>${e(blockBody ? noteBodyText(entry.body) : entry?.body)}</textarea></label>
+    ${blockBody ? `<p><a href="${workroomPages.note.path}?edit=${entry.id}">Edit isi di editor blok</a></p>` : ''}
     ${kind === 'task' ? `<div class="task-detail-tools" hidden>
       <button type="button" class="task-image-toggle" aria-expanded="false">+ Tambah gambar lewat URL</button>
       <div class="task-image-fields" hidden>
@@ -1038,7 +1040,7 @@ async function workroomNotesData(request, db) {
   }
   const {id, title, body, category} = data;
   if (data.action !== 'save' || (id !== null && (!Number.isSafeInteger(id) || id < 1)) ||
-      typeof title !== 'string' || !title.trim() || title.length > 160 || typeof body !== 'string' || body.length > 10000 ||
+      typeof title !== 'string' || !title.trim() || title.length > 160 || typeof body !== 'string' || body.length > (readBlockNote(body) ? 100000 : 10000) ||
       typeof category !== 'string' || category.length > 50) return reply({error:'Periksa judul, isi, dan kategori.'}, 400);
   const custom = category !== 'none' && !Object.hasOwn(builtInNoteCategories, category);
   const categoryCheck = '(NOT ? OR EXISTS (SELECT 1 FROM workroom_note_categories WHERE id = ?)) AND NOT EXISTS (SELECT 1 FROM workroom_archived_categories WHERE id = ?)';
@@ -1395,12 +1397,16 @@ async function handleWorkroom(request, env, url) {
     }
   } else if (get('action') === 'save') {
     const title = get('title');
-    const body = get('body');
+    let body = get('body');
+    if (kind === 'note' && id) {
+      const existing = await db.prepare("SELECT body FROM workroom_entries WHERE id = ? AND kind = 'note'").bind(id).first();
+      if (readBlockNote(existing?.body)) body = existing.body;
+    }
     const status = get('status') || 'active';
     const due = kind === 'note' ? '' : get('due');
     const priority = kind === 'task' ? get('priority') : 'normal';
     const project = kind !== 'project' && get('project_id') ? Number(get('project_id')) : null;
-    if (!title || title.length > 160 || body.length > 10000 || !Object.hasOwn(workroomKinds[kind].statuses, status) ||
+    if (!title || title.length > 160 || body.length > (kind === 'note' && readBlockNote(body) ? 100000 : 10000) || !Object.hasOwn(workroomKinds[kind].statuses, status) ||
         !['normal', 'high'].includes(priority) ||
         (due && (!/^\d{4}-\d{2}-\d{2}$/.test(due) || !Number.isFinite(Date.parse(due)) ||
           new Date(due).toISOString().slice(0, 10) !== due))) return invalid();

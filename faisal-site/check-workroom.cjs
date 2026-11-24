@@ -47,6 +47,9 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.goto(origin+'/workroom/review/');
     await page.waitForSelector('.workroom-review h1');
     await page.waitForSelector('.workroom-route-status',{state:'attached'});
+    db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('note', ?, ?, 'active', '', 'normal')")
+      .run('Catatan lama', '## Judul lama\n**Tebal**\n- [x] Sudah selesai');
+
     await page.evaluate(()=>{ window.testDocument = true; });
     await page.locator('.workroom-nav > a[aria-label="Catatan"]').click();
     await page.waitForSelector('#note-query');
@@ -58,7 +61,20 @@ module.exports = async function checkWorkroom(browser, origin) {
     ]);
     assert.ok(Math.abs((icon.y + icon.height / 2) - (label.y + label.height / 2)) <= 1);
     assert.equal(await page.evaluate(()=>window.testDocument), true);
+    await page.getByRole('button', { name: /Catatan lama/ }).click();
+    await page.locator('#edit-body h2').filter({ hasText: 'Judul lama' }).waitFor();
+    assert.equal(await page.locator('#edit-body strong').textContent(), 'Tebal');
+    assert.equal(await page.locator('#edit-body input[type=checkbox]').isChecked(), true);
     await page.locator('[data-new-note]').click();
+    const editor = page.getByRole('textbox', { name: 'Isi catatan' });
+    await editor.click();
+    await page.keyboard.type('# Judul blok');
+    await editor.locator('h1').filter({ hasText: 'Judul blok' }).waitFor();
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('/table');
+    await page.getByRole('option', { name: 'Tabel' }).waitFor();
+    await page.keyboard.press('Enter');
+    await editor.locator('table').waitFor();
     await page.locator('#edit-title').fill('Draf yang belum disimpan');
     page.once('dialog', dialog => dialog.dismiss());
     await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
@@ -68,10 +84,21 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.waitForSelector('#workspace');
     assert.equal(await page.evaluate(()=>window.testDocument), true);
     assert.equal(await page.locator('.workroom-link-options').count(),1);
-    assert.equal(await page.locator('.note-selection-bar').count(),0);
+    assert.equal(await page.locator('.tiptap').count(),0);
     await page.goBack();
     await page.waitForSelector('#note-query');
-    assert.equal(await page.locator('.note-selection-bar').count(),1);
+    assert.equal(await page.locator('.note-block-menu').count(),0);
+    await page.getByRole('button', { name: /Catatan lama/ }).click();
+    await editor.locator('strong').click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' disunting');
+    await page.getByRole('button', { name: 'Simpan', exact: true }).click();
+    await page.getByText('Catatan tersimpan.', { exact: true }).waitFor();
+    const stored = db.prepare("SELECT body FROM workroom_entries WHERE title = ?").get('Catatan lama').body;
+    assert.match(stored, /^workroom-blocks-v1:/);
+    await page.getByRole('button', { name: /Catatan lama/ }).click();
+    assert.match(await editor.textContent(), /disunting/);
+
     await page.goForward();
     await page.waitForSelector('#workspace');
     await page.locator('.workroom-nav > a[aria-label="Review"]').click();

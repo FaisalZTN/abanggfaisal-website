@@ -1,6 +1,6 @@
 # abangfaisal.my.id
 
-Website statis Python 3 untuk Cloudflare Pages, GitHub dan Decap CMS. Build dari direktori `faisal-site`: `python3 build.py`; output `dist/`. Dependency build dikunci pada requirements.txt (Pillow 12.3.0, Mistune 3.4.0). Build memasang versi tersebut ke .build-deps bila belum tersedia; command Pages tetap python3 build.py. Build pertama memerlukan akses PyPI, selanjutnya memakai paket yang sudah tersedia. OAuth GitHub melalui Worker yang sudah aktif tetap dipertahankan.
+Website statis Python 3 untuk Cloudflare Pages, GitHub dan Decap CMS. Build dari direktori `faisal-site`: `python3 build.py`; output `dist/`. Dependency build dikunci pada requirements.txt (Pillow 12.3.0, Mistune 3.4.0). Build memasang versi tersebut ke .build-deps bila belum tersedia; command Pages tetap python3 build.py. Build pertama memerlukan akses PyPI dan npm, serta Node.js/npm untuk bundel Tiptap. Versi dependency editor dikunci di package-lock.json. OAuth GitHub melalui Worker yang sudah aktif tetap dipertahankan.
 
 ## Mengelola tulisan
 
