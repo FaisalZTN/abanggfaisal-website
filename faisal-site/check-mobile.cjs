@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
+const checkWorkroom = require('./check-workroom.cjs');
 
 const base = 'http://localhost:8080';
 const widths = [320, 360, 412];
@@ -377,6 +378,7 @@ async function main() {
     } finally {
       await page.close();
     }
+    await checkWorkroom(browser, base);
   } finally {
     await browser.close();
   }

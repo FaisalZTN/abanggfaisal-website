@@ -804,3 +804,14 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 
 .workroom-loading:has(+ .workroom-loaded) { display: none; }
 .workroom-loaded { display: contents; }
+
+.workroom-route-status {
+  position: fixed;
+  z-index: 10;
+  inset: auto 1rem max(4.5rem, env(safe-area-inset-bottom)) auto;
+  margin: 0;
+  padding: .45rem .75rem;
+  border-radius: .5rem;
+  background: var(--green);
+  color: var(--ink);
+}

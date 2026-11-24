@@ -1,4 +1,4 @@
-(() => {
+export function mount(panel, signal) {
   function webUrl(value, httpsOnly = false) {
     try {
       const url = new URL(value);
@@ -74,7 +74,7 @@
     return item;
   }
 
-  for (const tools of document.querySelectorAll('.task-detail-tools')) {
+  for (const tools of panel.querySelectorAll('.task-detail-tools')) {
     const field = tools.closest('form').elements.body;
     const preview = tools.querySelector('.task-detail-preview');
     const status = tools.querySelector('.task-detail-status');
@@ -150,4 +150,4 @@
     tools.hidden = false;
     render();
   }
-})();
+}
