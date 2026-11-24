@@ -51,7 +51,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.locator('.workroom-nav > a[aria-label="Catatan"]').click();
     await page.waitForSelector('#note-query');
     await page.evaluate(() => document.fonts.ready);
-    assert.match(await page.locator('.notes-head h1').evaluate(element => getComputedStyle(element).fontFamily), /Source Serif 4/);
+    assert.match(await page.locator('.notes-head h1').evaluate(element => getComputedStyle(element).fontFamily), /Inter/);
     const newNote = page.locator('[data-new-note]');
     const [icon, label] = await Promise.all([
       newNote.locator('svg').boundingBox(), newNote.locator('span').boundingBox(),
