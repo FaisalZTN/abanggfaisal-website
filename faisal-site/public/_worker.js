@@ -793,7 +793,7 @@ async function renderWorkroom(db, page, url, env) {
   const params = url.searchParams;
   const edit = params.get('edit');
   if (page === 'home' && edit) {
-    const selected = await db.prepare('SELECT id, kind FROM workroom_entries WHERE id = ?').bind(edit).first();
+    const selected = await db.prepare("SELECT id, kind FROM workroom_entries WHERE id = ? AND status <> 'trashed'").bind(edit).first();
     if (selected && String(selected.id) === edit) return workroomRedirect(url, workroomEntryLink(selected));
   }
   if (page === 'home' && params.get('add') === 'task') {
@@ -803,12 +803,12 @@ async function renderWorkroom(db, page, url, env) {
   if (page === 'home') {
     const [tasks, notes, totals] = await db.batch([
       db.prepare("SELECT id, kind, title, status, due FROM workroom_entries WHERE kind = 'task' AND status <> 'done' AND due <> '' ORDER BY id DESC"),
-      db.prepare("SELECT id, kind, title, body FROM workroom_entries WHERE kind = 'note' ORDER BY id DESC LIMIT 3"),
+      db.prepare("SELECT id, kind, title, body FROM workroom_entries WHERE kind = 'note' AND status <> 'trashed' ORDER BY id DESC LIMIT 3"),
       db.prepare(`SELECT
         COUNT(CASE WHEN kind = 'task' AND status <> 'done' THEN 1 END) AS tasks,
         COUNT(CASE WHEN kind = 'project' AND status = 'active' THEN 1 END) AS projects,
         COUNT(CASE WHEN kind = 'goal' AND status = 'active' THEN 1 END) AS goals,
-        COUNT(CASE WHEN kind = 'note' THEN 1 END) AS notes
+        COUNT(CASE WHEN kind = 'note' AND status <> 'trashed' THEN 1 END) AS notes
         FROM workroom_entries`),
     ]);
     entries = [...tasks.results, ...notes.results];
@@ -820,7 +820,7 @@ async function renderWorkroom(db, page, url, env) {
   } else {
     ({ results: entries } = await db.prepare(`SELECT id, kind, title, status, due, priority, project_id,
       CASE WHEN kind = ? THEN body END AS body
-      FROM workroom_entries WHERE kind IN (?, 'project') ORDER BY id DESC`).bind(page, page).all());
+      FROM workroom_entries WHERE kind IN (?, 'project') AND status <> 'trashed' ORDER BY id DESC`).bind(page, page).all());
   }
   const notice = params.has('saved') ? '<p class="save-notice" role="status">Perubahan tersimpan.</p>' : '';
   const projects = entries.filter(entry => entry.kind === 'project');
@@ -930,12 +930,15 @@ async function ensureWorkroomNotes(db) {
   await db.prepare('CREATE TABLE IF NOT EXISTS workroom_note_categories (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE)').run();
 }
 
+const workroomNoteFields = 'id, kind, title, body, note_category AS category, note_updated AS updated, note_pinned AS pinned';
+
 async function readWorkroomNotes(db) {
-  const [notes, categories] = await db.batch([
-    db.prepare("SELECT id, kind, title, body, note_category AS category, note_updated AS updated, note_pinned AS pinned FROM workroom_entries WHERE kind = 'note' ORDER BY id DESC"),
+  const [notes, trash, categories] = await db.batch([
+    db.prepare(`SELECT ${workroomNoteFields} FROM workroom_entries WHERE kind = 'note' AND status <> 'trashed' ORDER BY id DESC`),
+    db.prepare("SELECT id, title FROM workroom_entries WHERE kind = 'note' AND status = 'trashed' ORDER BY id DESC"),
     db.prepare('SELECT id, name FROM workroom_note_categories ORDER BY name'),
   ]);
-  return { notes: notes.results, categories: categories.results };
+  return { notes: notes.results, categories: categories.results, trash: trash.results };
 }
 
 async function workroomNotesData(request, db) {
@@ -948,17 +951,33 @@ async function workroomNotesData(request, db) {
   let data;
   try { data = await request.json(); } catch { return reply({error:'Permintaan tidak valid.'}, 400); }
   if (!data || typeof data !== 'object') return reply({error:'Permintaan tidak valid.'}, 400);
-  if (data.action === 'pin' || data.action === 'delete') {
+  if (['pin', 'delete', 'restore'].includes(data.action)) {
     if (!Number.isSafeInteger(data.id) || data.id < 1 ||
         (data.action === 'pin' && typeof data.pinned !== 'boolean')) {
       return reply({error:'Permintaan catatan tidak valid.'}, 400);
     }
-    const note = data.action === 'pin'
-      ? await db.prepare("UPDATE workroom_entries SET note_pinned = ? WHERE id = ? AND kind = 'note' RETURNING id, note_pinned AS pinned")
-        .bind(Number(data.pinned), data.id).first()
-      : await db.prepare("DELETE FROM workroom_entries WHERE id = ? AND kind = 'note' RETURNING id")
+    let note;
+    if (data.action === 'pin') {
+      note = await db.prepare("UPDATE workroom_entries SET note_pinned = ? WHERE id = ? AND kind = 'note' AND status <> 'trashed' RETURNING id, note_pinned AS pinned")
+        .bind(Number(data.pinned), data.id).first();
+    } else if (data.action === 'delete') {
+      note = await db.prepare("UPDATE workroom_entries SET status = 'trashed' WHERE id = ? AND kind = 'note' RETURNING id, title")
         .bind(data.id).first();
-    return note ? reply(note) : reply({error:'Catatan tidak ditemukan.'}, 404);
+    } else {
+      note = await db.prepare(`UPDATE workroom_entries SET status = 'active' WHERE id = ? AND kind = 'note' AND status = 'trashed' RETURNING ${workroomNoteFields}`)
+        .bind(data.id).first();
+    }
+    return note ? reply(note) : reply({error:'Catatan tidak ditemukan atau sudah dipulihkan.'}, 404);
+  }
+  if (data.action === 'delete-category') {
+    if (typeof data.id !== 'string' || !/^custom-[a-f0-9-]{36}$/.test(data.id)) {
+      return reply({error:'Hanya kategori buatan sendiri yang bisa dihapus.'}, 400);
+    }
+    await db.batch([
+      db.prepare("UPDATE workroom_entries SET note_category = NULL WHERE kind = 'note' AND note_category = ?").bind(data.id),
+      db.prepare('DELETE FROM workroom_note_categories WHERE id = ?').bind(data.id),
+    ]);
+    return reply({ id: data.id });
   }
   if (data.action === 'category') {
     const name = typeof data.name === 'string' ? data.name.trim() : '';
@@ -971,16 +990,15 @@ async function workroomNotesData(request, db) {
   if (data.action !== 'save' || (id !== null && (!Number.isSafeInteger(id) || id < 1)) ||
       typeof title !== 'string' || !title.trim() || title.length > 160 || typeof body !== 'string' || body.length > 10000 ||
       typeof category !== 'string' || category.length > 50) return reply({error:'Periksa judul, isi, dan kategori.'}, 400);
-  if (category !== 'none' && !builtInNoteCategories.includes(category) &&
-      !await db.prepare('SELECT id FROM workroom_note_categories WHERE id = ?').bind(category).first()) {
-    return reply({error:'Kategori tidak ditemukan.'}, 400);
-  }
+  const custom = category !== 'none' && !builtInNoteCategories.includes(category);
+  const categoryCheck = 'NOT ? OR EXISTS (SELECT 1 FROM workroom_note_categories WHERE id = ?)';
+
   const updated = Date.now();
   const values = [title.trim(), body, category, updated];
   const result = id === null
-    ? await db.prepare("INSERT INTO workroom_entries (title, body, note_category, note_updated, kind, status, due, priority) VALUES (?, ?, ?, ?, 'note', 'active', '', 'normal')").bind(...values).run()
-    : await db.prepare("UPDATE workroom_entries SET title = ?, body = ?, note_category = ?, note_updated = ? WHERE id = ? AND kind = 'note'").bind(...values, id).run();
-  if (!result.meta.changes) return reply({error:'Catatan tidak ditemukan.'}, 404);
+    ? await db.prepare(`INSERT INTO workroom_entries (title, body, note_category, note_updated, kind, status, due, priority) SELECT ?, ?, ?, ?, 'note', 'active', '', 'normal' WHERE ${categoryCheck}`).bind(...values, Number(custom), category).run()
+    : await db.prepare(`UPDATE workroom_entries SET title = ?, body = ?, note_category = ?, note_updated = ? WHERE id = ? AND kind = 'note' AND status <> 'trashed' AND (${categoryCheck})`).bind(...values, id, Number(custom), category).run();
+  if (!result.meta.changes) return reply({error: custom ? 'Catatan atau kategori sudah berubah. Muat ulang halaman.' : 'Catatan tidak ditemukan.'}, custom ? 409 : 404);
   return reply({id: id ?? result.meta.last_row_id, kind:'note', title:title.trim(), body, category, updated});
 }
 
@@ -1274,7 +1292,11 @@ async function handleWorkroom(request, env, url) {
   } else if (get('action') === 'complete' && kind === 'task' && id) {
     await db.prepare("UPDATE workroom_entries SET status = 'done' WHERE id = ? AND kind = 'task'").bind(id).run();
   } else if (get('action') === 'delete' && id) {
-    await db.prepare('DELETE FROM workroom_entries WHERE id = ? AND kind = ?').bind(id, kind).run();
+    if (kind === 'note') {
+      await db.prepare("UPDATE workroom_entries SET status = 'trashed' WHERE id = ? AND kind = 'note'").bind(id).run();
+    } else {
+      await db.prepare('DELETE FROM workroom_entries WHERE id = ? AND kind = ?').bind(id, kind).run();
+    }
   } else if (get('action') === 'save') {
     const title = get('title');
     const body = get('body');
@@ -1291,7 +1313,7 @@ async function handleWorkroom(request, env, url) {
 
     const values = [title, body, status, due, priority, project];
     if (id) {
-      await db.prepare('UPDATE workroom_entries SET title = ?, body = ?, status = ?, due = ?, priority = ?, project_id = ? WHERE id = ? AND kind = ?')
+      await db.prepare("UPDATE workroom_entries SET title = ?, body = ?, status = ?, due = ?, priority = ?, project_id = ? WHERE id = ? AND kind = ? AND status <> 'trashed'")
         .bind(...values, id, kind).run();
     } else {
       await db.prepare('INSERT INTO workroom_entries (title, body, status, due, priority, project_id, kind) VALUES (?, ?, ?, ?, ?, ?, ?)')
