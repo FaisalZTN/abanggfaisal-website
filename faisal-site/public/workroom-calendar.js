@@ -1,5 +1,5 @@
-(() => {
-  const root = document.querySelector('.calendar-agenda[data-day]');
+export function mount(panel, signal) {
+  const root = panel.querySelector('.calendar-agenda[data-day]');
   if (!root || root.hasAttribute('data-calendar-full')) return;
 
   const { today, google } = root.dataset;
@@ -142,9 +142,9 @@
 
   window.addEventListener('popstate', () => {
     const day = location.href === initialUrl ? initialDay : new URLSearchParams(location.search).get('day') ?? today;
-    showDay(day);
-  });
+    if (location.pathname === calendarPath) showDay(day);
+  }, { signal });
 
   root.addEventListener('agenda-task-change', () => updateDays(months.get(selected.slice(0, 7))?.calendar));
   showDay(selected);
-})();
+}

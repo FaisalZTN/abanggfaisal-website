@@ -38,7 +38,7 @@ workroom_notes_source = workroom_asset_data('workroom-notes.js').decode('utf-8')
 workroom_notes.write_text(workroom_notes_source, encoding='utf-8')
 workroom_notes_url = asset('workroom-notes.js', workroom_notes_source.encode('utf-8'))
 workroom_source = workroom_source.replace('"/workroom-notes.js"', f'"{workroom_notes_url}"')
-for workroom_asset in ('workroom.css', 'workroom-nav.js', 'workroom-greeting.js', 'workroom-calendar.js', 'workroom-agenda-check.js', 'workroom-review.js', 'workroom-private-notes.js', 'workroom-task-detail.js', 'workroom-quick-check.js', 'workroom-link-options.js', 'workroom-image-upload.js', 'workroom-hero.webp', 'workroom-favicon.svg'):
+for workroom_asset in ('workroom.css', 'workroom-theme.js', 'workroom-nav.js', 'workroom-greeting.js', 'workroom-calendar.js', 'workroom-agenda-check.js', 'workroom-review.js', 'workroom-private-notes.js', 'workroom-task-detail.js', 'workroom-quick-check.js', 'workroom-link-options.js', 'workroom-image-upload.js', 'workroom-hero.webp', 'workroom-favicon.svg'):
     workroom_source = workroom_source.replace(
         f'"/{workroom_asset}"', f'"{asset(workroom_asset, workroom_asset_data(workroom_asset))}"'
     )

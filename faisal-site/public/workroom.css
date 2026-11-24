@@ -815,3 +815,59 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   background: var(--green);
   color: var(--ink);
 }
+
+:root[data-workroom-theme="midnight"] {
+  --paper: #090b13;
+  --card: #141824;
+  --ink: #f2f4fb;
+  --muted: #b7bed0;
+  --line: #353d52;
+  --green: #42407f;
+  --selected: #252842;
+  --accent: #a6a1ff;
+}
+
+:root[data-workroom-theme="light"] {
+  color-scheme: light;
+  --paper: #f7f8fc;
+  --card: #fff;
+  --ink: #192439;
+  --muted: #4c5d76;
+  --line: #b9c6da;
+  --green: #dbe7ff;
+  --selected: #e8effc;
+  --accent: #2359b5;
+}
+
+:root[data-workroom-theme="light"] button { color: var(--ink); }
+.today-panel { background: linear-gradient(115deg, var(--selected), var(--card)); }
+.workroom-themes { margin: 0; min-inline-size: 0; }
+.workroom-themes legend { padding-inline: .5rem; font-weight: 650; }
+.workroom-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: .75rem;
+}
+.workroom-theme-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: .4rem;
+  padding: .7rem;
+  border: 1px solid var(--line);
+  border-radius: .75rem;
+  cursor: pointer;
+}
+.workroom-theme-option:has(:checked) { border-color: var(--accent); background: var(--selected); }
+.workroom-theme-option:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.workroom-theme-option input { margin: 0; accent-color: var(--accent); }
+.workroom-theme-swatch {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  height: 2.5rem;
+  border: 1px solid var(--line);
+  border-radius: .45rem;
+  background: linear-gradient(115deg, #020d2f, #0841c9);
+}
+[data-preview="midnight"] .workroom-theme-swatch { background: linear-gradient(115deg, #090b13, #42407f); }
+[data-preview="light"] .workroom-theme-swatch { background: linear-gradient(115deg, #fff, #dbe7ff); }

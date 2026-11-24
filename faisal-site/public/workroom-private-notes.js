@@ -1,5 +1,5 @@
-(() => {
-  const content = document.querySelector('[data-private-notes-expires]');
+export function mount(panel, signal) {
+  const content = panel.querySelector('[data-private-notes-expires]');
   if (!content) return;
   const expires = Number(content.dataset.privateNotesExpires) * 1000;
 
@@ -11,9 +11,22 @@
     content.append(link);
   }
 
-  setTimeout(removeContent, Math.max(0, expires - Date.now()));
+  const timer = setTimeout(removeContent, Math.max(0, expires - Date.now()));
   document.addEventListener('visibilitychange', () => {
     if (Date.now() >= expires) removeContent();
-  });
-  window.addEventListener('pagehide', removeContent);
-})();
+  }, { signal });
+  window.addEventListener('pagehide', removeContent, { signal });
+  signal.addEventListener('abort', () => {
+    clearTimeout(timer);
+    removeContent();
+  }, { once: true });
+  let dirty = false;
+  content.addEventListener('input', () => { dirty = true; }, { signal });
+  content.addEventListener('submit', () => { dirty = false; }, { signal });
+  window.addEventListener('beforeunload', event => {
+    if (!dirty || Date.now() >= expires) return;
+    event.preventDefault();
+    event.returnValue = '';
+  }, { signal });
+  return () => dirty && Date.now() < expires;
+}

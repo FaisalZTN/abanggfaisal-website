@@ -16,6 +16,7 @@ const workroomPages = {
   note: { path: WORKROOM + 'notes/', title: 'Catatan', icon: 'file-text' },
   project: { path: WORKROOM + 'projects/', title: 'Proyek', icon: 'folder' },
   goal: { path: WORKROOM + 'goals/', title: 'Goals', icon: 'target' },
+  settings: { path: WORKROOM + 'settings/', title: 'Pengaturan', icon: 'settings' },
   review: { path: WORKROOM + 'review/', title: 'Review', icon: 'book-open' },
 };
 const privateHeaders = {
@@ -43,7 +44,7 @@ function taskCheckboxIcons() {
 function workroomDocument(content, page) {
   const wordmark = '<a class="workroom-wordmark" href="/">Faysaruworks.</a>';
   const currentPage = page === 'privateNotes' ? 'note' : page;
-  const secondaryPages = ['project', 'goal', 'review'];
+  const secondaryPages = ['project', 'goal', 'review', 'settings'];
   const sidebarLink = ([key, { path, title, icon }], extra = false) => {
     const secondary = secondaryPages.includes(key);
     return `<a href="${key === 'home' ? workroomOverviewUrl : path}" aria-label="${title}"${currentPage === key ? ' aria-current="page"' : ''}${secondary && !extra ? ' class="workroom-nav-secondary"' : ''}>
@@ -66,14 +67,14 @@ function workroomDocument(content, page) {
   </nav><script src="/workroom-nav.js" defer></script>` : '';
   return `<!doctype html><html lang="id"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${page && page !== 'home' ? workroomPages[page].title + ' · ' : ''}Workroom · Faysaruworks.</title><link rel="icon" type="image/svg+xml" href="/workroom-favicon.svg"><link rel="stylesheet" href="/workroom.css"></head>
+    <script src="/workroom-theme.js"></script><title>${page && page !== 'home' ? workroomPages[page].title + ' · ' : ''}Workroom · Faysaruworks.</title><link rel="icon" type="image/svg+xml" href="/workroom-favicon.svg"><link rel="stylesheet" href="/workroom.css"></head>
     <body${page ? ' class="workroom-layout"' : ''}>${sidebar}
-    ${page === 'home' || page === 'today' ? '<script src="/workroom-agenda-check.js" defer></script>' : ''}
+    ${page === 'home' || page === 'today' ? '<script type="application/workroom-module" data-src="/workroom-agenda-check.js"></script>' : ''}
     <header class="workroom-header">
       ${wordmark}
       <nav aria-label="Navigasi situs"><a href="/">Menu Utama</a><a href="/ruang-belajar/">Ruang Belajar</a></nav>
     </header>
-    <main${['task', 'note', 'review'].includes(page) ? ` data-workroom-panel="${page}"` : ''}>${page === 'note' ? `<div class="notes-private-entry">
+    <main${page ? ` data-workroom-panel="${page}"` : ''}>${page === 'note' ? `<div class="notes-private-entry">
       <a href="${workroomPages.privateNotes.path}">${workroomIcon('lock')}Catatan Rahasia</a>
     </div>` : ''}${content}</main>
     ${page === 'task' || page === 'note' ? '<script type="application/workroom-module" data-src="/workroom-link-options.js"></script>' : ''}
@@ -898,7 +899,7 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
             <h2 data-workroom-greeting data-morning="${greetings.morning}" data-afternoon="${greetings.afternoon}" data-night="${greetings.night}">${greetings[period]}</h2>
             <p class="workroom-greeting-copy">Sudah siap ngopi, nugas, dan belajar?</p>
           </div></div>
-          <script src="/workroom-greeting.js" defer></script>
+          <script type="application/workroom-module" data-src="/workroom-greeting.js"></script>
           <form class="capture" method="post" action="${WORKROOM}">
             <input type="hidden" name="action" value="save"><input type="hidden" name="priority" value="normal">
             <select aria-label="Jenis entri" name="kind"><option value="task">Tugas</option><option value="note">Catatan</option></select>
@@ -915,7 +916,7 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
         <div class="collection calendar-agenda" id="agenda" data-day="${day}" data-today="${today}" data-google="${showGoogle}"${fullCalendar ? ' data-calendar-full' : ''}>
           ${workroomCalendar(day, tasks, today, google.entries, fullCalendar)}
           <template id="calendar-tasks">${tasks.filter(entry => !isDue(entry)).map(entry => workroomDueTask(entry, today)).join('')}</template>
-          <script src="/workroom-calendar.js" defer></script>
+          <script type="application/workroom-module" data-src="/workroom-calendar.js"></script>
           <section class="agenda" aria-label="Agenda tanggal terpilih">
             <div class="agenda-heading">
               <h2>${new Date(day + 'T12:00:00Z').toLocaleDateString('id-ID', {day:'numeric', month:'long', timeZone:'UTC'})}</h2>
@@ -1242,7 +1243,7 @@ async function workroomPrivateNotes(request, url, env) {
         </form>
       </section>
     </div>
-  </div><script src="/workroom-private-notes.js" defer></script>`);
+  </div><script type="application/workroom-module" data-src="/workroom-private-notes.js"></script>`);
 }
 
 async function handleWorkroom(request, env, url) {
@@ -1268,6 +1269,24 @@ async function handleWorkroom(request, env, url) {
   if (request.method !== 'GET' && request.method !== 'POST') return workroomPage('<h1>Metode tidak didukung</h1>', 405);
 
   if (page === 'privateNotes') return workroomPrivateNotes(request, url, env);
+
+  if (page === 'settings') {
+    if (request.method !== 'GET') return workroomPage('<h1>Metode tidak didukung</h1>', 405);
+    return workroomPage(`<div class="dashboard-content">
+      <h1>Pengaturan</h1>
+      <fieldset class="collection workroom-themes">
+        <legend>Tema aplikasi</legend>
+        <div class="workroom-theme-grid">
+          ${[['midnight', 'Midnight'], ['blue', 'Biru'], ['light', 'Terang']].map(([theme, title]) => `
+            <label class="workroom-theme-option" data-preview="${theme}">
+              <input type="radio" name="workroom-theme" value="${theme}"${theme === 'blue' ? ' checked' : ''}>
+              <span class="workroom-theme-swatch" aria-hidden="true"></span>
+              <span>${title}</span>
+            </label>`).join('')}
+        </div>
+      </fieldset>
+    </div>`, 200, page);
+  }
 
   if (page === 'home' && request.method === 'GET' && url.searchParams.has('calendar-data')) {
     const day = url.searchParams.get('calendar-data');
