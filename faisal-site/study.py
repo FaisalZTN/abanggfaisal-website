@@ -138,6 +138,7 @@ def build_study(root, output, write, head, escape, render_article, preview=False
             'block': blocks[block_id]['title'],
             'url': block_path(block_id) + '#' + item['id'],
         })
+    output.mkdir(parents=True, exist_ok=True)
     (output / 'study-schedule.json').write_text(
         json.dumps(schedule, ensure_ascii=False, separators=(',', ':')), encoding='utf-8',
     )
