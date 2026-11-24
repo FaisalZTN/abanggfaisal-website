@@ -801,3 +801,6 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .category-head [data-delete-category] { display: grid; place-items: center; flex: 0 0 44px; width: 44px; padding: 0; }
 
 .category-head:has([data-delete-category]) { flex-wrap: wrap; }
+
+.workroom-loading:has(+ .workroom-loaded) { display: none; }
+.workroom-loaded { display: contents; }

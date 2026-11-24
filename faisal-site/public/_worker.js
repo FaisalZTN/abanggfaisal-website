@@ -40,7 +40,7 @@ function taskCheckboxIcons() {
   return workroomIcon('square', 'ui-icon check-empty') + workroomIcon('checkbox', 'ui-icon check-marked');
 }
 
-function workroomPage(content, status = 200, page = null) {
+function workroomDocument(content, page) {
   const wordmark = '<a class="workroom-wordmark" href="/">Faysaruworks.</a>';
   const currentPage = page === 'privateNotes' ? 'note' : page;
   const secondaryPages = ['project', 'goal', 'review'];
@@ -64,7 +64,7 @@ function workroomPage(content, status = 200, page = null) {
       </div>
     </details>
   </nav><script src="/workroom-nav.js" defer></script>` : '';
-  return new Response(`<!doctype html><html lang="id"><head><meta charset="utf-8">
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${page && page !== 'home' ? workroomPages[page].title + ' · ' : ''}Workroom · Faysaruworks.</title><link rel="icon" type="image/svg+xml" href="/workroom-favicon.svg"><link rel="stylesheet" href="/workroom.css"></head>
     <body${page ? ' class="workroom-layout"' : ''}>${sidebar}
@@ -82,7 +82,33 @@ function workroomPage(content, status = 200, page = null) {
       <span role="img" class="workroom-logo googlecalendar" aria-label="Terintegrasi dengan Google Calendar" title="Terintegrasi dengan Google Calendar"><svg aria-hidden="true" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Google Calendar</title><path d="M18.316 5.684H24v12.632h-5.684V5.684zM5.684 24h12.632v-5.684H5.684V24zM18.316 5.684V0H1.895A1.894 1.894 0 0 0 0 1.895v16.421h5.684V5.684h12.632zm-7.207 6.25v-.065c.272-.144.5-.349.687-.617s.279-.595.279-.982c0-.379-.099-.72-.3-1.025a2.05 2.05 0 0 0-.832-.714 2.703 2.703 0 0 0-1.197-.257c-.6 0-1.094.156-1.481.467-.386.311-.65.671-.793 1.078l1.085.452c.086-.249.224-.461.413-.633.189-.172.445-.257.767-.257.33 0 .602.088.816.264a.86.86 0 0 1 .322.703c0 .33-.12.589-.36.778-.24.19-.535.284-.886.284h-.567v1.085h.633c.407 0 .748.109 1.02.327.272.218.407.499.407.843 0 .336-.129.614-.387.832s-.565.327-.924.327c-.351 0-.651-.103-.897-.311-.248-.208-.422-.502-.521-.881l-1.096.452c.178.616.505 1.082.977 1.401.472.319.984.478 1.538.477a2.84 2.84 0 0 0 1.293-.291c.382-.193.684-.458.902-.794.218-.336.327-.72.327-1.149 0-.429-.115-.797-.344-1.105a2.067 2.067 0 0 0-.881-.689zm2.093-1.931l.602.913L15 10.045v5.744h1.187V8.446h-.827l-2.158 1.557zM22.105 0h-3.289v5.184H24V1.895A1.894 1.894 0 0 0 22.105 0zm-3.289 23.5l4.684-4.684h-4.684V23.5zM0 22.105C0 23.152.848 24 1.895 24h3.289v-5.184H0v3.289z"/></svg></span>
       <span role="img" class="workroom-logo github" aria-label="Kode dikelola di GitHub" title="Kode dikelola di GitHub"><svg aria-hidden="true" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>GitHub</title><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></span>
       <span role="img" class="workroom-logo cloudflare" aria-label="Dihosting di Cloudflare" title="Dihosting di Cloudflare"><svg aria-hidden="true" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Cloudflare</title><path d="M16.5088 16.8447c.1475-.5068.0908-.9707-.1553-1.3154-.2246-.3164-.6045-.499-1.0615-.5205l-8.6592-.1123a.1559.1559 0 0 1-.1333-.0713c-.0283-.042-.0351-.0986-.021-.1553.0278-.084.1123-.1484.2036-.1562l8.7359-.1123c1.0351-.0489 2.1601-.8868 2.5537-1.9136l.499-1.3013c.0215-.0561.0293-.1128.0147-.168-.5625-2.5463-2.835-4.4453-5.5499-4.4453-2.5039 0-4.6284 1.6177-5.3876 3.8614-.4927-.3658-1.1187-.5625-1.794-.499-1.2026.119-2.1665 1.083-2.2861 2.2856-.0283.31-.0069.6128.0635.894C1.5683 13.171 0 14.7754 0 16.752c0 .1748.0142.3515.0352.5273.0141.083.0844.1475.1689.1475h15.9814c.0909 0 .1758-.0645.2032-.1553l.12-.4268zm2.7568-5.5634c-.0771 0-.1611 0-.2383.0112-.0566 0-.1054.0415-.127.0976l-.3378 1.1744c-.1475.5068-.0918.9707.1543 1.3164.2256.3164.6055.498 1.0625.5195l1.8437.1133c.0557 0 .1055.0263.1329.0703.0283.043.0351.1074.0214.1562-.0283.084-.1132.1485-.204.1553l-1.921.1123c-1.041.0488-2.1582.8867-2.5527 1.914l-.1406.3585c-.0283.0713.0215.1416.0986.1416h6.5977c.0771 0 .1474-.0489.169-.126.1122-.4082.1757-.837.1757-1.2803 0-2.6025-2.125-4.727-4.7344-4.727"/></svg></span>
-    </footer>` : ''}</body></html>`, { status, headers: privateHeaders });
+    </footer>` : ''}</body></html>`;
+}
+
+function workroomPage(content, status = 200, page = null) {
+  return new Response(workroomDocument(content, page), { status, headers: privateHeaders });
+}
+
+function streamWorkroomPage(page, render) {
+  const marker = '<!--workroom-content-->';
+  const [before, after] = workroomDocument(marker, page).split(marker);
+  const encoder = new TextEncoder();
+  const body = new ReadableStream({
+    async start(controller) {
+      controller.enqueue(encoder.encode(before + `<div class="dashboard-content workroom-loading" role="status">
+        <h1>${workroomPages[page].title}</h1><p>Memuat…</p>
+      </div>`));
+      let content;
+      try {
+        content = await render();
+      } catch {
+        content = '<div class="dashboard-content"><p role="alert">Halaman sedang tidak tersedia. <a href="">Muat ulang</a></p></div>';
+      }
+      controller.enqueue(encoder.encode(`<div class="workroom-loaded">${content}</div>` + after));
+      controller.close();
+    },
+  });
+  return new Response(body, { headers: privateHeaders });
 }
 
 function decodeAccessPart(part) {
@@ -552,7 +578,7 @@ function reviewActivity(db, start, end) {
     .bind(fromSeconds, toSeconds).all();
 }
 
-async function renderWorkroomReview(db, url, env) {
+async function renderWorkroomReview(db, url, env, renderPage = workroomPage) {
   const e = escapeWorkroom;
   const today = workroomDay.format(new Date());
   const period = reviewPeriod(url.searchParams, today);
@@ -606,7 +632,7 @@ async function renderWorkroomReview(db, url, env) {
   const href = (length, date, filter = source) => workroomPages.review.path + '?' + e(new URLSearchParams({period: length, day: date, source: filter}));
   const length = monthly ? 'month' : 'week';
   const periodLabel = monthly ? 'Bulan' : 'Minggu';
-  return workroomPage(`<div class="dashboard-content workroom-review">
+  return renderPage(`<div class="dashboard-content workroom-review">
     <div class="review-heading">
       <div><h1>Review ${monthly ? 'bulanan' : 'mingguan'}</h1><p>${label(start)} – ${label(last)} · WITA</p></div>
       <nav class="review-controls" aria-label="Jenis periode">
@@ -790,7 +816,7 @@ async function workroomToday(request, url, env) {
   </div>`, 200, 'today');
 }
 
-async function renderWorkroom(db, page, url, env) {
+async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
   const e = escapeWorkroom;
   const params = url.searchParams;
   const edit = params.get('edit');
@@ -840,7 +866,7 @@ async function renderWorkroom(db, page, url, env) {
     </section>`;
   };
   if (page !== 'home') {
-    return workroomPage(`<div class="dashboard-content"><h1>${workroomPages[page].title}</h1>
+    return renderPage(`<div class="dashboard-content"><h1>${workroomPages[page].title}</h1>
       ${notice}${collection(page)}${page === 'task' ? workroomWorkspace(entries, params) + '<script src="/workroom-task-detail.js" defer></script><script src="/workroom-quick-check.js" defer></script>' : ''}</div>`, 200, page);
   }
 
@@ -1254,7 +1280,7 @@ async function handleWorkroom(request, env, url) {
   }
 
   const db = env.WORKROOM_DB;
-  await db.prepare(`CREATE TABLE IF NOT EXISTS workroom_entries (
+  const ensureEntries = () => db.prepare(`CREATE TABLE IF NOT EXISTS workroom_entries (
     id INTEGER PRIMARY KEY,
     kind TEXT NOT NULL,
     title TEXT NOT NULL,
@@ -1267,6 +1293,23 @@ async function handleWorkroom(request, env, url) {
     note_updated INTEGER,
     note_pinned INTEGER NOT NULL DEFAULT 0
   )`).run();
+  const renderNotes = async () => {
+    await ensureWorkroomNotes(db);
+    const notes = escapeWorkroom(JSON.stringify(await readWorkroomNotes(db)));
+    return `<div id="view" aria-busy="true">Memuat catatan…</div><p id="note-status" role="status"></p><div hidden id="workroom-notes-data">${notes}</div><noscript>Aktifkan JavaScript untuk membuka editor. <a href="?basic">Buka daftar catatan dasar</a></noscript><script type="module" src="/workroom-notes.js"></script>`;
+  };
+  if (request.method === 'GET' && !url.search && ['task', 'note', 'review'].includes(page)) {
+    return streamWorkroomPage(page, async () => {
+      await ensureEntries();
+      if (page === 'note') return renderNotes();
+      if (page === 'review') {
+        await ensureWorkroomActivity(db);
+        return renderWorkroomReview(db, url, env, content => content);
+      }
+      return renderWorkroom(db, page, url, env, content => content);
+    });
+  }
+  await ensureEntries();
   if (page === 'home' && request.method === 'GET' && !url.search) {
     return workroomRedirect(url, workroomPages.today.path);
   }
@@ -1282,9 +1325,7 @@ async function handleWorkroom(request, env, url) {
       return workroomRedirect(url, workroomPages.note.path + url.search);
     }
     if (page === 'note' && !url.searchParams.has('basic')) {
-      await ensureWorkroomNotes(db);
-      const notes = escapeWorkroom(JSON.stringify(await readWorkroomNotes(db)));
-      return workroomPage(`<div id="view" aria-busy="true">Memuat catatan…</div><p id="note-status" role="status"></p><div hidden id="workroom-notes-data">${notes}</div><noscript>Aktifkan JavaScript untuk membuka editor. <a href="?basic">Buka daftar catatan dasar</a></noscript><script type="module" src="/workroom-notes.js"></script>`, 200, page);
+      return workroomPage(await renderNotes(), 200, page);
     }
     return renderWorkroom(db, page, url, env);
   }
