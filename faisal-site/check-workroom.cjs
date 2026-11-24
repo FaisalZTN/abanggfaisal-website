@@ -5,7 +5,10 @@ module.exports = async function checkWorkroom(browser, origin) {
   const db = new DatabaseSync(':memory:');
   const adapt = (sql, values = []) => ({
     bind: (...args) => adapt(sql,args),
-    run: async () => db.prepare(sql).run(...values),
+    run: async () => {
+      const { changes, lastInsertRowid } = db.prepare(sql).run(...values);
+      return { meta: { changes: Number(changes), last_row_id: Number(lastInsertRowid) } };
+    },
     all: async () => ({results:db.prepare(sql).all(...values)}),
     first: async () => db.prepare(sql).get(...values),
   });
