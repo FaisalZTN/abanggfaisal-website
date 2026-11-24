@@ -328,7 +328,7 @@ async function checkPageTransition(browser) {
     await page.getByRole('link', { name: 'Jelajahi Journal', exact: false }).first().tap();
     await page.waitForURL('**/journal/');
     await page.waitForFunction(() => document.documentElement.hasAttribute('data-page-cover-duration'));
-    assert.equal(await page.locator('html').getAttribute('data-page-cover-duration'), '1150');
+    assert.equal(await page.locator('html').getAttribute('data-page-cover-duration'), '160');
     assert.ok(await page.evaluate(() => window.originalHeader === document.querySelector('header')));
 
     await page.goBack();

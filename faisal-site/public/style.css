@@ -845,24 +845,24 @@ body > header {
     z-index: 1;
     overflow: hidden;
     border-radius: 1.5rem;
-    animation-duration: .48s;
+    animation-duration: 160ms;
     animation-timing-function: cubic-bezier(.22, 1, .36, 1);
   }
   ::view-transition-old(active-destination),
   ::view-transition-new(active-destination) {
     height: 100%;
     object-fit: none;
-    animation-duration: .24s;
+    animation-duration: 120ms;
   }
 
-  ::view-transition-group(root) { animation-duration: 1.15s; }
-  ::view-transition-old(root) { animation: none; }
+  ::view-transition-group(root) { animation-duration: 160ms; }
+  ::view-transition-old(root) { display: none; }
   ::view-transition-new(root) {
     mix-blend-mode: normal;
-    animation: page-cover 1.15s cubic-bezier(.22, 1, .36, 1) both;
+    animation: page-cover 160ms cubic-bezier(.22, 1, .36, 1) both;
   }
   @keyframes page-cover {
-    from { opacity: 0; }
+    from { opacity: .85; }
     to { opacity: 1; }
   }
 }
