@@ -1,4 +1,4 @@
-import json, html, pathlib, shutil, os, re, hashlib
+import json, html, pathlib, shutil, os, re, hashlib, subprocess
 from urllib.parse import urlparse
 from build_deps import ensure
 ensure()
@@ -26,15 +26,25 @@ def workroom_asset_data(name):
 
 workroom_worker = D / '_worker.js'
 workroom_source = workroom_worker.read_text(encoding='utf-8').replace('/gentleface-icons.svg', gentleface_url)
+# Bundle the editor only for the Notes panel. Keep the existing Pages build command.
+editor_lock = hashlib.sha256((P / 'package-lock.json').read_bytes()).hexdigest()
+editor_stamp = P / 'node_modules/.workroom-editor-lock'
+editor_bundler = P / 'node_modules/.bin/esbuild'
+if not editor_bundler.exists() or not editor_stamp.exists() or editor_stamp.read_text() != editor_lock:
+    subprocess.run(['npm', 'ci', '--no-audit', '--no-fund'], cwd=P, check=True)
+    editor_stamp.write_text(editor_lock)
+editor_bundle = subprocess.check_output([str(editor_bundler), 'workroom-block-editor.js', '--bundle', '--format=esm', '--minify'], cwd=P)
+editor_url = asset('workroom-block-editor.js', editor_bundle)
 workroom_note_format = asset('workroom-note-format.js')
 workroom_source = workroom_source.replace(
-    "import { notePreview } from './workroom-note-format.js';",
+    "import { notePreview, readBlockNote, noteBodyText } from './workroom-note-format.js';",
     (P / 'public/workroom-note-format.js').read_text(encoding='utf-8').replace('export function ', 'function '),
 )
 workroom_notes = D / 'workroom-notes.js'
 workroom_notes_source = workroom_asset_data('workroom-notes.js').decode('utf-8').replace(
     "'./workroom-note-format.js'", f"'.{workroom_note_format}'"
 )
+workroom_notes_source = workroom_notes_source.replace('/workroom-block-editor.js', editor_url)
 workroom_notes.write_text(workroom_notes_source, encoding='utf-8')
 workroom_notes_url = asset('workroom-notes.js', workroom_notes_source.encode('utf-8'))
 workroom_source = workroom_source.replace('"/workroom-notes.js"', f'"{workroom_notes_url}"')

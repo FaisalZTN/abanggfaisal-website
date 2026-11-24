@@ -35,7 +35,7 @@ class ContentTests(unittest.TestCase):
    with self.assertRaises(ValueError):normalize(x,'products')
  def test_build_fixtures(self):
   with tempfile.TemporaryDirectory() as tmp:
-   root=pathlib.Path(tmp)/'site';shutil.copytree(P,root,ignore=shutil.ignore_patterns('dist','__pycache__','.openai','.build-deps'))
+   root=pathlib.Path(tmp)/'site';shutil.copytree(P,root,ignore=shutil.ignore_patterns('dist','__pycache__','.openai','.build-deps','node_modules'))
    x=self.article();x.update(id='qa-article',article='## Section\n\nA **test**.',seo_title='SEO override',seo_description='SEO description',date='2026-10-30')
    (root/'content/journal/qa-article.json').write_text(json.dumps(x))
    p=self.product();p.update(id='qa-product',availability='available',checkout='https://example.com/pay',price=0)

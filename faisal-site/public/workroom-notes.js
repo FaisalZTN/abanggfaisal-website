@@ -1,4 +1,5 @@
-import { noteInline, noteLines, notePreview } from './workroom-note-format.js';
+import { noteInline, noteLines, notePreview, readBlockNote, blockNoteBody } from './workroom-note-format.js';
+import { mountBlockEditor } from '/workroom-block-editor.js';
 
 export function mount(panel, signal) {
   const el = id => panel.querySelector('#' + id);
@@ -11,108 +12,43 @@ export function mount(panel, signal) {
   const clock = new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Makassar',dateStyle:'short',timeStyle:'short'});
   const noteTime = item => item.updated ? clock.format(new Date(item.updated)) : '';
   let fromTime='', toTime='';
-  let editorRange;
+  let blockEditor;
 
-  function checklistItem(text, checked = false) {
-    return `<div class="note-check"><input type="checkbox" aria-label="Tandai selesai" contenteditable="false"${checked ? ' checked' : ''}><span>${text || '<br>'}</span></div>`;
-  }
-
-  function formatNote(body) {
-    return noteLines(body).map(line => {
-      const check = line.match(/^- \[([ xX])\] (.*)$/);
-      if (check) return checklistItem(noteInline(check[2]), check[1] !== ' ');
+  function legacyContent(body) {
+    const html = noteLines(body).map(line => {
+      const task = /^- \[([ xX])\] (.*)$/.exec(line);
+      if (task) return `<ul data-type="taskList"><li data-type="taskItem" data-checked="${task[1] !== ' '}"><p>${noteInline(task[2])}</p></li></ul>`;
       const heading = /^(#{1,6}) (.*)$/.exec(line);
       if (heading) return `<h${heading[1].length}>${noteInline(heading[2])}</h${heading[1].length}>`;
-      if (line.startsWith('- ')) return `<ul><li>${noteInline(line.slice(2))}</li></ul>`;
-      return `<div>${noteInline(line) || '<br>'}</div>`;
-    }).join('').replaceAll('</ul><ul>', '');
-  }
-
-  function serializeNote(editor) {
-    const markers = {B:'**', STRONG:'**', I:'*', EM:'*', SUP:'^', SUB:'~'};
-    function read(node) {
-      if (node.nodeType === Node.TEXT_NODE) return node.textContent.replaceAll('\u00a0', ' ');
-      if (node.nodeType !== Node.ELEMENT_NODE) return '';
-      const tag = node.tagName;
-      const children = [...node.childNodes].map(read).join('');
-      if (node.classList.contains('note-check')) {
-        const box = node.querySelector('input');
-        return '\n- [' + (box?.checked ? 'x' : ' ') + '] ' + children.trimEnd() + '\n';
-      }
-      if (Object.hasOwn(markers, tag)) return children ? markers[tag] + children + markers[tag] : '';
-      if (tag === 'A' && node.hasAttribute('data-note-autolink')) return children;
-      if (tag === 'IMG' || tag === 'A') {
-        const url = node.getAttribute(tag === 'IMG' ? 'src' : 'href');
-        const label = (tag === 'IMG' ? node.alt : node.textContent).replace(/[\[\]\n]/g, '');
-        if (/^https:\/\/[^\s]+$/.test(url || '')) {
-          return (tag === 'IMG' ? '!' : '') + '[' + label + '](' + url.replaceAll(')', '%29') + ')';
-        }
-      }
-      if (/^H[1-6]$/.test(tag)) return '\n' + '#'.repeat(Number(tag[1])) + ' ' + children.trimEnd() + '\n';
-      if (tag === 'U') return '<u>' + children + '</u>';
-      if (tag === 'FONT') {
-        const color = node.getAttribute('color'), size = node.getAttribute('size');
-        let result = children;
-        if (/^#[a-f0-9]{6}$/i.test(color)) result = '<font color="' + color + '">' + result + '</font>';
-        if (/^[1-7]$/.test(size)) result = '<font size="' + size + '">' + result + '</font>';
-        return result;
-      }
-      if (tag === 'LI') return '\n- ' + children.trimEnd() + '\n';
-      if (tag === 'BR') return node.parentNode.childNodes.length === 1 ? '' : '\n';
-      if (tag === 'DIV' || tag === 'P') return children.endsWith('\n') ? children : children + '\n';
-      return children;
-    }
-    return [...editor.childNodes].map(read).join('').replace(/\n(?=\n(?:## |- ))/g, '').replace(/^\n|\n$/g, '');
+      if (line.startsWith('- ')) return `<ul><li><p>${noteInline(line.slice(2))}</p></li></ul>`;
+      return `<p>${noteInline(line)}</p>`;
+    }).join('');
+    return html.replace(/<font (color|size)="([^"]+)">/g, (_, type, value) => {
+      const px = [0, 10, 13, 16, 18, 24, 32, 48];
+      return `<span style="${type === 'color' ? 'color:' + value : 'font-size:' + px[Number(value)] + 'px'}">`;
+    }).replaceAll('</font>', '</span>');
   }
 
   const toolbar = [
-    ['heading', 'Judul bagian', 'heading'], ['bold', 'Tebal', 'bold'], ['italic', 'Miring', 'italic'],
-    ['sup', 'Superskrip', 'superscript'], ['sub', 'Subskrip', 'subscript'], ['list', 'Daftar', 'list'],
-    ['check', 'Checklist', 'checklist'], ['link', 'Sisipkan tautan', 'link'], ['image', 'Sisipkan gambar', 'image'],
+    ['blocks', 'Tambah blok', 'plus'], ['bold', 'Tebal', 'bold'], ['italic', 'Miring', 'italic'],
+    ['underline', 'Garis bawah', 'underline'], ['sup', 'Superskrip', 'superscript'],
+    ['sub', 'Subskrip', 'subscript'], ['link', 'Sisipkan tautan', 'link'],
   ];
 
-  function focusEditor(editor) {
-    editor.focus();
-    if (editorRange && editor.contains(editorRange.commonAncestorContainer)) {
-      const selection = getSelection();
-      selection.removeAllRanges();
-      selection.addRange(editorRange);
-    }
-  }
-
-  function editFormat(mark, editor) {
-    focusEditor(editor);
-    const commands = {heading:'formatBlock', bold:'bold', italic:'italic', sup:'superscript', sub:'subscript', list:'insertUnorderedList'};
-    if (Object.hasOwn(commands, mark)) {
-      document.execCommand(commands[mark], false, mark === 'heading' ? (document.queryCommandValue('formatBlock') === 'h2' ? 'div' : 'h2') : null);
-    } else if (mark === 'check') {
-      const selection = getSelection();
-      const current = selection.anchorNode?.parentElement?.closest('.note-check');
-      if (current) return;
-      const item = checklistItem(escape(selection.toString())).replace('<span>', '<span data-new-check>');
-      document.execCommand('insertHTML', false, item + '<div><br></div>');
-      const label = editor.querySelector('[data-new-check]');
-      if (label) {
-        label.removeAttribute('data-new-check');
-        selection.collapse(label, label.textContent ? label.childNodes.length : 0);
-      }
+  function editFormat(mark) {
+    if (!blockEditor) return;
+    if (mark === 'blocks') return blockEditor.showBlocks();
+    const chain = blockEditor.editor.chain().focus();
+    const commands = { bold: 'toggleBold', italic: 'toggleItalic', underline: 'toggleUnderline',
+      sup: 'toggleSuperscript', sub: 'toggleSubscript' };
+    if (Object.hasOwn(commands, mark)) return chain[commands[mark]]().run();
+    const href = prompt('URL tautan (HTTPS)')?.trim();
+    if (!href || !/^https:\/\/[^\s]+$/i.test(href)) return;
+    if (blockEditor.editor.state.selection.empty) {
+      chain.insertContent({ type: 'text', text: href, marks: [{ type: 'link', attrs: { href } }] }).run();
     } else {
-      const image = mark === 'image';
-      const raw = prompt(image ? 'URL gambar (HTTPS)' : 'URL tautan (HTTPS)');
-      if (!raw) return;
-      let url;
-      try { url = new URL(raw); if (url.protocol !== 'https:') throw Error(); }
-      catch { message('Masukkan URL HTTPS yang valid.'); return; }
-      const selected = getSelection().toString();
-      const label = image ? selected : prompt('Nama tautan (opsional)', selected);
-      if (label === null) return;
-      focusEditor(editor);
-      const href = escape(url.href);
-      document.execCommand('insertHTML', false, image
-        ? `<img src="${href}" alt="${escape(selected || 'Gambar')}" referrerpolicy="no-referrer">`
-        : `<a href="${href}" rel="noopener noreferrer">${escape(label || selected || url.href)}</a>`);
+      chain.setLink({ href }).run();
     }
-    editor.dispatchEvent(new Event('input', {bubbles:true}));
   }
 
   let noteCategory='all', noteQuery='', noteEditing=false, activeNote;
@@ -160,7 +96,6 @@ export function mount(panel, signal) {
     const options = Object.entries(noteCategories).filter(([key]) => key !== 'all');
     const deleteCategory = !['all', 'none'].includes(noteCategory) && Object.hasOwn(noteCategories, noteCategory)
       ? `<button type="button" data-delete-category aria-label="Hapus kategori" title="Hapus kategori">${noteActionIcon('trash')}</button>` : '';
-    editorRange = undefined;
     const trashPanel = `<details class="note-trash"${trashOpen ? ' open' : ''}>
       <summary>${noteActionIcon('trash')} Sampah <small>${trash.length + archivedCategories.length}</small></summary>
       ${trash.length ? '<ul>' + trash.map(note => `<li><span>${escape(note.title)}</span>
@@ -169,6 +104,8 @@ export function mount(panel, signal) {
         <button type="button" data-restore-category="${escape(category.id)}">Pulihkan</button></li>`).join('') + '</ul>' : ''}
       ${trash.length || archivedCategories.length ? '' : '<p>Sampah kosong.</p>'}
     </details>`;
+    blockEditor?.destroy();
+    blockEditor = undefined;
     el('view').innerHTML = `<div class="notes-head"><h1>Catatan</h1><div class="notes-head-actions"><a class="notes-private-link" href="/workroom/private-notes/" aria-label="Catatan Rahasia">${noteActionIcon('lock')}<span>Catatan Rahasia</span></a><button class="primary" data-new-note>${noteActionIcon('plus')}<span>Catatan baru</span></button></div></div>
       <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
         <section class="note-categories" aria-label="Kategori"><div class="category-head"><h2>Kategori</h2><div class="category-head-actions"><button type="button" id="add-category" aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('plus')}</button>${deleteCategory}</div></div>${Object.entries(noteCategories).map(([key, label]) =>
@@ -185,14 +122,27 @@ export function mount(panel, signal) {
           <input id="edit-title" placeholder="Catatan baru" aria-label="Judul catatan" maxlength="160" value="${escape(note.title)}">
           <div class="note-toolbar" role="group" aria-label="Format catatan">${toolbar.map(([mark, label, icon]) =>
             `<button data-mark="${mark}" aria-label="${label}" title="${label}">${noteActionIcon(icon)}</button>`).join('')}
+            <input type="color" id="note-text-color" aria-label="Warna teks" title="Warna teks" value="#1d97f1">
+            <select id="note-text-size" aria-label="Ukuran teks">
+              <option value="">Ukuran teks</option>
+              ${[10, 13, 16, 18, 24, 32, 48].map(px => `<option value="${px}px">${px} px</option>`).join('')}
+            </select>
             <input type="date" id="insert-date" aria-label="Sisipkan tanggal" title="Sisipkan tanggal">
           </div>
-          <div id="edit-body" class="note-rendered" contenteditable="true" role="textbox" aria-label="Isi catatan" aria-multiline="true" data-placeholder="Tulis ide kamu di sini…">${formatNote(note.body)}</div>
+          <div id="edit-body" class="note-rendered"></div>
           <div class="note-footer"><button class="note-save" id="save-note">Simpan</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label>
             ${note.id !== null ? `<button type="button" id="pin-note" aria-pressed="${Boolean(note.pinned)}" aria-label="${pinNoteLabel(note.pinned)}" title="${pinNoteLabel(note.pinned)}">${noteActionIcon('pin')}</button>` : ''}
             <button type="button" id="delete-note" aria-label="${note.id === null ? 'Buang draf' : 'Hapus catatan'}" title="${note.id === null ? 'Buang draf' : 'Hapus catatan'}">${noteActionIcon('trash')}</button>
           </div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
       </div>`;
+    if (note) {
+      blockEditor = mountBlockEditor(el('edit-body'), readBlockNote(note.body) ?? legacyContent(note.body), document => {
+        note.body = blockNoteBody(document);
+        dirty.add(note);
+        renderNoteIndex();
+        message('Perubahan belum disimpan.');
+      });
+    }
     el('view').querySelector('.note-trash').addEventListener('toggle', event => { trashOpen = event.target.open; });
     renderNoteIndex();
   }
@@ -208,7 +158,7 @@ export function mount(panel, signal) {
       if(!entries.some(note=>note.id===null))entries.unshift({id:null,kind:'note',title:'',body:'',category:noteCategory==='all'?'none':noteCategory});
       noteQuery=''; activeNote=null;noteEditing=true;render();el('edit-title').focus();
     }
-    if(button.dataset.mark) editFormat(button.dataset.mark, el('edit-body'));
+    if(button.dataset.mark) editFormat(button.dataset.mark);
 
     if (button.hasAttribute('data-delete-category') || button.dataset.restoreNote || button.dataset.restoreCategory) {
       const deletingCategory = button.hasAttribute('data-delete-category');
@@ -320,7 +270,7 @@ export function mount(panel, signal) {
       if(addingCategory && !name)return;
       if(name && Object.values(noteCategories).some(label=>label.toLowerCase()===name.toLowerCase())){message('Kategori sudah ada.');return;}
       if(!name && !note?.title.trim()){message('Isi judul sebelum menyimpan.');el('edit-title').focus();return;}
-      if (!name && note.body.length > 10000) {
+      if (!name && note.body.length > (readBlockNote(note.body) ? 100000 : 10000)) {
         message('Catatan terlalu panjang. Kurangi isi atau jumlah format sebelum menyimpan.');
         return;
       }
@@ -355,13 +305,14 @@ export function mount(panel, signal) {
       if(target.id==='note-from')fromTime=target.value;else toTime=target.value;
       renderNoteIndex();
     }
-    if(target.id==='insert-date' && target.value){
-      focusEditor(el('edit-body'));
-      document.execCommand('insertText', false, target.value);
-      target.value='';
+    if (target.id === 'note-text-color') blockEditor?.editor.chain().focus().setColor(target.value).run();
+    if (target.id === 'note-text-size') {
+      const chain = blockEditor?.editor.chain().focus();
+      if (chain) (target.value ? chain.setFontSize(target.value) : chain.unsetFontSize()).run();
     }
-    if(target.matches('#edit-body input[type="checkbox"]')){
-      el('edit-body').dispatchEvent(new Event('input', {bubbles:true}));
+    if(target.id==='insert-date' && target.value){
+      blockEditor?.editor.chain().focus().insertContent(target.value).run();
+      target.value='';
     }
 
     if(target.id==='note-category'){
@@ -371,51 +322,16 @@ export function mount(panel, signal) {
   });
   listen(document, 'input', event=>{
     if(event.target.id==='note-query'){noteQuery=event.target.value;renderNoteIndex();return;}
-    if(!['edit-title','edit-body'].includes(event.target.id))return;
+    if (event.target.id !== 'edit-title') return;
     const note=entries.find(item=>item.id===activeNote);
-    if (event.target.id === 'edit-title') note.title = event.target.value;
-    else note.body = serializeNote(event.target);
+    note.title = event.target.value;
     dirty.add(note);renderNoteIndex();message('Perubahan belum disimpan.');
-  });
-  listen(document, 'selectionchange', () => {
-    const selection = getSelection();
-    const editor = el('edit-body');
-    if (selection.rangeCount && editor?.contains(selection.getRangeAt(0).commonAncestorContainer)) {
-      editorRange = selection.getRangeAt(0).cloneRange();
-      for (const button of document.querySelectorAll('[data-mark="bold"], [data-mark="italic"]')) {
-        button.setAttribute('aria-pressed', String(document.queryCommandState(button.dataset.mark)));
-      }
-    }
   });
   listen(document, 'mousedown', event => {
     if (event.target.closest('.note-toolbar [data-mark]')) event.preventDefault();
   });
   listen(document, 'workroom-image', event => {
-    const editor = event.target;
-    if (editor.id !== 'edit-body' || editor !== el('edit-body') || busy) return;
-    focusEditor(editor);
-    if (document.execCommand('insertHTML', false, `<img src="${escape(event.detail)}" alt="Gambar" loading="lazy" decoding="async">`)) {
-      event.preventDefault();
-      editor.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-  });
-  listen(document, 'paste', event => {
-    if (!event.target.closest('#edit-body')) return;
-    event.preventDefault();
-    document.execCommand('insertText', false, event.clipboardData.getData('text/plain'));
-  });
-  listen(document, 'drop', event => {
-    if (event.target.closest('#edit-body')) event.preventDefault();
-  });
-  listen(document, 'keydown', event => {
-    if (event.key !== 'Enter' || !event.target.matches('#edit-body')) return;
-    const selection = getSelection();
-    const item = selection.anchorNode?.parentElement?.closest('.note-check');
-    if (!item) return;
-    event.preventDefault();
-    if (!item.nextSibling) item.after(document.createElement('div'));
-    if (!item.nextSibling.hasChildNodes()) item.nextSibling.append(document.createElement('br'));
-    selection.collapse(item.nextSibling, 0);
+    if (event.target === el('edit-body') && !busy && blockEditor?.image(event.detail)) event.preventDefault();
   });
   listen(window, 'beforeunload',event=>{if(dirty.size){event.preventDefault();event.returnValue='';}});
   const bootstrap = el('workroom-notes-data');
@@ -431,107 +347,6 @@ export function mount(panel, signal) {
     render();
   }).catch(error=>{el('view').textContent=error.message;}).finally(()=>el('view').removeAttribute('aria-busy'));
 
-  const selectionBar = document.createElement('div');
-  selectionBar.className = 'note-selection-bar';
-  selectionBar.setAttribute('role','toolbar');
-  selectionBar.setAttribute('aria-label','Format teks terpilih');
-  selectionBar.hidden = true;
-  selectionBar.innerHTML = `<select aria-label="Jenis paragraf" data-command="formatBlock"><option value="">Paragraf</option><option value="div">Teks biasa</option>${[1,2,3,4,5,6].map(n=>`<option value="h${n}">Heading ${n}</option>`).join('')}</select>
-  <input type="color" value="#b8d99d" data-command="foreColor" aria-label="Warna teks">
-  <select data-command="fontSize" aria-label="Ukuran teks"><option value="">Ukuran</option>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}">${n}</option>`).join('')}</select><button data-command="link" aria-label="Tautan" title="Tautan">${noteActionIcon('link')}</button>`;
-  document.body.append(selectionBar);
-  const selectionPopupDesktop = matchMedia('(hover: hover) and (pointer: fine)');
-  const selectionPopupDelay = 500;
-  let selectedRange;
-  let selectionPopupTimer;
-  let selectingWithPointer = false;
-
-  function closeSelectionBar() {
-    clearTimeout(selectionPopupTimer);
-    selectionBar.hidden = true;
-    selectedRange = undefined;
-  }
-
-  function editorSelectionRange() {
-    const selection = getSelection();
-    const editor = el('edit-body');
-    if (!selectionPopupDesktop.matches || !selection?.rangeCount || selection.isCollapsed) return;
-    const range = selection.getRangeAt(0);
-    if (editor?.contains(range.commonAncestorContainer)) return range;
-  }
-
-  function positionSelectionBar() {
-    if (selectionBar.hidden || !selectedRange) return;
-    const editor = el('edit-body');
-    if (!editor?.contains(selectedRange.commonAncestorContainer)) {
-      closeSelectionBar();
-      return;
-    }
-    const rect = selectedRange.getBoundingClientRect();
-    if (rect.bottom < 0 || rect.top > innerHeight) {
-      closeSelectionBar();
-      return;
-    }
-    const top = rect.top > selectionBar.offsetHeight + 8 ? rect.top - selectionBar.offsetHeight - 6 : rect.bottom + 6;
-    selectionBar.style.left = Math.max(8, Math.min(rect.left, innerWidth - selectionBar.offsetWidth - 8)) + 'px';
-    selectionBar.style.top = Math.max(8, Math.min(innerHeight - selectionBar.offsetHeight - 8, top)) + 'px';
-  }
-
-  function scheduleSelectionBar() {
-    if (selectionBar.contains(document.activeElement)) return;
-    closeSelectionBar();
-    if (selectingWithPointer || !editorSelectionRange()) return;
-    selectionPopupTimer = setTimeout(() => {
-      const range = editorSelectionRange();
-      if (!range) return;
-      selectedRange = range.cloneRange();
-      selectionBar.hidden = false;
-      positionSelectionBar();
-    }, selectionPopupDelay);
-  }
-
-  listen(document, 'selectionchange', scheduleSelectionBar);
-  listen(selectionPopupDesktop, 'change', closeSelectionBar);
-  listen(window, 'resize', positionSelectionBar);
-  listen(document, 'scroll', positionSelectionBar, true);
-  listen(document, 'pointerdown', event => {
-    if (selectionBar.contains(event.target)) return;
-    selectingWithPointer = Boolean(event.target.closest('#edit-body'));
-    closeSelectionBar();
-  });
-  listen(document, 'pointerup', () => {
-    if (!selectingWithPointer) return;
-    selectingWithPointer = false;
-    scheduleSelectionBar();
-  });
-  listen(document, 'pointercancel', () => {
-    selectingWithPointer = false;
-    closeSelectionBar();
-  });
-  listen(document, 'keydown', event => {
-    if (event.key === 'Escape') closeSelectionBar();
-  });
-  selectionBar.addEventListener('mousedown',event=>{if(event.target.closest('button'))event.preventDefault();});
-  function applySelectionFormat(control) {
-    const editor=el('edit-body');
-    if(!selectionPopupDesktop.matches || !control || !selectedRange || !editor?.contains(selectedRange.commonAncestorContainer))return;
-    editorRange=selectedRange.cloneRange();
-    focusEditor(editor);
-    const command=control.dataset.command;
-    if(command==='link')editFormat('link',editor);
-    else {
-      document.execCommand('styleWithCSS',false,false);
-      document.execCommand(command,false,control.value || null);
-      editor.dispatchEvent(new Event('input',{bubbles:true}));
-    }
-    if(control.tagName==='SELECT')control.selectedIndex=0;
-  }
-  selectionBar.addEventListener('click',event=>applySelectionFormat(event.target.closest('button')));
-  selectionBar.addEventListener('change',event=>applySelectionFormat(event.target));
-
-  signal.addEventListener('abort', () => {
-    closeSelectionBar();
-    selectionBar.remove();
-  }, { once: true });
+  signal.addEventListener('abort', () => blockEditor?.destroy(), { once: true });
   return () => busy ? "busy" : dirty.size > 0;
 }

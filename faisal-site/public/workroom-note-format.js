@@ -44,10 +44,41 @@ export function noteLines(body) {
   return body.replace(/\r\n?/g, '\n').replace(/([^\n]) +(?=- \[[ xX]\] )/g, '$1\n').split('\n');
 }
 
+export function readBlockNote(body) {
+  const prefix = 'workroom-blocks-v1:';
+  if (!body?.startsWith(prefix)) return null;
+  try {
+    const document = JSON.parse(body.slice(prefix.length));
+    let count = 0;
+    function valid(node, depth = 0) {
+      return node && typeof node.type === 'string' && depth <= 40 && ++count <= 5000 &&
+        (node.text === undefined || typeof node.text === 'string') &&
+        (node.content === undefined || Array.isArray(node.content) && node.content.every(child => valid(child, depth + 1)));
+    }
+    return document?.type === 'doc' && valid(document) ? document : null;
+  } catch {
+    return null;
+  }
+}
+
+export function blockNoteBody(document) {
+  return 'workroom-blocks-v1:' + JSON.stringify(document);
+}
+
+export function noteBodyText(body) {
+  const document = readBlockNote(body);
+  if (!document) return body;
+  function text(node) {
+    if (node.type === 'image') return node.attrs?.alt || 'Gambar';
+    return node.text ?? (node.content ?? []).map(text).join(node.type === 'paragraph' || node.type === 'heading' ? '' : '\n');
+  }
+  return text(document);
+}
+
 export function notePreview(body, limit = 120) {
-  const text = noteLines(body)
+  const text = (readBlockNote(body) ? noteBodyText(body) : noteLines(body)
     .map(line => noteInline(line.replace(/^(?:#{1,6} |- (?:\[[ xX]\] )?)/, ''), true))
-    .join(' ').replace(/\s+/g, ' ').trim();
+    .join(' ')).replace(/\s+/g, ' ').trim();
   const characters = Array.from(text);
   return characters.length > limit ? characters.slice(0, limit).join('').trimEnd() + '…' : text;
 }
