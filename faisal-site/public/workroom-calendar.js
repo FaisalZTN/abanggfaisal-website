@@ -14,7 +14,7 @@
   const template = root.querySelector('#calendar-tasks');
   const tasks = [...dueList.children, ...template.content.children]
     .sort((a, b) => a.dataset.due.localeCompare(b.dataset.due));
-  const taskDates = new Set(tasks.map(task => task.dataset.due));
+
   const dateLabel = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' });
   const monthLabel = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric', timeZone: 'UTC' });
   const months = new Map();
@@ -61,6 +61,7 @@
   }
 
   function updateDays(calendar) {
+    const taskDates = new Set(tasks.filter(task => !task.hasAttribute('data-agenda-completed')).map(task => task.dataset.due));
     for (const link of grid.querySelectorAll('a')) {
       const day = link.dataset.calendarDate;
       const hasTask = taskDates.has(day);
@@ -102,7 +103,7 @@
     const month = day.slice(0, 7);
     showMonth(day);
     dayHeading.textContent = dateLabel.format(toDate(day));
-    const due = tasks.filter(task => day === today ? task.dataset.due <= today : task.dataset.due === day);
+    const due = tasks.filter(task => !task.hidden && (day === today ? task.dataset.due <= today : task.dataset.due === day));
     dueList.replaceChildren(...due);
     dueList.hidden = !due.length;
     empty.hidden = Boolean(due.length);
@@ -144,5 +145,6 @@
     showDay(day);
   });
 
+  root.addEventListener('agenda-task-change', () => updateDays(months.get(selected.slice(0, 7))?.calendar));
   showDay(selected);
 })();
