@@ -127,6 +127,19 @@ export function mount(panel, signal) {
               <option value="">Ukuran teks</option>
               ${[10, 13, 16, 18, 24, 32, 48].map(px => `<option value="${px}px">${px} px</option>`).join('')}
             </select>
+            <select data-note-layout="alignment" aria-label="Perataan paragraf">
+              <option value="">Perataan</option><option value="left">Rata kiri</option>
+              <option value="center">Rata tengah</option><option value="right">Rata kanan</option>
+              <option value="justify">Rata kiri-kanan (Justify)</option>
+            </select>
+            <select data-note-layout="leading" aria-label="Spasi antarbaris">
+              <option value="">Spasi baris</option><option value="compact">1,25</option>
+              <option value="normal">1,65</option><option value="wide">2</option>
+            </select>
+            <select data-note-layout="spacing" aria-label="Jarak antarparagraf">
+              <option value="">Jarak paragraf</option><option value="none">Tanpa jarak</option>
+              <option value="normal">Normal</option><option value="wide">Lebar</option>
+            </select>
             <input type="date" id="insert-date" aria-label="Sisipkan tanggal" title="Sisipkan tanggal">
           </div>
           <div id="edit-body" class="note-rendered"></div>
@@ -304,6 +317,10 @@ export function mount(panel, signal) {
     if(target.id==='note-from' || target.id==='note-to'){
       if(target.id==='note-from')fromTime=target.value;else toTime=target.value;
       renderNoteIndex();
+    }
+    if (target.matches('[data-note-layout]') && target.value) {
+      blockEditor?.editor.chain().focus().setParagraphLayout(target.dataset.noteLayout, target.value).run();
+      target.value = '';
     }
     if (target.id === 'note-text-color') blockEditor?.editor.chain().focus().setColor(target.value).run();
     if (target.id === 'note-text-size') {

@@ -930,3 +930,14 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-block-menu button:is(:hover, [aria-selected="true"]) { background: var(--selected); }
 .note-toolbar #note-text-color { width: 44px; padding: .25rem; }
 .note-toolbar #note-text-size { width: auto; }
+.note-toolbar [data-note-layout] { width: auto; max-width: 100%; }
+.note-rendered [data-note-alignment="left"] { text-align: left; }
+.note-rendered [data-note-alignment="center"] { text-align: center; }
+.note-rendered [data-note-alignment="right"] { text-align: right; }
+.note-rendered [data-note-alignment="justify"] { text-align: justify; }
+.note-rendered [data-note-leading="compact"] { line-height: 1.25; }
+.note-rendered [data-note-leading="normal"] { line-height: 1.65; }
+.note-rendered [data-note-leading="wide"] { line-height: 2; }
+.note-rendered .tiptap [data-note-spacing="none"] { margin-block: 0; }
+.note-rendered .tiptap [data-note-spacing="normal"] { margin-block: .45rem; }
+.note-rendered .tiptap [data-note-spacing="wide"] { margin-block: 1rem; }
