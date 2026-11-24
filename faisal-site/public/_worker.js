@@ -74,9 +74,7 @@ function workroomDocument(content, page) {
       ${wordmark}
       <nav aria-label="Navigasi situs"><a href="/">Menu Utama</a><a href="/ruang-belajar/">Ruang Belajar</a></nav>
     </header>
-    <main${page ? ` data-workroom-panel="${page}"` : ''}>${page === 'note' ? `<div class="notes-private-entry">
-      <a href="${workroomPages.privateNotes.path}">${workroomIcon('lock')}Catatan Rahasia</a>
-    </div>` : ''}${content}</main>
+    <main${page ? ` data-workroom-panel="${page}"` : ''}>${content}</main>
     ${page === 'task' || page === 'note' ? '<script type="application/workroom-module" data-src="/workroom-link-options.js"></script>' : ''}
     ${page === 'task' || page === 'note' ? '<script type="application/workroom-module" data-src="/workroom-image-upload.js"></script>' : ''}
     ${page ? `<footer class="workroom-footer" aria-label="Teknologi Workroom">
@@ -867,7 +865,8 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
     </section>`;
   };
   if (page !== 'home') {
-    return renderPage(`<div class="dashboard-content"><h1>${workroomPages[page].title}</h1>
+    return renderPage(`<div class="dashboard-content">${page === 'note' ? `<div class="notes-head"><h1>Catatan</h1>
+      <a class="notes-private-link" href="${workroomPages.privateNotes.path}" aria-label="Catatan Rahasia">${workroomIcon('lock')}<span>Catatan Rahasia</span></a></div>` : `<h1>${workroomPages[page].title}</h1>`}
       ${notice}${collection(page)}${page === 'task' ? workroomWorkspace(entries, params) + '<script type="application/workroom-module" data-src="/workroom-task-detail.js"></script><script type="application/workroom-module" data-src="/workroom-quick-check.js"></script>' : ''}</div>`, 200, page);
   }
 

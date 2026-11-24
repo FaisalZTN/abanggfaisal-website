@@ -86,7 +86,11 @@ module.exports = async function checkWorkroom(browser, origin) {
 
     await page.setViewportSize({ width: 360, height: 800 });
     await page.locator('.workroom-nav > a[aria-label="Catatan"]').click();
-    await page.getByRole('link', { name: 'Catatan Rahasia' }).click();
+    const privateLink = page.locator('.notes-head').getByRole('link', { name: 'Catatan Rahasia' });
+    await privateLink.waitFor();
+    assert.equal(await privateLink.locator('span').isVisible(), false);
+    assert.ok((await privateLink.boundingBox()).width >= 44);
+    await privateLink.click();
     await page.getByLabel('Sandi Catatan Rahasia').waitFor();
     assert.equal(await page.evaluate(() => window.testDocument), true);
     await page.getByLabel('Lainnya', { exact: true }).click();
