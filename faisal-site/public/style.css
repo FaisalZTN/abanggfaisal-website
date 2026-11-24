@@ -997,3 +997,5 @@ details[open] > summary::after {
   overflow-wrap: anywhere;
 }
 .study-comments li p { margin: .3rem 0 0; white-space: pre-wrap; }
+
+.ui-icon { width: 1rem; height: 1rem; flex: none; vertical-align: -.15em; }

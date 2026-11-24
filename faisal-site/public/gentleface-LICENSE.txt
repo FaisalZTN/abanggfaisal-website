@@ -1,0 +1,29 @@
+MIT License
+
+Copyright (c) 2026 Alexander Kiselev
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Brand icons
+
+Brand icons (brand-*) are trademarks of their respective owners. They are included only to represent those companies, products or services, for example a link to an account or a "sign in with" button. Their inclusion implies no endorsement by, or affiliation with, the owners. The MIT licence covers our drawings only and grants no trademark rights: using a brand icon is subject to that brand's guidelines, which you must follow. To have a mark removed, write to https://gentleface.com/feedback.
+
+- brand-android: the Android robot is reproduced or modified from work created and shared by Google and used according to terms described in the Creative Commons 3.0 Attribution License.
+- brand-linux: Tux is derived from the image by Larry Ewing (lewing@isc.tamu.edu), made with The GIMP.
+- brand-debian: derived from the Debian Open Use Logo, Copyright (c) 1999 Software in the Public Interest, Inc., released under the GNU Lesser General Public License, version 3 or any later version, or, at your option, the Creative Commons Attribution-ShareAlike 3.0 Unported License. brand-debian is under those terms, not MIT.

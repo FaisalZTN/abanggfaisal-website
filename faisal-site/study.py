@@ -428,7 +428,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         </section>'''
 
     def back():
-        return '<p>' + link('', '← Ruang Belajar') + '</p>'
+        return '<p>' + link('', '@@arrow-left@@ Ruang Belajar') + '</p>'
 
     def tutorial_topics(item):
         entries = ''.join(
@@ -537,7 +537,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             <p>Coba pemeriksaan fisik paru dan latihan mengenali bunyi paru tanpa akun.</p>
             <div class="study-resource-links">
               <a class="btn" href="https://phasemed.id/coba" rel="external">Coba latihan PhaseMed</a>
-              <a href="https://phasemed.id/" rel="external">Buka beranda PhaseMed ↗</a>
+              <a href="https://phasemed.id/" rel="external">Buka beranda PhaseMed @@external-link@@</a>
             </div>
           </div>
         </article>
@@ -549,7 +549,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
           </div>
           <div class="study-resource-body">
             <p>Bacaan pendamping untuk meninjau materi kuliah.</p>
-            <a class="btn" href="https://klinikbelajarkedokteran.site/" rel="external">Buka Klinik Belajar Kedokteran ↗</a>
+            <a class="btn" href="https://klinikbelajarkedokteran.site/" rel="external">Buka Klinik Belajar Kedokteran @@external-link@@</a>
           </div>
         </article>
         <article class="card study-resource">
@@ -562,7 +562,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
           </div>
           <div class="study-resource-body">
             <p>Ubah catatan kuliah atau PDF menjadi flashcard dan kuis untuk menguji ingatan.</p>
-            <a class="btn" href="https://gizmo.ai/" rel="external">Buka Gizmo ↗</a>
+            <a class="btn" href="https://gizmo.ai/" rel="external">Buka Gizmo @@external-link@@</a>
           </div>
         </article>
         <article class="card study-resource">
@@ -573,7 +573,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
           </div>
           <div class="study-resource-body">
             <p>Jawab tujuh pertanyaan medis setiap hari. Jawaban benar yang lebih jarang mendapat poin lebih tinggi.</p>
-            <a class="btn" href="https://www.playzebra.io/" rel="external">Main Zebra ↗</a>
+            <a class="btn" href="https://www.playzebra.io/" rel="external">Main Zebra @@external-link@@</a>
           </div>
         </article>
       </div>

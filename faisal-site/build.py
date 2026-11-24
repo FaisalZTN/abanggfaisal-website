@@ -16,15 +16,23 @@ def asset(name, data=None):
     versioned=path.stem+'.'+hashlib.sha256(data).hexdigest()[:12]+path.suffix
     (D/versioned).write_bytes(data)
     return '/'+versioned
+gentleface_url = asset('gentleface-icons.svg')
+
+def site_icon(name):
+    return f'<svg class="ui-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="{gentleface_url}#{name}"/></svg>'
+
+def workroom_asset_data(name):
+    return (P / 'public' / name).read_bytes().replace(b'/gentleface-icons.svg', gentleface_url.encode())
+
 workroom_worker = D / '_worker.js'
-workroom_source = workroom_worker.read_text(encoding='utf-8')
+workroom_source = workroom_worker.read_text(encoding='utf-8').replace('/gentleface-icons.svg', gentleface_url)
 workroom_note_format = asset('workroom-note-format.js')
 workroom_source = workroom_source.replace(
     "import { notePreview } from './workroom-note-format.js';",
     (P / 'public/workroom-note-format.js').read_text(encoding='utf-8').replace('export function ', 'function '),
 )
 workroom_notes = D / 'workroom-notes.js'
-workroom_notes_source = workroom_notes.read_text(encoding='utf-8').replace(
+workroom_notes_source = workroom_asset_data('workroom-notes.js').decode('utf-8').replace(
     "'./workroom-note-format.js'", f"'.{workroom_note_format}'"
 )
 workroom_notes.write_text(workroom_notes_source, encoding='utf-8')
@@ -32,7 +40,7 @@ workroom_notes_url = asset('workroom-notes.js', workroom_notes_source.encode('ut
 workroom_source = workroom_source.replace('"/workroom-notes.js"', f'"{workroom_notes_url}"')
 for workroom_asset in ('workroom.css', 'workroom-nav.js', 'workroom-greeting.js', 'workroom-calendar.js', 'workroom-agenda-check.js', 'workroom-review.js', 'workroom-private-notes.js', 'workroom-task-detail.js', 'workroom-quick-check.js', 'workroom-link-options.js', 'workroom-image-upload.js', 'workroom-hero.webp', 'workroom-favicon.svg'):
     workroom_source = workroom_source.replace(
-        f'"/{workroom_asset}"', f'"{asset(workroom_asset)}"'
+        f'"/{workroom_asset}"', f'"{asset(workroom_asset, workroom_asset_data(workroom_asset))}"'
     )
 workroom_worker.write_text(workroom_source, encoding='utf-8')
 style_url=asset('style.css')
@@ -71,7 +79,7 @@ def art(n,label): return f'<div class="art tone-{int(n)%3}" aria-hidden="true"><
 def card(x,kind,heading=3):
     url=f'/{kind}/{x["id"]}/'
     meta=x['category']+(' · '+x['iso_date']+' · '+str(x['minutes'])+' menit baca' if kind=='journal' else ' · Digital')
-    return f'<a class="card" data-category="{e(x["category"])}" data-search="{e(x["title"]+" "+x["short"])}" href="{url}">{media(x,art(x["art"],"a thought to keep" if kind=="journal" else x["title"]))}<div class="meta">{e(meta)}</div><h{heading}>{e(x["title"])}</h{heading}><p>{e(x["short"])}</p><span class="text-link">'+('Baca tulisan ↗' if kind=='journal' else label(x))+'</span></a>'
+    return f'<a class="card" data-category="{e(x["category"])}" data-search="{e(x["title"]+" "+x["short"])}" href="{url}">{media(x,art(x["art"],"a thought to keep" if kind=="journal" else x["title"]))}<div class="meta">{e(meta)}</div><h{heading}>{e(x["title"])}</h{heading}><p>{e(x["short"])}</p><span class="text-link">'+('Baca tulisan @@external-link@@' if kind=='journal' else label(x))+'</span></a>'
 def grid(items,kind,heading=3):return '<div class="grid">'+''.join(card(x,kind,heading) for x in items)+'</div>' if items else '<p class="notice">'+('Tulisan sedang dipersiapkan.' if kind=='journal' else 'Karya digital sedang dipersiapkan. Nantikan pembaruannya di sini.')+'</p>'
 def head(eyebrow,title,desc):return f'<section class="page-hero"><div class="eyebrow">{eyebrow}</div><h1>{title}</h1><p class="intro">{desc}</p></section>'
 def write(path,title,desc,body,section='home',item=None):
@@ -97,15 +105,13 @@ def write(path,title,desc,body,section='home',item=None):
       <div class="site-footer-bottom">
         <small>© 2026 abangfaisal.</small>
         <a class="site-footer-social" href="https://www.instagram.com/abanggfaisal/">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <rect x="3" y="3" width="18" height="18" rx="5"/>
-            <circle cx="12" cy="12" r="4"/>
-            <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
-          </svg>
+          {site_icon("brand-instagram")}
           <span><span class="site-footer-platform">Instagram</span> @abanggfaisal</span>
         </a>
       </div>
-    </footer><button id="back-to-top" type="button" aria-label="Kembali ke atas" title="Kembali ke atas" hidden><span aria-hidden="true">↑</span></button></body></html>'''
+    </footer><button id="back-to-top" type="button" aria-label="Kembali ke atas" title="Kembali ke atas" hidden>{site_icon("arrow-up")}</button></body></html>'''
+    page = re.sub(r'@@(arrow-left|external-link|chevron-left|chevron-right)@@',
+                  lambda match: site_icon(match[1]), page)
     for src in re.findall(r'<img[^>]+src="([^"]+)"',body):
         if not (D/html.unescape(src).lstrip('/')).is_file():raise ValueError('Missing rendered image: '+src)
     out=D/('404.html' if path=='/404.html' else path.strip('/')+'/index.html' if path!='/' else 'index.html');out.parent.mkdir(parents=True,exist_ok=True);out.write_text(page)
@@ -132,33 +138,33 @@ home_carousel = f"""
     <ul class="home-carousel-cards">{''.join(carousel_cards)}</ul>
   </div>
   <div class="home-carousel-controls" hidden>
-    <button type="button" data-step="-1" aria-label="Kartu sebelumnya">‹</button>
+    <button type="button" data-step="-1" aria-label="Kartu sebelumnya">@@chevron-left@@</button>
     <span class="home-carousel-status" aria-live="polite"></span>
-    <button type="button" data-step="1" aria-label="Kartu berikutnya">›</button>
+    <button type="button" data-step="1" aria-label="Kartu berikutnya">@@chevron-right@@</button>
   </div>
 </section>
 """
-write('/','Ruang untuk berpikir, menulis, dan berkarya','Journal personal dan karya digital Faisal.',f'''<section class="hero"><div><div class="eyebrow">A PERSONAL SPACE · EST. 2026</div><h1>Thoughts to keep.<br><em>Stories to share.</em></h1><p class="intro">Ruang kecil untuk merawat rasa ingin tahu, menuliskan pengalaman, dan membagikan karya yang berguna.</p><div class="actions"><a class="btn" href="/journal/">Jelajahi Journal ↗</a><a class="text-link" href="/shop/">Temukan karya saya ↗</a><a class="text-link" href="/ruang-belajar/#ringkasan-jadwal">Jadwal kuliah hari ini</a></div></div>{art(1,'a quiet place to begin')}</section>{home_carousel}<section class="section"><div class="section-head"><div><div class="eyebrow">01 / WORDS & REFLECTIONS</div><h2>From the journal.</h2></div><a href="/journal/">Semua tulisan ↗</a></div>{grid(articles[:3],'journal')}</section><section class="section"><div class="section-head"><div><div class="eyebrow">02 / DIGITAL CREATIONS</div><h2>Made with intention.</h2></div><a href="/shop/">Kunjungi Shop ↗</a></div>{grid(products[:3],'shop')}</section><section class="section split"><div><div class="eyebrow">03 / THE PERSON BEHIND IT</div><h2>Belajar. Mencatat.<br><em>Berbagi.</em></h2></div><div><p class="intro">Saya Faisal, mahasiswa kedokteran yang tertarik pada proses belajar, tulisan reflektif, dan desain. Website ini menjadi ruang untuk mempertemukan ketiganya.</p><a href="/about/">Kenali saya lebih dekat ↗</a></div></section>''')
+write('/','Ruang untuk berpikir, menulis, dan berkarya','Journal personal dan karya digital Faisal.',f'''<section class="hero"><div><div class="eyebrow">A PERSONAL SPACE · EST. 2026</div><h1>Thoughts to keep.<br><em>Stories to share.</em></h1><p class="intro">Ruang kecil untuk merawat rasa ingin tahu, menuliskan pengalaman, dan membagikan karya yang berguna.</p><div class="actions"><a class="btn" href="/journal/">Jelajahi Journal @@external-link@@</a><a class="text-link" href="/shop/">Temukan karya saya @@external-link@@</a><a class="text-link" href="/ruang-belajar/#ringkasan-jadwal">Jadwal kuliah hari ini</a></div></div>{art(1,'a quiet place to begin')}</section>{home_carousel}<section class="section"><div class="section-head"><div><div class="eyebrow">01 / WORDS & REFLECTIONS</div><h2>From the journal.</h2></div><a href="/journal/">Semua tulisan @@external-link@@</a></div>{grid(articles[:3],'journal')}</section><section class="section"><div class="section-head"><div><div class="eyebrow">02 / DIGITAL CREATIONS</div><h2>Made with intention.</h2></div><a href="/shop/">Kunjungi Shop @@external-link@@</a></div>{grid(products[:3],'shop')}</section><section class="section split"><div><div class="eyebrow">03 / THE PERSON BEHIND IT</div><h2>Belajar. Mencatat.<br><em>Berbagi.</em></h2></div><div><p class="intro">Saya Faisal, mahasiswa kedokteran yang tertarik pada proses belajar, tulisan reflektif, dan desain. Website ini menjadi ruang untuk mempertemukan ketiganya.</p><a href="/about/">Kenali saya lebih dekat @@external-link@@</a></div></section>''')
 for kind,items,title,desc in [('journal',articles,'A collection of thoughts.','Refleksi, opini, dan catatan personal. Satu tulisan, satu cara baru melihat pengalaman.'),('shop',products,'Useful things, thoughtfully made.','E-book, template, desain, dan materi pembelajaran untuk menemani proses Anda.')]:
     cats=sorted({x['category'] for x in items})
     toolbar='<div class="toolbar"><label for="search">Cari '+('tulisan' if kind=='journal' else 'produk')+'</label><input id="search" type="search" placeholder="Ketik kata kunci…"><label for="category">Kategori</label><select id="category"><option value="">Semua kategori</option>'+''.join(f'<option>{e(c)}</option>' for c in cats)+'</select></div><p id="count" role="status"></p>' if items else ''
     write('/'+kind+'/',kind.title(),desc,head('THE '+kind.upper(),title,desc)+toolbar+'<div id="results">'+grid(items,kind,2)+'</div>'+'<p id="empty" hidden>Tidak ditemukan. Coba kata kunci atau kategori lain.</p>',kind)
 for a in articles:
-    body='<article class="reading"><a href="/journal/">← Kembali ke Journal</a>'+head(e(a['category'])+' · '+e(a['iso_date']),e(a['title']),e(a['short']))+f'<p class="meta">{a["minutes"]} menit baca · Faisal</p>'+media(a,'',True)+'<div class="prose">'+render_article(a)+'</div>'+'<hr><a href="/journal/">Jelajahi tulisan lainnya ↗</a></article>'
+    body='<article class="reading"><a href="/journal/">@@arrow-left@@ Kembali ke Journal</a>'+head(e(a['category'])+' · '+e(a['iso_date']),e(a['title']),e(a['short']))+f'<p class="meta">{a["minutes"]} menit baca · Faisal</p>'+media(a,'',True)+'<div class="prose">'+render_article(a)+'</div>'+'<hr><a href="/journal/">Jelajahi tulisan lainnya @@external-link@@</a></article>'
     related=sorted([x for x in articles if x['id']!=a['id']],key=lambda x:x['category']!=a['category'])[:3]
     if related:body+='<section class="section"><h2>Lanjutkan membaca.</h2>'+grid(related,'journal')+'</section>'
     write('/journal/'+a['id']+'/',a['title'],a['short'],body,'journal',a)
 for p in products:
     checkout=p.get('checkout','');price='Rp'+format(p['price'],',').replace(',','.') if p['price'] else 'Gratis'
     purchasable = available(p)
-    cta = (f'<a class="btn" href="{e(checkout)}" rel="noopener noreferrer">Beli melalui penyedia checkout ↗</a>'
+    cta = (f'<a class="btn" href="{e(checkout)}" rel="noopener noreferrer">Beli melalui penyedia checkout @@external-link@@</a>'
            if purchasable else '')
     status = '' if purchasable else f'<p class="notice">{e(label(p))}. Produk ini belum bisa dibeli.</p>'
-    provider_link=('<p><a href="'+e(p['catalog_url'])+'" rel="noopener noreferrer">Lihat informasi produk di Mayar ↗</a></p>') if p.get('catalog_url') else ''
+    provider_link=('<p><a href="'+e(p['catalog_url'])+'" rel="noopener noreferrer">Lihat informasi produk di Mayar @@external-link@@</a></p>') if p.get('catalog_url') else ''
     fulfillment = p.get('fulfillment_note') or ('Pembayaran dan pengiriman file ditangani penyedia checkout. '
                   'Periksa ketentuan produk di halaman checkout.' if purchasable else '')
     fulfillment_html = f'<p class="meta">{e(fulfillment)}</p>' if fulfillment else ''
-    info = (f'<div class="product-info"><a href="/shop/">← Kembali ke Shop</a>'
+    info = (f'<div class="product-info"><a href="/shop/">@@arrow-left@@ Kembali ke Shop</a>'
             f'<section class="page-hero"><div class="eyebrow">{e(p["category"])}</div>'
             f'<h1>{e(p["title"])}</h1>{status}<p class="intro">{e(p["description"])}</p></section>'
             f'<p>{price}</p><p>Format: {e(p["format"])}</p><p>{e(p["license"])}</p>'
@@ -170,8 +176,8 @@ for p in products:
 profile=json.loads((P/'content/profile.json').read_text())
 contact=profile.get('contact_url','')
 if contact and not https_url(contact):raise ValueError('Kontak harus URL HTTPS lengkap')
-about=head('BEHIND THE WORDS','Hello, I’m Faisal.',e(profile['intro']))+'<section class="section split"><div class="monogram" aria-hidden="true">f.</div><div class="about"><h2>Rasa ingin tahu<br>sebagai titik berangkat.</h2>'+''.join('<p>'+e(t)+'</p>' for t in profile['story'])+'<a class="btn" href="/journal/">Baca catatan saya ↗</a></div></section><section class="section"><div class="eyebrow">WHAT I KEEP COMING BACK TO</div><h2>Bidang yang saya jelajahi.</h2><ul class="interests">'+''.join('<li>'+e(t)+'</li>' for t in profile['interests'])+'</ul></section><section class="section split"><div><h2>Dari pemikiran<br>menjadi karya.</h2></div><div><p class="intro">Tulisan personal saya tersimpan di Journal. Karya digital dan materi pembelajaran dapat dijelajahi melalui Shop.</p><a href="/shop/">Jelajahi karya digital ↗</a></div></section>'
-if contact and profile.get('contact_approved') is True:about+='<section class="section"><h2>Mari terhubung.</h2><a class="btn" href="'+e(contact)+'" rel="noopener noreferrer">Hubungi saya ↗</a></section>'
+about=head('BEHIND THE WORDS','Hello, I’m Faisal.',e(profile['intro']))+'<section class="section split"><div class="monogram" aria-hidden="true">f.</div><div class="about"><h2>Rasa ingin tahu<br>sebagai titik berangkat.</h2>'+''.join('<p>'+e(t)+'</p>' for t in profile['story'])+'<a class="btn" href="/journal/">Baca catatan saya @@external-link@@</a></div></section><section class="section"><div class="eyebrow">WHAT I KEEP COMING BACK TO</div><h2>Bidang yang saya jelajahi.</h2><ul class="interests">'+''.join('<li>'+e(t)+'</li>' for t in profile['interests'])+'</ul></section><section class="section split"><div><h2>Dari pemikiran<br>menjadi karya.</h2></div><div><p class="intro">Tulisan personal saya tersimpan di Journal. Karya digital dan materi pembelajaran dapat dijelajahi melalui Shop.</p><a href="/shop/">Jelajahi karya digital @@external-link@@</a></div></section>'
+if contact and profile.get('contact_approved') is True:about+='<section class="section"><h2>Mari terhubung.</h2><a class="btn" href="'+e(contact)+'" rel="noopener noreferrer">Hubungi saya @@external-link@@</a></section>'
 write('/about/','Tentang Faisal','Mengenal Faisal, pembelajar di antara kedokteran, tulisan, dan desain.',about,'about')
 build_study(P, D, write, head, e, render_article, preview)
 write('/404.html','Halaman tidak ditemukan','Halaman tidak tersedia.',head('404','A little off the page.','Halaman yang Anda cari tidak tersedia.')+'<a class="btn" href="/">Kembali ke Home</a>')

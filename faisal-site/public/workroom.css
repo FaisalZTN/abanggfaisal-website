@@ -622,7 +622,7 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 }
 .workroom-link-options button:hover, .workroom-link-options a:hover,
 .workroom-link-options button:focus-visible, .workroom-link-options a:focus-visible { background: var(--selected); }
-.workroom-link-options svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.7; }
+.workroom-link-options svg { width: 1rem; height: 1rem; }
 .workroom-link-options span { flex-basis: 100%; padding: 0 .5rem .2rem; color: var(--muted); font-size: .82rem; }
 @media (hover: hover) and (pointer: fine) {
   .workroom-link-options button, .workroom-link-options a { min-height: 34px; }
@@ -660,8 +660,8 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   cursor: pointer;
   list-style: none;
 }
-.daily-task-card summary::before { content: '›'; color: var(--muted); }
-.daily-task-card details[open] summary::before { transform: rotate(90deg); }
+.daily-task-chevron { color: var(--muted); }
+.daily-task-card details[open] .daily-task-chevron { transform: rotate(90deg); }
 .daily-task-card summary::-webkit-details-marker { display: none; }
 .daily-task-today {
   border-radius: 1rem;
@@ -695,7 +695,7 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 }
 .daily-task-card li > div { padding-top: .55rem; overflow-wrap: anywhere; }
 .daily-task-card li form { margin: 0; padding: 0; }
-.daily-task-card [role="checkbox"] {
+.task-checkbox, .due-list .task-checkbox {
   display: grid;
   place-items: center;
   width: 44px;
@@ -703,24 +703,11 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   padding: 0;
   border: 0;
   background: transparent;
+  color: var(--muted);
 }
-.daily-task-card [role="checkbox"] span {
-  display: grid;
-  place-items: center;
-  width: 1.1rem;
-  height: 1.1rem;
-  border: 1.5px solid var(--muted);
-  border-radius: .15rem;
-  color: var(--ink);
-}
-.daily-task-card [aria-checked="true"] span::after {
-  content: '';
-  width: .31rem;
-  height: .55rem;
-  border: solid currentColor;
-  border-width: 0 1.5px 1.5px 0;
-  transform: translateY(-.06rem) rotate(45deg);
-}
+.task-checkbox[aria-checked="true"] { color: var(--ink); }
+.task-checkbox[aria-checked="false"] .check-marked,
+.task-checkbox[aria-checked="true"] .check-empty { display: none; }
 .quick-check-feedback { color: var(--muted); }
 .daily-task-title { font-weight: 650; }
 .daily-task-card .is-done .daily-task-title { color: var(--muted); text-decoration: line-through; }
@@ -787,7 +774,6 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .today-icon::-webkit-details-marker { display: none; }
 .today-icon:hover, .today-icon:focus-visible { background: var(--selected); }
 .today-icon svg, .note-mobile-category svg { width: 1.15rem; height: 1.15rem; flex: none; }
-.today-icon svg { fill: none; stroke: currentColor; stroke-width: 1.7; }
 .today-inbox { margin-top: .75rem; }
 .inbox-items > li { margin-block: .5rem; }
 .inbox-items p { white-space: pre-wrap; }
@@ -804,3 +790,7 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   .note-mobile-category select { min-width: 0; }
   .note-index .note-mobile-category button { display: grid; place-items: center; width: 44px; flex: none; }
 }
+
+.ui-icon { width: 1rem; height: 1rem; flex: none; vertical-align: -.15em; }
+.workroom-nav .ui-icon { width: 1.25rem; height: 1.25rem; }
+.note-toolbar .ui-icon, .note-selection-bar .ui-icon { vertical-align: middle; }

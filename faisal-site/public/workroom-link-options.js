@@ -7,10 +7,10 @@
   menu.contentEditable = 'false';
   const copy = document.createElement('button');
   copy.type = 'button';
-  copy.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 4H6a2 2 0 0 0-2 2v10"/></svg>Salin';
+  copy.innerHTML = '<svg class="ui-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="/gentleface-icons.svg#copy"/></svg>Salin';
   copy.setAttribute('aria-label', 'Salin link');
   const open = document.createElement('a');
-  open.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg>Buka';
+  open.innerHTML = '<svg class="ui-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="/gentleface-icons.svg#globe"/></svg>Buka';
   open.setAttribute('aria-label', 'Buka link di tab baru');
   open.target = '_blank';
   open.rel = 'noopener noreferrer';

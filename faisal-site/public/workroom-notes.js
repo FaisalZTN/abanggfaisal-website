@@ -61,10 +61,9 @@ function serializeNote(editor) {
 }
 
 const toolbar = [
-  ['heading','Judul bagian','H₂'], ['bold','Tebal','<b>B</b>'], ['italic','Miring','<i>I</i>'],
-  ['sup','Superskrip','x²'], ['sub','Subskrip','x₂'], ['list','Daftar','☷'], ['check','Checklist','☑'],
-  ['link','Sisipkan tautan','↗'], ['image','Sisipkan gambar',
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m3 17 5-4 4 3 4-5 5 6"/></svg>'],
+  ['heading', 'Judul bagian', 'heading'], ['bold', 'Tebal', 'bold'], ['italic', 'Miring', 'italic'],
+  ['sup', 'Superskrip', 'superscript'], ['sub', 'Subskrip', 'subscript'], ['list', 'Daftar', 'list'],
+  ['check', 'Checklist', 'checklist'], ['link', 'Sisipkan tautan', 'link'], ['image', 'Sisipkan gambar', 'image'],
 ];
 
 function focusEditor(editor) {
@@ -123,10 +122,8 @@ async function request(data) {
   if(!response.ok) throw new Error(result.error || 'Workroom tidak bisa menyimpan atau memuat catatan. Coba lagi setelah masuk.');
   return result;
 }
-const notePinPath = 'M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5Zm3 10v6';
-const noteTrashPath = 'M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 10v7m4-7v7';
-function noteActionIcon(path, label = '') {
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"${label ? ` role="img" aria-label="${label}"` : ' aria-hidden="true"'}><path d="${path}"/></svg>`;
+function noteActionIcon(name, label = '') {
+  return `<svg class="ui-icon" viewBox="0 0 16 16" focusable="false"${label ? ` role="img" aria-label="${label}"` : ' aria-hidden="true"'}><use href="/gentleface-icons.svg#${name}"/></svg>`;
 }
 const pinNoteLabel = pinned => pinned ? 'Lepas pin' : 'Pin catatan';
 
@@ -139,34 +136,34 @@ function renderNoteIndex() {
     (!toTime || (noteTime(item) && noteTime(item).replace(' ','T') <= toTime)));
   notes.sort((a, b) => (b.pinned || 0) - (a.pinned || 0) || (b.updated || 0) - (a.updated || 0));
   el('note-list').innerHTML = notes.map(note => `<button data-open="${note.id ?? 'new'}"${note.id === activeNote ? ' aria-current="true"' : ''}>
-    <span class="note-row-head"><span class="note-row-title">${note.pinned ? noteActionIcon(notePinPath, 'Catatan dipin') : ''}<strong>${escape(note.title)}</strong></span>${noteTime(note) ? `<time title="${noteTime(note)} WITA">${noteTime(note).slice(-5)}</time>` : ''}</span><small>${escape(notePreview(note.body) || 'Catatan kosong')}</small><small class="note-tag">${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
+    <span class="note-row-head"><span class="note-row-title">${note.pinned ? noteActionIcon('pin', 'Catatan dipin') : ''}<strong>${escape(note.title)}</strong></span>${noteTime(note) ? `<time title="${noteTime(note)} WITA">${noteTime(note).slice(-5)}</time>` : ''}</span><small>${escape(notePreview(note.body) || 'Catatan kosong')}</small><small class="note-tag">${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
 }
 function renderNotes(notes) {
   const note = notes.find(item => item.id === activeNote) || notes[0];
   activeNote = note?.id;
   const options = Object.entries(noteCategories).filter(([key]) => key !== 'all');
   editorRange = undefined;
-  el('view').innerHTML = `<div class="notes-head"><h1>Catatan</h1><button class="primary" data-new-note>+ Catatan baru</button></div>
+  el('view').innerHTML = `<div class="notes-head"><h1>Catatan</h1><button class="primary" data-new-note>${noteActionIcon('plus')} Catatan baru</button></div>
     <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
-      <section class="note-categories" aria-label="Kategori"><div class="category-head"><h2>Kategori</h2><button id="add-category" aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('M12 5v14M5 12h14')}</button></div>${Object.entries(noteCategories).map(([key, label]) =>
+      <section class="note-categories" aria-label="Kategori"><div class="category-head"><h2>Kategori</h2><button id="add-category" aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('plus')}</button></div>${Object.entries(noteCategories).map(([key, label]) =>
         `<button data-category="${key}" aria-pressed="${key === noteCategory}"><span>${escape(label)}</span><small class="note-category-count">${notes.filter(item => key === 'all' || (item.category || 'none') === key).length}</small></button>`).join('')}</section>
       <section class="note-index" aria-label="Daftar catatan"><input type="search" id="note-query" aria-label="Cari catatan" placeholder="Cari catatan…" value="${escape(noteQuery)}"><div class="note-mobile-category">
-        <label><span class="note-sr-only">Kategori</span>${noteActionIcon('M4 6h16l-6 7v5l-4 2v-7z')}
+        <label><span class="note-sr-only">Kategori</span>${noteActionIcon('filter')}
           <select id="note-category-filter">${Object.entries(noteCategories).map(([key, label]) =>
             `<option value="${key}"${key === noteCategory ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select>
         </label>
-        <button type="button" data-add-category aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('M12 5v14M5 12h14')}</button>
+        <button type="button" data-add-category aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('plus')}</button>
       </div><details ${fromTime || toTime ? "open" : ""}><summary>Filter waktu<span class="muted"> · WITA</span></summary><label>Dari<input type="datetime-local" id="note-from" value="${escape(fromTime)}"></label><label>Sampai<input type="datetime-local" id="note-to" value="${escape(toTime)}"></label><button id="clear-time">Hapus filter waktu</button></details><div id="note-list"></div></section>
-      <section class="note-sheet" aria-label="Editor catatan">${note ? `<div><button class="note-back" id="note-back">← Daftar catatan</button></div>
+      <section class="note-sheet" aria-label="Editor catatan">${note ? `<div><button class="note-back" id="note-back">${noteActionIcon('arrow-left')} Daftar catatan</button></div>
         <input id="edit-title" placeholder="Catatan baru" aria-label="Judul catatan" maxlength="160" value="${escape(note.title)}">
         <div class="note-toolbar" role="group" aria-label="Format catatan">${toolbar.map(([mark, label, icon]) =>
-          `<button data-mark="${mark}" aria-label="${label}" title="${label}">${icon}</button>`).join('')}
+          `<button data-mark="${mark}" aria-label="${label}" title="${label}">${noteActionIcon(icon)}</button>`).join('')}
           <input type="date" id="insert-date" aria-label="Sisipkan tanggal" title="Sisipkan tanggal">
         </div>
         <div id="edit-body" class="note-rendered" contenteditable="true" role="textbox" aria-label="Isi catatan" aria-multiline="true" data-placeholder="Tulis ide kamu di sini…">${formatNote(note.body)}</div>
         <div class="note-footer"><button class="note-save" id="save-note">Simpan</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label>
-          ${note.id !== null ? `<button type="button" id="pin-note" aria-pressed="${Boolean(note.pinned)}" aria-label="${pinNoteLabel(note.pinned)}" title="${pinNoteLabel(note.pinned)}">${noteActionIcon(notePinPath)}</button>` : ''}
-          <button type="button" id="delete-note" aria-label="${note.id === null ? 'Buang draf' : 'Hapus catatan'}" title="${note.id === null ? 'Buang draf' : 'Hapus catatan'}">${noteActionIcon(noteTrashPath)}</button>
+          ${note.id !== null ? `<button type="button" id="pin-note" aria-pressed="${Boolean(note.pinned)}" aria-label="${pinNoteLabel(note.pinned)}" title="${pinNoteLabel(note.pinned)}">${noteActionIcon('pin')}</button>` : ''}
+          <button type="button" id="delete-note" aria-label="${note.id === null ? 'Buang draf' : 'Hapus catatan'}" title="${note.id === null ? 'Buang draf' : 'Hapus catatan'}">${noteActionIcon('trash')}</button>
         </div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
     </div>`;
   renderNoteIndex();
@@ -347,7 +344,7 @@ selectionBar.setAttribute('aria-label','Format teks terpilih');
 selectionBar.hidden = true;
 selectionBar.innerHTML = `<select aria-label="Jenis paragraf" data-command="formatBlock"><option value="">Paragraf</option><option value="div">Teks biasa</option>${[1,2,3,4,5,6].map(n=>`<option value="h${n}">Heading ${n}</option>`).join('')}</select>
 <input type="color" value="#b8d99d" data-command="foreColor" aria-label="Warna teks">
-<select data-command="fontSize" aria-label="Ukuran teks"><option value="">Ukuran</option>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}">${n}</option>`).join('')}</select><button data-command="link">Tautan</button>`;
+<select data-command="fontSize" aria-label="Ukuran teks"><option value="">Ukuran</option>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}">${n}</option>`).join('')}</select><button data-command="link" aria-label="Tautan" title="Tautan">${noteActionIcon('link')}</button>`;
 document.body.append(selectionBar);
 const selectionPopupDesktop = matchMedia('(hover: hover) and (pointer: fine)');
 const selectionPopupDelay = 500;
