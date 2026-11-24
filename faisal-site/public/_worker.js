@@ -33,7 +33,7 @@ function escapeWorkroom(value) {
 }
 
 function workroomIcon(name, classes = 'ui-icon') {
-  return `<svg class="${classes}" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="/gentleface-icons.svg#${name}"/></svg>`;
+  return `<svg class="${classes}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="/gentleface-icons.svg#${name}"/></svg>`;
 }
 
 function taskCheckboxIcons() {
@@ -666,7 +666,9 @@ async function workroomInbox(db, data) {
   await ensureWorkroomNotes(db);
   await db.batch([
     db.prepare(`INSERT INTO workroom_entries (kind, title, body, status, due, priority, note_category, note_updated)
-        SELECT ?, substr(text, 1, 160), text, 'active', '', 'normal', ?, ? FROM workroom_inbox WHERE id = ?`)
+        SELECT ?, substr(text, 1, 160), text, 'active', '', 'normal',
+        (SELECT ? WHERE NOT EXISTS (SELECT 1 FROM workroom_archived_categories WHERE id = 'referensi')), ?
+        FROM workroom_inbox WHERE id = ?`)
         .bind(destination === 'task' ? 'task' : 'note', destination === 'reference' ? 'referensi' : null, Date.now(), id),
     remove,
   ]);
@@ -914,7 +916,7 @@ async function renderWorkroom(db, page, url, env) {
     </div>`, 200, page);
 }
 
-const builtInNoteCategories = ['belajar', 'ide', 'pribadi', 'referensi'];
+const builtInNoteCategories = { belajar: 'Belajar', ide: 'Ide', pribadi: 'Pribadi', referensi: 'Referensi' };
 
 async function ensureWorkroomNotes(db) {
   const columns = async () => (await db.prepare('PRAGMA table_info(workroom_entries)').all()).results;
@@ -927,18 +929,30 @@ async function ensureWorkroomNotes(db) {
       if (!(await columns()).some(column => column.name === name)) throw error;
     }
   }
-  await db.prepare('CREATE TABLE IF NOT EXISTS workroom_note_categories (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE)').run();
+  await db.batch([
+    db.prepare('CREATE TABLE IF NOT EXISTS workroom_note_categories (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS workroom_archived_categories (id TEXT PRIMARY KEY)'),
+  ]);
 }
 
-const workroomNoteFields = 'id, kind, title, body, note_category AS category, note_updated AS updated, note_pinned AS pinned';
+const workroomNoteFields = `id, kind, title, body,
+  CASE WHEN note_category IN (SELECT id FROM workroom_archived_categories) THEN NULL ELSE note_category END AS category,
+  note_updated AS updated, note_pinned AS pinned`;
 
 async function readWorkroomNotes(db) {
-  const [notes, trash, categories] = await db.batch([
+  const [notes, trash, customCategories, archived] = await db.batch([
     db.prepare(`SELECT ${workroomNoteFields} FROM workroom_entries WHERE kind = 'note' AND status <> 'trashed' ORDER BY id DESC`),
     db.prepare("SELECT id, title FROM workroom_entries WHERE kind = 'note' AND status = 'trashed' ORDER BY id DESC"),
     db.prepare('SELECT id, name FROM workroom_note_categories ORDER BY name'),
+    db.prepare('SELECT id FROM workroom_archived_categories'),
   ]);
-  return { notes: notes.results, categories: categories.results, trash: trash.results };
+  const hidden = new Set(archived.results.map(row => row.id));
+  const categories = [...Object.entries(builtInNoteCategories).map(([id, name]) => ({ id, name })), ...customCategories.results];
+  return {
+    notes: notes.results, trash: trash.results,
+    categories: categories.filter(category => !hidden.has(category.id)),
+    archivedCategories: categories.filter(category => hidden.has(category.id)),
+  };
 }
 
 async function workroomNotesData(request, db) {
@@ -969,36 +983,49 @@ async function workroomNotesData(request, db) {
     }
     return note ? reply(note) : reply({error:'Catatan tidak ditemukan atau sudah dipulihkan.'}, 404);
   }
-  if (data.action === 'delete-category') {
-    if (typeof data.id !== 'string' || !/^custom-[a-f0-9-]{36}$/.test(data.id)) {
-      return reply({error:'Hanya kategori buatan sendiri yang bisa dihapus.'}, 400);
+  if (data.action === 'delete-category' || data.action === 'restore-category') {
+    const id = data.id;
+    if (typeof id !== 'string' || (!Object.hasOwn(builtInNoteCategories, id) && !/^custom-[a-f0-9-]{36}$/.test(id))) {
+      return reply({error:'Kategori tidak valid.'}, 400);
     }
-    await db.batch([
-      db.prepare("UPDATE workroom_entries SET note_category = NULL WHERE kind = 'note' AND note_category = ?").bind(data.id),
-      db.prepare('DELETE FROM workroom_note_categories WHERE id = ?').bind(data.id),
+    const name = builtInNoteCategories[id] ?? (await db.prepare('SELECT name FROM workroom_note_categories WHERE id = ?').bind(id).first())?.name;
+    if (!name) return reply({error:'Kategori tidak ditemukan.'}, 404);
+    if (data.action === 'delete-category') {
+      await db.prepare('INSERT OR IGNORE INTO workroom_archived_categories (id) VALUES (?)').bind(id).run();
+      return reply({ id, name });
+    }
+    const [, notes] = await db.batch([
+      db.prepare('DELETE FROM workroom_archived_categories WHERE id = ?').bind(id),
+      db.prepare("SELECT id FROM workroom_entries WHERE kind = 'note' AND status <> 'trashed' AND note_category = ?").bind(id),
     ]);
-    return reply({ id: data.id });
+    return reply({ id, name, notes: notes.results.map(note => note.id) });
   }
   if (data.action === 'category') {
     const name = typeof data.name === 'string' ? data.name.trim() : '';
     if (!name || name.length > 40) return reply({error:'Nama kategori tidak valid.'}, 400);
+    if (['Semua', 'Tanpa kategori', ...Object.values(builtInNoteCategories)].some(label => label.toLowerCase() === name.toLowerCase())) {
+      return reply({error:'Nama kategori sudah dipakai. Jika dihapus, pulihkan dari Sampah.'}, 409);
+    }
     const id = 'custom-' + crypto.randomUUID();
     const result = await db.prepare('INSERT OR IGNORE INTO workroom_note_categories (id, name) VALUES (?, ?)').bind(id, name).run();
-    return result.meta.changes ? reply({id, name}, 201) : reply({error:'Kategori sudah ada.'}, 409);
+    return result.meta.changes ? reply({id, name}, 201) : reply({error:'Kategori sudah ada. Jika dihapus, pulihkan dari Sampah.'}, 409);
   }
   const {id, title, body, category} = data;
   if (data.action !== 'save' || (id !== null && (!Number.isSafeInteger(id) || id < 1)) ||
       typeof title !== 'string' || !title.trim() || title.length > 160 || typeof body !== 'string' || body.length > 10000 ||
       typeof category !== 'string' || category.length > 50) return reply({error:'Periksa judul, isi, dan kategori.'}, 400);
-  const custom = category !== 'none' && !builtInNoteCategories.includes(category);
-  const categoryCheck = 'NOT ? OR EXISTS (SELECT 1 FROM workroom_note_categories WHERE id = ?)';
+  const custom = category !== 'none' && !Object.hasOwn(builtInNoteCategories, category);
+  const categoryCheck = '(NOT ? OR EXISTS (SELECT 1 FROM workroom_note_categories WHERE id = ?)) AND NOT EXISTS (SELECT 1 FROM workroom_archived_categories WHERE id = ?)';
 
   const updated = Date.now();
   const values = [title.trim(), body, category, updated];
   const result = id === null
-    ? await db.prepare(`INSERT INTO workroom_entries (title, body, note_category, note_updated, kind, status, due, priority) SELECT ?, ?, ?, ?, 'note', 'active', '', 'normal' WHERE ${categoryCheck}`).bind(...values, Number(custom), category).run()
-    : await db.prepare(`UPDATE workroom_entries SET title = ?, body = ?, note_category = ?, note_updated = ? WHERE id = ? AND kind = 'note' AND status <> 'trashed' AND (${categoryCheck})`).bind(...values, id, Number(custom), category).run();
-  if (!result.meta.changes) return reply({error: custom ? 'Catatan atau kategori sudah berubah. Muat ulang halaman.' : 'Catatan tidak ditemukan.'}, custom ? 409 : 404);
+    ? await db.prepare(`INSERT INTO workroom_entries (title, body, note_category, note_updated, kind, status, due, priority) SELECT ?, ?, ?, ?, 'note', 'active', '', 'normal' WHERE ${categoryCheck}`).bind(...values, Number(custom), category, category).run()
+    : await db.prepare(`UPDATE workroom_entries SET title = ?, body = ?, note_category = CASE
+        WHEN ? = 'none' AND note_category IN (SELECT id FROM workroom_archived_categories) THEN note_category ELSE ? END,
+        note_updated = ? WHERE id = ? AND kind = 'note' AND status <> 'trashed' AND (${categoryCheck})`)
+      .bind(title.trim(), body, category, category, updated, id, Number(custom), category, category).run();
+  if (!result.meta.changes) return reply({error: category !== 'none' ? 'Catatan atau kategori sudah berubah. Muat ulang halaman.' : 'Catatan tidak ditemukan.'}, category !== 'none' ? 409 : 404);
   return reply({id: id ?? result.meta.last_row_id, kind:'note', title:title.trim(), body, category, updated});
 }
 

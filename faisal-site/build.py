@@ -19,7 +19,7 @@ def asset(name, data=None):
 gentleface_url = asset('gentleface-icons.svg')
 
 def site_icon(name):
-    return f'<svg class="ui-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="{gentleface_url}#{name}"/></svg>'
+    return f'<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="{gentleface_url}#{name}"/></svg>'
 
 def workroom_asset_data(name):
     return (P / 'public' / name).read_bytes().replace(b'/gentleface-icons.svg', gentleface_url.encode())

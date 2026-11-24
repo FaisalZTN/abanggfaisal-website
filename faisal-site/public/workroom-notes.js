@@ -2,7 +2,8 @@ import { noteInline, noteLines, notePreview } from './workroom-note-format.js';
 
 const el = id => document.getElementById(id);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const noteCategories = {all:'Semua',belajar:'Belajar',ide:'Ide',pribadi:'Pribadi',referensi:'Referensi',none:'Tanpa kategori'};
+const noteCategories = {all:'Semua',none:'Tanpa kategori'};
+let archivedCategories = [];
 const clock = new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Makassar',dateStyle:'short',timeStyle:'short'});
 const noteTime = item => item.updated ? clock.format(new Date(item.updated)) : '';
 let fromTime='', toTime='';
@@ -117,13 +118,13 @@ let busy=false;
 const render = () => renderNotes(entries);
 let trash = [];
 let trashOpen = false;
-function message(value, undoId) {
+function message(value, undoId, type = 'restoreNote') {
   const status = el('note-status');
   status.textContent = value;
   if (!undoId) return;
   const undo = document.createElement('button');
   undo.type = 'button';
-  undo.dataset.restoreNote = undoId;
+  undo.dataset[type] = undoId;
   undo.textContent = 'Urungkan';
   status.append(' ', undo);
 }
@@ -134,7 +135,7 @@ async function request(data) {
   return result;
 }
 function noteActionIcon(name, label = '') {
-  return `<svg class="ui-icon" viewBox="0 0 16 16" focusable="false"${label ? ` role="img" aria-label="${label}"` : ' aria-hidden="true"'}><use href="/gentleface-icons.svg#${name}"/></svg>`;
+  return `<svg class="ui-icon" viewBox="0 0 24 24" focusable="false"${label ? ` role="img" aria-label="${label}"` : ' aria-hidden="true"'}><use href="/gentleface-icons.svg#${name}"/></svg>`;
 }
 const pinNoteLabel = pinned => pinned ? 'Lepas pin' : 'Pin catatan';
 
@@ -153,13 +154,16 @@ function renderNotes(notes) {
   const note = notes.find(item => item.id === activeNote) || notes[0];
   activeNote = note?.id;
   const options = Object.entries(noteCategories).filter(([key]) => key !== 'all');
-  const deleteCategory = noteCategory.startsWith('custom-') && Object.hasOwn(noteCategories, noteCategory)
+  const deleteCategory = !['all', 'none'].includes(noteCategory) && Object.hasOwn(noteCategories, noteCategory)
     ? `<button type="button" data-delete-category aria-label="Hapus kategori" title="Hapus kategori">${noteActionIcon('trash')}</button>` : '';
   editorRange = undefined;
   const trashPanel = `<details class="note-trash"${trashOpen ? ' open' : ''}>
-    <summary>${noteActionIcon('trash')} Sampah <small>${trash.length}</small></summary>
+    <summary>${noteActionIcon('trash')} Sampah <small>${trash.length + archivedCategories.length}</small></summary>
     ${trash.length ? '<ul>' + trash.map(note => `<li><span>${escape(note.title)}</span>
-      <button type="button" data-restore-note="${note.id}">Pulihkan</button></li>`).join('') + '</ul>' : '<p>Sampah kosong.</p>'}
+      <button type="button" data-restore-note="${note.id}">Pulihkan</button></li>`).join('') + '</ul>' : ''}
+    ${archivedCategories.length ? '<ul aria-label="Kategori dihapus">' + archivedCategories.map(category => `<li><span>Kategori · ${escape(category.name)}</span>
+      <button type="button" data-restore-category="${escape(category.id)}">Pulihkan</button></li>`).join('') + '</ul>' : ''}
+    ${trash.length || archivedCategories.length ? '' : '<p>Sampah kosong.</p>'}
   </details>`;
   el('view').innerHTML = `<div class="notes-head"><h1>Catatan</h1><button class="primary" data-new-note>${noteActionIcon('plus')} Catatan baru</button></div>
     <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
@@ -190,7 +194,7 @@ function renderNotes(notes) {
 }
 
 document.addEventListener('click', async event=>{
-  const button=event.target.closest('#view button, #note-status button[data-restore-note]');
+  const button=event.target.closest('#view button, #note-status button');
   if(!button || busy)return;
   if(button.id==='clear-time'){fromTime='';toTime='';render();el('note-query').focus();}
   if(button.dataset.category){noteCategory=button.dataset.category;noteEditing=false;render();}
@@ -202,22 +206,42 @@ document.addEventListener('click', async event=>{
   }
   if(button.dataset.mark) editFormat(button.dataset.mark, el('edit-body'));
 
-  if (button.hasAttribute('data-delete-category') || button.dataset.restoreNote) {
+  if (button.hasAttribute('data-delete-category') || button.dataset.restoreNote || button.dataset.restoreCategory) {
     const deletingCategory = button.hasAttribute('data-delete-category');
-    const category = noteCategory;
+    const category = button.dataset.restoreCategory ?? noteCategory;
     if (deletingCategory && !confirm(`Hapus kategori “${noteCategories[category]}”? Catatannya akan dipindah ke Tanpa kategori.`)) return;
     busy = true;
     el('view').inert = true;
     try {
       if (deletingCategory) {
-        await request({ action: 'delete-category', id: category });
+        const removed = await request({ action: 'delete-category', id: category });
+        archivedCategories = [removed, ...archivedCategories.filter(item => item.id !== category)];
         delete noteCategories[category];
         for (const note of entries) {
-          if (note.category === category) note.category = 'none';
+          if (note.category === category) {
+            note.category = 'none';
+            note.archivedCategory = category;
+          }
         }
         noteCategory = 'none';
         render();
-        message('Kategori dihapus. Catatan tersedia di Tanpa kategori.');
+        message('Kategori dihapus. Catatan tersedia di Tanpa kategori.', category, 'restoreCategory');
+      } else if (button.dataset.restoreCategory) {
+        const restored = await request({ action: 'restore-category', id: category });
+        noteCategories[category] = restored.name;
+        archivedCategories = archivedCategories.filter(item => item.id !== category);
+        const restoredNotes = new Set(restored.notes);
+        for (const note of entries) {
+          if ((!note.category || note.category === 'none') && (
+            restoredNotes.has(note.id) || (note.id === null && note.archivedCategory === category)
+          )) note.category = category;
+          if (note.archivedCategory === category) delete note.archivedCategory;
+        }
+        noteCategory = category;
+        noteQuery = fromTime = toTime = '';
+        noteEditing = false;
+        render();
+        message('Kategori dipulihkan.');
       } else {
         const id = Number(button.dataset.restoreNote);
         const note = await request({ action: 'restore', id });
@@ -233,6 +257,7 @@ document.addEventListener('click', async event=>{
       }
     } catch (error) {
       if (deletingCategory) message(error.message);
+      else if (button.dataset.restoreCategory) message(error.message, category, 'restoreCategory');
       else message(error.message, Number(button.dataset.restoreNote));
     } finally {
       busy = false;
@@ -395,6 +420,7 @@ initialNotes.then(data=>{
   bootstrap?.remove();
   entries=data.notes;
   trash=data.trash ?? [];
+  archivedCategories=data.archivedCategories ?? [];
   for(const {id,name} of data.categories)noteCategories[id]=name;
   const selected=Number(new URLSearchParams(location.search).get('edit'));
   if(entries.some(note=>note.id===selected)){activeNote=selected;noteEditing=true;}
