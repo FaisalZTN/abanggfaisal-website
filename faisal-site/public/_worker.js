@@ -9,14 +9,14 @@ const workroomKinds = {
   goal: { title: 'Goals', statuses: { active: 'Sedang berjalan', done: 'Tercapai' } },
 };
 const workroomPages = {
-  home: { path: WORKROOM, title: 'Ringkasan', icon: 'M3 10l9-7 9 7v10H3z M9 20v-7h6v7' },
-  today: { path: WORKROOM + 'today/', title: 'Hari Ini', icon: 'M5 5h14v15H5z M8 3v4m8-4v4M5 10h14m-11 5 2 2 4-4' },
-  task: { path: WORKROOM + 'tasks/', title: 'Tugas', icon: 'M20 12v8H4V4h12 M8 11l4 4 9-10' },
-  privateNotes: { path: WORKROOM + 'private-notes/', title: 'Catatan Rahasia', icon: 'M6 10h12v10H6z M9 10V7a3 3 0 0 1 6 0v3 M12 14v2' },
-  note: { path: WORKROOM + 'notes/', title: 'Catatan', icon: 'M6 3h8l4 4v14H6z M14 3v5h4 M9 12h6 M9 16h6' },
-  project: { path: WORKROOM + 'projects/', title: 'Proyek', icon: 'M3 6h7l2 3h9v11H3z' },
-  goal: { path: WORKROOM + 'goals/', title: 'Goals', icon: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0z M12 12h.01' },
-  review: { path: WORKROOM + 'review/', title: 'Review', icon: 'M12 6v15 M12 6C9.4 4 6 3.7 3 5v14c3-1.3 6.4-1 9 2 2.6-3 6-3.3 9-2V5c-3-1.3-6.4-1-9 1Z' },
+  home: { path: WORKROOM, title: 'Ringkasan', icon: 'home' },
+  today: { path: WORKROOM + 'today/', title: 'Hari Ini', icon: 'calendar-day' },
+  task: { path: WORKROOM + 'tasks/', title: 'Tugas', icon: 'checklist' },
+  privateNotes: { path: WORKROOM + 'private-notes/', title: 'Catatan Rahasia', icon: 'lock' },
+  note: { path: WORKROOM + 'notes/', title: 'Catatan', icon: 'file-text' },
+  project: { path: WORKROOM + 'projects/', title: 'Proyek', icon: 'folder' },
+  goal: { path: WORKROOM + 'goals/', title: 'Goals', icon: 'target' },
+  review: { path: WORKROOM + 'review/', title: 'Review', icon: 'book-open' },
 };
 const privateHeaders = {
   'Content-Type': 'text/html; charset=utf-8',
@@ -32,6 +32,14 @@ function escapeWorkroom(value) {
   })[character]);
 }
 
+function workroomIcon(name, classes = 'ui-icon') {
+  return `<svg class="${classes}" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="/gentleface-icons.svg#${name}"/></svg>`;
+}
+
+function taskCheckboxIcons() {
+  return workroomIcon('square', 'ui-icon check-empty') + workroomIcon('checkbox', 'ui-icon check-marked');
+}
+
 function workroomPage(content, status = 200, page = null) {
   const wordmark = '<a class="workroom-wordmark" href="/">abanggfaisal.</a>';
   const currentPage = page === 'privateNotes' ? 'note' : page;
@@ -39,8 +47,7 @@ function workroomPage(content, status = 200, page = null) {
   const sidebarLink = ([key, { path, title, icon }], extra = false) => {
     const secondary = secondaryPages.includes(key);
     return `<a href="${key === 'home' ? workroomOverviewUrl : path}" aria-label="${title}"${currentPage === key ? ' aria-current="page"' : ''}${secondary && !extra ? ' class="workroom-nav-secondary"' : ''}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="${key === 'review' ? '#fff' : 'currentColor'}" stroke-width="1.6"
-        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icon}"/></svg>
+      ${workroomIcon(icon)}
       <span aria-hidden="true">${!extra && key === 'home' ? '<span class="workroom-nav-full">Ringkasan</span><span class="workroom-nav-short">Ringkas</span>' : title}</span>
     </a>`;
   };
@@ -49,7 +56,7 @@ function workroomPage(content, status = 200, page = null) {
     ${Object.entries(workroomPages).filter(([key]) => key !== 'privateNotes').map(entry => sidebarLink(entry)).join('')}
     <details class="workroom-nav-more"${secondaryPages.includes(currentPage) ? ' data-active' : ''}>
       <summary aria-label="Lainnya">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+        ${workroomIcon('more-horizontal')}
         <span>Lainnya</span>
       </summary>
       <div class="workroom-nav-menu">
@@ -67,7 +74,7 @@ function workroomPage(content, status = 200, page = null) {
       <nav aria-label="Navigasi situs"><a href="/">Menu Utama</a><a href="/ruang-belajar/">Ruang Belajar</a></nav>
     </header>
     <main>${page === 'note' ? `<div class="notes-private-entry">
-      <a href="${workroomPages.privateNotes.path}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="${workroomPages.privateNotes.icon}"/></svg>Catatan Rahasia</a>
+      <a href="${workroomPages.privateNotes.path}">${workroomIcon('lock')}Catatan Rahasia</a>
     </div>` : ''}${content}</main>
     ${page === 'task' || page === 'note' ? '<script src="/workroom-link-options.js" defer></script>' : ''}
     ${page === 'task' || page === 'note' ? '<script src="/workroom-image-upload.js" defer></script>' : ''}
@@ -313,7 +320,7 @@ function workroomDueTask(entry, today, action = WORKROOM) {
   const title = escapeWorkroom(entry.title);
   return `<li data-agenda-task data-status="${escapeWorkroom(entry.status)}" data-due="${escapeWorkroom(entry.due)}"><form method="post" action="${action}">
     <input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${entry.id}">
-    <button name="action" value="complete" aria-label="Tandai selesai: ${title}">✓</button><button type="button" data-agenda-undo hidden>Urungkan</button>
+    <button name="action" value="complete" class="task-checkbox" role="checkbox" aria-checked="false" aria-label="Tandai selesai: ${title}">${taskCheckboxIcons()}</button><button type="button" class="task-checkbox" role="checkbox" aria-checked="true" aria-label="Urungkan penyelesaian: ${title}" title="Urungkan" data-agenda-undo hidden>${taskCheckboxIcons()}</button>
     </form><div><a href="${workroomEntryLink(entry)}">${title}</a><small>${entry.due < today ? 'Lewat tenggat · ' : ''}${escapeWorkroom(entry.due)}</small><small data-agenda-feedback role="status"></small></div></li>`;
 }
 
@@ -337,9 +344,9 @@ function workroomCalendar(day, tasks, today, google, fullCalendar) {
     return `<a data-calendar-date="${value}" href="${href(value)}" class="${value === day ? 'selected ' : ''}${dated.has(value) || google.has(value) ? 'marked' : ''}" aria-label="${value}${dated.has(value) ? ', ada tugas' : ''}${google.has(value) ? ', ada acara Google Calendar' : ''}"${value === today ? ' aria-current="date"' : ''}>${i + 1}</a>`;
   });
   return `<section class="calendar"><div class="calendar-heading">
-    ${monthLink(-1, 'Bulan sebelumnya', '←')}
+    ${monthLink(-1, 'Bulan sebelumnya', workroomIcon('arrow-left'))}
     <h2>${date.toLocaleDateString('id-ID', {month:'long', year:'numeric', timeZone:'UTC'})}</h2>
-    ${monthLink(1, 'Bulan berikutnya', '→')}
+    ${monthLink(1, 'Bulan berikutnya', workroomIcon('arrow-right'))}
   </div>
   <a data-calendar-date="${today}" class="reset-day" href="${href(today)}">Hari ini · ${todayLabel}</a>
   <div class="days">${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<small>${d}</small>`).join('')}${'<span></span>'.repeat(first.getUTCDay())}${cells.join('')}</div></section>`;
@@ -375,7 +382,7 @@ function workroomDailyTasks(tasks, projects, filter) {
     const collapsed = date && date < today && items.every(task => task.status === 'done');
     return `<article class="daily-task-card" id="tasks-${date || 'undated'}"${!visible.length && date !== today ? ' hidden' : ''}>
       <details${collapsed ? '' : ' open'}>
-        <summary><strong>${e(title)}</strong>${date === today ? '<span class="daily-task-today">Hari ini</span>' : ''}
+        <summary>${workroomIcon('chevron-right', 'ui-icon daily-task-chevron')}<strong>${e(title)}</strong>${date === today ? '<span class="daily-task-today">Hari ini</span>' : ''}
           <small class="daily-task-progress" data-completed="${completed}" data-total="${visible.length}" aria-label="${completed} dari ${visible.length} selesai">${completed}/${visible.length}</small></summary>
         ${items.length ? `<ul>${items.map(task => {
           const done = task.status === 'done';
@@ -388,7 +395,7 @@ function workroomDailyTasks(tasks, projects, filter) {
               <input type="hidden" name="view" value="daily">
               <input type="hidden" name="status" value="${done ? 'active' : 'done'}">
               <input type="hidden" name="filter" value="${Object.hasOwn(workroomKinds.task.statuses, filter) ? filter : ''}">
-              <button name="action" value="status" role="checkbox" aria-checked="${done}" data-title="${e(task.title)}" aria-label="${change}: ${e(task.title)}"><span aria-hidden="true"></span></button>
+              <button name="action" value="status" class="task-checkbox" role="checkbox" aria-checked="${done}" data-title="${e(task.title)}" aria-label="${change}: ${e(task.title)}">${taskCheckboxIcons()}</button>
             </form>
             <div><a class="daily-task-title" href="${workroomEntryLink(task)}#workspace">${e(task.title)}</a>
               ${project || task.priority === 'high' || task.status === 'doing' ? `<div class="daily-task-meta">
@@ -401,7 +408,7 @@ function workroomDailyTasks(tasks, projects, filter) {
         }).join('')}</ul>` : ''}
         <p data-daily-empty${visible.length ? ' hidden' : ''}>${filter ? 'Tidak ada tugas dengan status ini.' : 'Belum ada tugas untuk hari ini.'}</p>
       </details>
-      <a class="daily-task-add" href="${path}?${e(add)}#add-task" aria-label="Tambah tugas: ${e(title)}" title="Tambah tugas">+</a>
+      <a class="daily-task-add" href="${path}?${e(add)}#add-task" aria-label="Tambah tugas: ${e(title)}" title="Tambah tugas">${workroomIcon('plus')}</a>
     </article>`;
   }).join('')}</div>`;
 }
@@ -608,9 +615,9 @@ async function renderWorkroomReview(db, url, env) {
       </nav>
     </div>
     <nav class="review-controls" aria-label="Pilih periode">
-      <a href="${href(length, previous)}" aria-label="${periodLabel} sebelumnya">←</a>
+      <a href="${href(length, previous)}" aria-label="${periodLabel} sebelumnya">${workroomIcon('arrow-left')}</a>
       <a href="${href(length, today)}">${periodLabel} ini</a>
-      <a href="${href(length, end)}" aria-label="${periodLabel} berikutnya">→</a>
+      <a href="${href(length, end)}" aria-label="${periodLabel} berikutnya">${workroomIcon('arrow-right')}</a>
     </nav>
     <div class="review-task-grid">
       <section class="collection">
@@ -739,7 +746,7 @@ async function workroomToday(request, url, env) {
     <div class="today-workspace-grid">
       <section class="collection today-focus"><h2>Fokus hari ini</h2>
         ${items.some(Boolean) ? `<ol>${items.filter(Boolean).map(item => `<li>${e(item)}</li>`).join('')}</ol>` : '<p>Belum ada fokus.</p>'}
-        <details><summary class="today-icon" aria-label="Edit fokus" title="Edit fokus"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 16-1 4 4-1L20 7l-3-3ZM14 7l3 3"/></svg></summary>
+        <details><summary class="today-icon" aria-label="Edit fokus" title="Edit fokus">${workroomIcon('pencil')}</summary>
         <form method="post" action="${path}">
           <input type="hidden" name="action" value="focus"><input type="hidden" name="day" value="${today}">
           ${[1, 2, 3].map(number => `<label>Fokus ${number}<input name="focus-${number}" maxlength="160" value="${e(items[number - 1])}"></label>`).join('')}
@@ -755,7 +762,7 @@ async function workroomToday(request, url, env) {
       </section>
       <section class="collection"><h2>Hari ini dan lewat tenggat</h2>
         ${list(due, 'Tidak ada tugas yang jatuh tempo.')}
-        <a href="${workroomPages.task.path}?add=task&amp;due=${today}#add-task">+ Tambah tugas hari ini</a>
+        <a href="${workroomPages.task.path}?add=task&amp;due=${today}#add-task">${workroomIcon('plus')} Tambah tugas hari ini</a>
       </section>
       <details class="collection today-upcoming"><summary>7 hari ke depan</summary>
         ${list(upcoming, 'Tidak ada tenggat dalam 7 hari ke depan.')}
@@ -764,7 +771,7 @@ async function workroomToday(request, url, env) {
     </div>
     <section class="collection today-inbox" id="inbox"><h2>Inbox Cepat</h2>
       <details${url.searchParams.has('captured') ? ' open' : ''}>
-        <summary class="today-icon" aria-label="Tambah ke Inbox" title="Tambah ke Inbox"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <summary class="today-icon" aria-label="Tambah ke Inbox" title="Tambah ke Inbox">${workroomIcon('plus')}</summary>
         <form method="post" action="${path}">
           <label>Teks atau tautan<textarea name="text" maxlength="10000" required rows="2"></textarea></label>
           <button name="action" value="capture">Simpan ke Inbox</button>
@@ -892,7 +899,7 @@ async function renderWorkroom(db, page, url, env) {
               <h3>Tugas</h3>
               <ul class="due-list"${due.length ? '' : ' hidden'}>${due.map(entry => workroomDueTask(entry, today)).join('')}</ul>
               <p class="agenda-empty"${due.length ? ' hidden' : ''}>Tidak ada tugas jatuh tempo.</p>
-              <a class="quick-add" href="${workroomPages.task.path}?add=task#add-task">+ Tambah tugas</a>
+              <a class="quick-add" href="${workroomPages.task.path}?add=task#add-task">${workroomIcon('plus')} Tambah tugas</a>
             </div>
           </section>
         </div>
@@ -1040,7 +1047,7 @@ const privateNotesLifetime = 300;
 const privateNotesEncoder = new TextEncoder();
 
 function privateNotesReply(content, status = 200) {
-  return workroomPage(`<div class="dashboard-content"><a class="private-notes-back" href="${workroomPages.note.path}">← Catatan</a><h1>Catatan Rahasia</h1>${content}</div>`, status, 'privateNotes');
+  return workroomPage(`<div class="dashboard-content"><a class="private-notes-back" href="${workroomPages.note.path}">${workroomIcon('arrow-left')} Catatan</a><h1>Catatan Rahasia</h1>${content}</div>`, status, 'privateNotes');
 }
 
 function privateNotesHex(bytes) {
@@ -1152,7 +1159,7 @@ async function workroomPrivateNotes(request, url, env) {
   return privateNotesReply(`<div data-private-notes-expires="${session.expires}">
     <form method="post" action="${path}"><button name="action" value="lock">Kunci sekarang</button></form>
     <div class="today-workspace-grid">
-      <section class="collection"><h2>Daftar catatan</h2><a href="${path}">+ Catatan baru</a>
+      <section class="collection"><h2>Daftar catatan</h2><a href="${path}">${workroomIcon('plus')} Catatan baru</a>
         ${notes.length ? '<ul>' + notes.map(note => `<li><a href="${path}?edit=${e(note.id)}">${e(note.title)}</a></li>`).join('') + '</ul>' : '<p>Belum ada catatan rahasia.</p>'}
       </section>
       <section class="collection"><h2>${selected ? 'Edit catatan' : 'Catatan baru'}</h2>
