@@ -21,7 +21,13 @@
   if (!sidebar || !panel) return;
 
   const routes = new Map([
+    ['/workroom/', 'home'],
+    ['/workroom/today/', 'today'],
     ['/workroom/tasks/', 'task'],
+    ['/workroom/projects/', 'project'],
+    ['/workroom/goals/', 'goal'],
+    ['/workroom/settings/', 'settings'],
+    ['/workroom/private-notes/', 'privateNotes'],
     ['/workroom/notes/', 'note'],
     ['/workroom/review/', 'review'],
   ]);
@@ -34,7 +40,7 @@
     const modules = [...scope.querySelectorAll(moduleSelector)];
     return Promise.all(modules.map(script => {
       const path = script.dataset.src;
-      if (!/^\/workroom-(?:notes|review|quick-check|task-detail|link-options|image-upload)(?:\.[a-f0-9]{12})?\.js$/.test(path)) {
+      if (!/^\/workroom-(?:notes|review|quick-check|task-detail|link-options|image-upload|agenda-check|calendar|greeting|private-notes)(?:\.[a-f0-9]{12})?\.js$/.test(path)) {
         throw new Error('Invalid Workroom module');
       }
       return import(path);
@@ -50,6 +56,7 @@
   }
 
   function selectRoute(path) {
+    if (routes.get(path) === 'privateNotes') path = '/workroom/notes/';
     const more = sidebar.querySelector('.workroom-nav-more');
     more?.removeAttribute('data-active');
     for (const link of sidebar.querySelectorAll('a[aria-label]')) {
@@ -85,7 +92,7 @@
     panel.inert = true;
     panel.setAttribute('aria-busy', 'true');
     const timer = setTimeout(() => {
-      status.textContent = 'Memuat ' + sidebar.querySelector('a[aria-current="page"]').getAttribute('aria-label') + '…';
+      status.textContent = 'Memuat halaman…';
       status.hidden = false;
     }, 150);
     try {
@@ -108,6 +115,7 @@
       lifecycle = new AbortController();
       panel.replaceWith(replacement);
       panel = replacement;
+      panel.dispatchEvent(new Event('workroom-panel-change', { bubbles: true }));
       mount(modules);
       document.title = next.title;
       panel.tabIndex = -1;
@@ -127,7 +135,7 @@
   }
 
   function canLeave() {
-    if (panel.querySelector('[data-quick-check][aria-busy="true"]')) return false;
+    if (panel.querySelector('form[aria-busy="true"], [data-agenda-task][aria-busy="true"]')) return false;
     const guard = preventLeaving?.();
     if (guard === 'busy') return false;
     return !guard || window.confirm('Ada perubahan catatan yang belum disimpan. Tinggalkan halaman?');
@@ -137,15 +145,15 @@
     mount(modules);
     if (!panel.dataset.workroomPanel) return;
 
-    // Intercept only owner pages using the shared panel layout. Other links retain
-    // browser navigation, including private notes and links opened in a new tab.
+    // Only Workroom GET links participate in the shared shell. Forms keep their native submission.
     document.addEventListener('click', event => {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       const link = event.target.closest('a[href]');
       if (!link || link.target || link.hasAttribute('download')) return;
-      if (!sidebar.contains(link) && !link.closest('.workspace-tools, .review-controls, .daily-task-add, .task-workspace, .review-task-grid')) return;
+      if (!sidebar.contains(link) && !panel.contains(link)) return;
       const url = new URL(link.href);
-      if (url.origin !== location.origin || !routes.has(url.pathname)) return;
+      if (url.origin !== location.origin || !routes.has(url.pathname) || (url.pathname === '/workroom/' && !url.search) ||
+          (url.pathname === location.pathname && url.search === location.search && url.hash)) return;
       event.preventDefault();
       if (url.href === location.href) {
         if (pending) clearPending();

@@ -1,5 +1,5 @@
-(() => {
-  const root = document.querySelector('.calendar-agenda[data-day]');
+export function mount(panel, signal) {
+  const root = panel.querySelector('.calendar-agenda[data-day]');
   if (!root || root.hasAttribute('data-calendar-full')) return;
 
   const { today, google } = root.dataset;
@@ -74,7 +74,7 @@
 
   function loadMonth(month) {
     if (!pending.has(month)) {
-      const request = fetch(calendarPath + '?calendar-data=' + month + '-01', { cache: 'no-store' })
+      const request = fetch(calendarPath + '?calendar-data=' + month + '-01', { cache: 'no-store', signal })
         .then(response => {
           if (!response.ok) throw new Error('Calendar request failed');
           return response.json();
@@ -142,9 +142,9 @@
 
   window.addEventListener('popstate', () => {
     const day = location.href === initialUrl ? initialDay : new URLSearchParams(location.search).get('day') ?? today;
-    showDay(day);
-  });
+    if (location.pathname === calendarPath) showDay(day);
+  }, { signal });
 
   root.addEventListener('agenda-task-change', () => updateDays(months.get(selected.slice(0, 7))?.calendar));
   showDay(selected);
-})();
+}

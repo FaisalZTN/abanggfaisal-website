@@ -23,6 +23,7 @@ module.exports = async function checkWorkroom(browser, origin) {
   const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5',pair.privateKey,Buffer.from(tokenData));
   const token = tokenData+'.'+Buffer.from(signature).toString('base64url');
   const env = {WORKROOM_ACCESS_ISSUER:issuer, WORKROOM_ACCESS_AUD:'test',WORKROOM_OWNER_EMAIL:'test@example.com',
+    WORKROOM_PRIVATE_NOTES_PASSWORD: 'local-test-password', WORKROOM_PRIVATE_NOTES_KEY: 'a'.repeat(64),
     WORKROOM_DB:{prepare:adapt,batch:async statements=>Promise.all(statements.map(statement => statement.all()))}};
   const page = await browser.newPage();
   try {
@@ -69,8 +70,37 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.locator('.workroom-nav > a[aria-label="Review"]').click();
     await page.waitForSelector('.workroom-review h1');
     assert.equal(await page.evaluate(()=>window.testDocument), true);
+    for (const [label, panel] of [
+      ['Ringkasan', 'home'], ['Hari Ini', 'today'], ['Proyek', 'project'],
+      ['Goals', 'goal'], ['Pengaturan', 'settings'],
+    ]) {
+      await page.locator(`.workroom-nav > a[aria-label="${label}"]`).click();
+      await page.locator(`main[data-workroom-panel="${panel}"]`).waitFor();
+      assert.equal(await page.evaluate(() => window.testDocument), true);
+    }
+    assert.equal(await page.getByRole('radio', { name: 'Biru' }).isChecked(), true);
+    await page.getByRole('radio', { name: 'Midnight' }).check();
+    assert.equal(await page.locator('html').getAttribute('data-workroom-theme'), 'midnight');
+    await page.getByRole('radio', { name: 'Terang' }).check();
+    assert.equal(await page.locator('html').getAttribute('data-workroom-theme'), 'light');
+
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.locator('.workroom-nav > a[aria-label="Catatan"]').click();
+    await page.getByRole('link', { name: 'Catatan Rahasia' }).click();
+    await page.getByLabel('Sandi Catatan Rahasia').waitFor();
+    assert.equal(await page.evaluate(() => window.testDocument), true);
+    await page.getByLabel('Lainnya', { exact: true }).click();
+    await page.locator('.workroom-nav-menu').getByRole('link', { name: 'Pengaturan' }).click();
+    await page.getByRole('radio', { name: 'Terang' }).waitFor();
+    assert.equal(await page.getByRole('radio', { name: 'Terang' }).isChecked(), true);
+    assert.equal(await page.evaluate(() => window.testDocument), true);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 360);
+    await page.reload();
+    await page.getByRole('radio', { name: 'Terang' }).waitFor();
+    assert.equal(await page.getByRole('radio', { name: 'Terang' }).isChecked(), true);
+    assert.equal(await page.locator('html').getAttribute('data-workroom-theme'), 'light');
     assert.deepEqual(errors, []);
-    console.log('Authenticated worker and Chromium: Review → Notes → Tasks → Back → Forward → Review, same document, module cleanup, no page errors');
+    console.log('Authenticated worker and Chromium: all Workroom panels, history, draft protection, mobile menu and persisted themes');
   } finally {
     global.fetch = originalFetch;
     db.close();

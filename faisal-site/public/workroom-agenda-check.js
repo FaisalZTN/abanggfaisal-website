@@ -1,5 +1,5 @@
-(() => {
-  const main = document.querySelector('main');
+export function mount(panel, signal) {
+  const main = panel;
   if (!main) return;
 
   function updateRow(row, complete) {
@@ -50,4 +50,4 @@
     const button = event.target.closest('[data-agenda-undo]');
     if (button) change(button.closest('[data-agenda-task]'), false);
   });
-})();
+}
