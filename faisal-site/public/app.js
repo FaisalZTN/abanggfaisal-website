@@ -617,6 +617,28 @@ if (primaryRoutes.has(renderedPath) && !location.search) {
     if (destination) requestPage(destination).catch(() => {});
   }
 
+  // Warm the most likely destinations one at a time, after the current page loads.
+  function prefetchPrimaryPages() {
+    const connection = navigator.connection;
+    if (connection?.saveData || (connection?.effectiveType && connection.effectiveType !== '4g')) return;
+    const queue = ['/journal/', '/shop/', '/ruang-belajar/'].filter(path => path !== renderedPath).slice(0, 2);
+    const whenIdle = callback => window.requestIdleCallback
+      ? window.requestIdleCallback(callback, { timeout: 1500 })
+      : window.setTimeout(callback, 750);
+    function warmNext() {
+      const path = queue.shift();
+      if (!path) return;
+      if (path === renderedPath || document.visibilityState !== 'visible') {
+        whenIdle(warmNext);
+        return;
+      }
+      requestPage(new URL(path, location.origin)).catch(() => {}).finally(() => whenIdle(warmNext));
+    }
+    whenIdle(warmNext);
+  }
+  if (document.readyState === 'complete') prefetchPrimaryPages();
+  else window.addEventListener('load', prefetchPrimaryPages, { once: true });
+
   document.addEventListener('pointerover', warmPage);
   document.addEventListener('pointerdown', warmPage, { passive: true });
   document.addEventListener('focusin', warmPage);
