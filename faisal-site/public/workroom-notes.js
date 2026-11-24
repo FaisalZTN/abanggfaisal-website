@@ -35,6 +35,40 @@ export function mount(panel, signal) {
     ['sub', 'Subskrip', 'subscript'], ['link', 'Sisipkan tautan', 'link'],
   ];
 
+  const paragraphMenus = [
+    ['alignment', 'Perataan paragraf', 'M3 5h18M3 10h13M3 15h18M3 20h13', 'left',
+      [['left', 'Rata kiri'], ['center', 'Rata tengah'], ['right', 'Rata kanan'], ['justify', 'Rata kiri-kanan (Justify)']]],
+    ['leading', 'Spasi antarbaris', 'M5 4v16M2 7l3-3 3 3m-6 10 3 3 3-3M11 5h10m-10 7h10m-10 7h10', 'normal',
+      [['1', '1,0'], ['1.15', '1,15'], ['1.5', '1,5'], ['2', '2,0'], ['2.5', '2,5'], ['3', '3,0'], ['compact', '1,25 (lama)'], ['normal', '1,65 (bawaan)']]],
+    ['spacing', 'Jarak antarparagraf', 'M3 4h18M3 7h18M12 10v4m-2-2 2-2 2 2m-4 0 2 2 2-2M3 17h18M3 20h18', 'normal',
+      [['none', 'Tanpa jarak'], ['normal', 'Normal'], ['wide', 'Lebar']]],
+  ];
+
+  function layoutControls() {
+    return paragraphMenus.map(([key, label, path, , options]) => `
+      <button type="button" data-layout-trigger="${key}" popovertarget="note-layout-${key}" aria-label="${label}" title="${label}">
+        <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="${path}"/></svg>
+      </button>
+      <div id="note-layout-${key}" class="note-layout-popover" popover aria-label="${label}" role="group">
+        ${options.map(([value, text]) => `<button type="button" data-layout-key="${key}" data-layout-value="${value}" aria-pressed="false"><span aria-hidden="true">✓</span>${text}</button>`).join('')}
+      </div>`).join('');
+  }
+
+  function syncLayout(attrs = {}) {
+    for (const [key, label, , fallback, options] of paragraphMenus) {
+      const value = key === 'leading' && attrs.leading === 'wide' ? '2' : attrs[key] ?? fallback;
+      const menu = el('note-layout-' + key);
+      if (!menu) continue;
+      for (const option of menu.querySelectorAll('button')) {
+        option.setAttribute('aria-pressed', String(option.dataset.layoutValue === value));
+        if (key === 'leading' && option.dataset.layoutValue === 'compact') option.hidden = value !== 'compact';
+      }
+      const trigger = panel.querySelector(`[data-layout-trigger="${key}"]`);
+      const current = options.find(option => option[0] === value)?.[1];
+      trigger.title = current ? `${label} · ${current}` : label;
+    }
+  }
+
   function editFormat(mark) {
     if (!blockEditor) return;
     if (mark === 'blocks') return blockEditor.showBlocks();
@@ -127,19 +161,7 @@ export function mount(panel, signal) {
               <option value="">Ukuran teks</option>
               ${[10, 13, 16, 18, 24, 32, 48].map(px => `<option value="${px}px">${px} px</option>`).join('')}
             </select>
-            <select data-note-layout="alignment" aria-label="Perataan paragraf">
-              <option value="">Perataan</option><option value="left">Rata kiri</option>
-              <option value="center">Rata tengah</option><option value="right">Rata kanan</option>
-              <option value="justify">Rata kiri-kanan (Justify)</option>
-            </select>
-            <select data-note-layout="leading" aria-label="Spasi antarbaris">
-              <option value="">Spasi baris</option><option value="compact">1,25</option>
-              <option value="normal">1,65</option><option value="wide">2</option>
-            </select>
-            <select data-note-layout="spacing" aria-label="Jarak antarparagraf">
-              <option value="">Jarak paragraf</option><option value="none">Tanpa jarak</option>
-              <option value="normal">Normal</option><option value="wide">Lebar</option>
-            </select>
+            ${layoutControls()}
             <input type="date" id="insert-date" aria-label="Sisipkan tanggal" title="Sisipkan tanggal">
           </div>
           <div id="edit-body" class="note-rendered"></div>
@@ -154,7 +176,22 @@ export function mount(panel, signal) {
         dirty.add(note);
         renderNoteIndex();
         message('Perubahan belum disimpan.');
-      });
+      }, syncLayout);
+      syncLayout(blockEditor.editor.state.selection.$from.parent.attrs);
+      for (const menu of panel.querySelectorAll('.note-layout-popover')) {
+        menu.addEventListener('beforetoggle', event => {
+          if (event.newState !== 'open') return;
+          const trigger = panel.querySelector(`[popovertarget="${menu.id}"]`);
+          const rect = trigger.getBoundingClientRect();
+          menu.style.left = Math.max(8, Math.min(rect.left, innerWidth - 216)) + 'px';
+          const below = innerHeight - rect.bottom - 12;
+          const above = rect.top - 12;
+          const openAbove = below < 256 && above > below;
+          menu.style.top = (openAbove ? rect.top - 4 : rect.bottom + 4) + 'px';
+          menu.style.transform = openAbove ? 'translateY(-100%)' : '';
+          menu.style.maxHeight = Math.min(256, Math.max(48, openAbove ? above : below)) + 'px';
+        });
+      }
     }
     el('view').querySelector('.note-trash').addEventListener('toggle', event => { trashOpen = event.target.open; });
     renderNoteIndex();
@@ -170,6 +207,11 @@ export function mount(panel, signal) {
     if(button.hasAttribute('data-new-note')){
       if(!entries.some(note=>note.id===null))entries.unshift({id:null,kind:'note',title:'',body:'',category:noteCategory==='all'?'none':noteCategory});
       noteQuery=''; activeNote=null;noteEditing=true;render();el('edit-title').focus();
+    }
+    if (button.dataset.layoutKey && blockEditor) {
+      button.closest('[popover]').hidePopover();
+      blockEditor.editor.chain().focus().setParagraphLayout(button.dataset.layoutKey, button.dataset.layoutValue).run();
+      return;
     }
     if(button.dataset.mark) editFormat(button.dataset.mark);
 
@@ -317,10 +359,6 @@ export function mount(panel, signal) {
     if(target.id==='note-from' || target.id==='note-to'){
       if(target.id==='note-from')fromTime=target.value;else toTime=target.value;
       renderNoteIndex();
-    }
-    if (target.matches('[data-note-layout]') && target.value) {
-      blockEditor?.editor.chain().focus().setParagraphLayout(target.dataset.noteLayout, target.value).run();
-      target.value = '';
     }
     if (target.id === 'note-text-color') blockEditor?.editor.chain().focus().setColor(target.value).run();
     if (target.id === 'note-text-size') {

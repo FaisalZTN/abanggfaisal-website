@@ -95,11 +95,22 @@ module.exports = async function checkWorkroom(browser, origin) {
     await editor.locator('strong').click();
     await page.keyboard.press('End');
     await page.keyboard.type(' disunting');
-    await page.getByLabel('Perataan paragraf').selectOption('justify');
-    await page.getByLabel('Spasi antarbaris').selectOption('wide');
-    await page.getByLabel('Jarak antarparagraf').selectOption('wide');
+    for (const [label, option] of [
+      ['Perataan paragraf', 'Rata kiri-kanan (Justify)'],
+      ['Spasi antarbaris', '1,5'],
+      ['Jarak antarparagraf', 'Lebar'],
+    ]) {
+      const trigger = page.getByRole('button', { name: label, exact: true });
+      const choice = page.getByRole('group', { name: label, exact: true })
+        .getByRole('button', { name: option, exact: true });
+      await trigger.click();
+      await choice.click();
+      await trigger.click();
+      assert.equal(await choice.getAttribute('aria-pressed'), 'true');
+      await page.keyboard.press('Escape');
+    }
     const formatted = editor.locator('p[data-note-alignment="justify"]');
-    assert.equal(await formatted.getAttribute('data-note-leading'), 'wide');
+    assert.equal(await formatted.getAttribute('data-note-leading'), '1.5');
     assert.equal(await formatted.getAttribute('data-note-spacing'), 'wide');
     await page.getByRole('button', { name: 'Simpan', exact: true }).click();
     await page.getByText('Catatan tersimpan.', { exact: true }).waitFor();
