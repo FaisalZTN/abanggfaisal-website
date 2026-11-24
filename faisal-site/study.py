@@ -121,6 +121,28 @@ def build_study(root, output, write, head, escape, render_article, preview=False
     comments = []
     if comments_path.is_file():
         comments = json.loads(comments_path.read_text(encoding='utf-8')).get('entries') or []
+    schedule = defaultdict(list)
+    published = sorted(
+        (item for item in lectures.values()
+         if item['status'] == 'published' and item.get('lecture_date')
+         and blocks[entry_block(item)]['status'] == 'active'),
+        key=lambda item: (item['lecture_date'], item.get('lecture_start') or '99:99', item['number']),
+    )
+    for item in published:
+        block_id = entry_block(item)
+        schedule[item['lecture_date']].append({
+            'title': item['title'],
+            'start': item.get('lecture_start') or '',
+            'end': item.get('lecture_end') or '',
+            'location': item.get('lecture_location') or '',
+            'block': blocks[block_id]['title'],
+            'url': block_path(block_id) + '#' + item['id'],
+        })
+    output.mkdir(parents=True, exist_ok=True)
+    (output / 'study-schedule.json').write_text(
+        json.dumps(schedule, ensure_ascii=False, separators=(',', ':')), encoding='utf-8',
+    )
+
     ordered = sorted(blocks.values(), key=lambda b: (b['id'] != DEFAULT_BLOCK,
                                                      b['status'] == 'coming-soon', b['title'].casefold()))
     for block in ordered:
@@ -131,7 +153,9 @@ def build_study(root, output, write, head, escape, render_article, preview=False
             continue
         render_block(block, selector, shared_guidelines, lectures_by_block[block_id], tutorials_by_block[block_id],
                      teachers, teachers_by_block[block_id], output, write, head, escape, render_article, preview,
-                     comments=comments)
+                     comments=comments,
+                     combined_schedule=[(item, blocks[entry_block(item)]) for item in published]
+                     if block_id == DEFAULT_BLOCK else None)
 
 
 def entry_block(item):
@@ -269,7 +293,7 @@ def render_exam_priorities(blueprint, lectures, teachers, base, e):
 
 
 def render_block(block, selector, guidelines, lectures, tutorials, teachers, roster,
-                 output, write, head, e, render_article, preview, *, comments=()):
+                 output, write, head, e, render_article, preview, *, comments=(), combined_schedule=None):
     block_id = block['id']
     base = block_path(block_id)
     block_name = block['title']
@@ -319,8 +343,16 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
 
     def schedule_dashboard():
         entries = defaultdict(list)
-        scheduled = (item for item in active if item.get('lecture_date'))
-        for item in sorted(scheduled, key=lambda x: (x['lecture_date'], x.get('lecture_start') or '99:99', x['number'])):
+        scheduled = combined_schedule
+        if scheduled is None:
+            scheduled = [(item, block) for item in active if item.get('lecture_date')]
+            scheduled.sort(key=lambda row: (row[0]['lecture_date'], row[0].get('lecture_start') or '99:99', row[0]['number']))
+        for item, source_block in scheduled:
+            session_url = block_path(source_block['id']) + '#' + item['id']
+            source = source_block.get('schedule_source') or 'Sumber jadwal'
+            reference = schedule_reference(item, source)
+            if combined_schedule is not None:
+                reference = source_block['title'] + ' · ' + reference
             hours = lecture_hours(item) or ('Jam ujian belum tercantum' if item['department'] == 'Ujian' else 'Jam belum tercatat')
             people = ', '.join(teachers[key]['title'] for key in (item.get('teachers') or []))
             location = item.get('lecture_location') or ''
@@ -330,8 +362,8 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
                 f'data-start="{e(item.get("lecture_start") or "")}" data-end="{e(item.get("lecture_end") or "")}" '
                 f'data-people="{e(people)}" data-location="{e(location)}" data-hours="{e(hours)}">'
                 f'<p class="study-slot-time">{e(hours)}<span data-session-state hidden></span></p>'
-                f'<div><h4>{link("#" + item["id"], item["title"])}</h4>'
-                f'<p>{e(people or "Dosen belum tercantum")}</p>{location_html}<small>{e(schedule_reference(item, schedule_source))}</small></div></li>'
+                f'<div><h4><a href="{e(session_url)}">{e(item["title"])}</a></h4>'
+                f'<p>{e(people or "Dosen belum tercantum")}</p>{location_html}<small>{e(reference)}</small></div></li>'
             )
         days = ''.join(
             f'<section class="study-agenda-day"><div class="study-agenda-day-head">'
@@ -358,6 +390,8 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
                     + (full_schedule or '<p>Jadwal belum tersedia.</p>')
                     + f'<div class="study-agenda-links">{calendar_link}{link("#kuliah", "Lihat katalog kuliah")}</div></section>')
         note = schedule_note or f'Tanggal dan jam mengikuti {schedule_source}. Lokasi mengikuti pembaruan Ruang Belajar.'
+        if combined_schedule is not None:
+            note = 'Jadwal gabungan blok dan mata kuliah aktif dalam WITA. ' + note
         past_classes = '''
           <details class="study-full-schedule study-past-classes" id="arsip-kelas" hidden>
             <summary>Arsip kelas <span data-past-count></span></summary>

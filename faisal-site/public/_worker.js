@@ -16,8 +16,8 @@ const workroomPages = {
   note: { path: WORKROOM + 'notes/', title: 'Catatan', icon: 'file-text' },
   project: { path: WORKROOM + 'projects/', title: 'Proyek', icon: 'folder' },
   goal: { path: WORKROOM + 'goals/', title: 'Goals', icon: 'target' },
-  settings: { path: WORKROOM + 'settings/', title: 'Pengaturan', icon: 'settings' },
   review: { path: WORKROOM + 'review/', title: 'Review', icon: 'book-open' },
+  settings: { path: WORKROOM + 'settings/', title: 'Pengaturan', icon: 'settings' },
 };
 const privateHeaders = {
   'Content-Type': 'text/html; charset=utf-8',
@@ -702,6 +702,36 @@ async function workroomInbox(db, data) {
   return true;
 }
 
+async function workroomStudySchedule(env, url, today) {
+  const e = escapeWorkroom;
+  const nextDay = new Date(today + 'T12:00:00Z');
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+  const tomorrow = nextDay.toISOString().slice(0, 10);
+  const dateLabel = new Intl.DateTimeFormat('id-ID', {weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC'});
+  const source = '<a href="/ruang-belajar/#ringkasan-jadwal">Lihat di Ruang Belajar</a>';
+  let content;
+  try {
+    const response = await env.ASSETS.fetch(new Request(new URL('/study-schedule.json', url)));
+    if (!response.ok) throw new Error('Jadwal tidak tersedia');
+    const schedule = await response.json();
+    content = '<div class="today-workspace-grid workroom-study-days">' +
+      [[today, 'Hari ini'], [tomorrow, 'Besok']].map(([day, label]) => {
+        const sessions = schedule[day] ?? [];
+        return `<section><h3>${label} <time datetime="${day}">${e(dateLabel.format(new Date(day + 'T12:00:00Z')))}</time></h3>
+          ${sessions.length ? `<ul class="workroom-study-sessions">${sessions.map(item => `<li>
+            <a href="${e(item.url)}">${e(item.title)}</a>
+            <small>${e(item.start && item.end ? item.start + '–' + item.end : item.start || 'Jam belum tercatat')}${item.location ? ' · ' + e(item.location) : ''} · ${e(item.block)}</small>
+          </li>`).join('')}</ul>` : '<p>Tidak ada sesi terjadwal.</p>'}</section>`;
+      }).join('') + '</div>';
+  } catch {
+    content = '<p>Jadwal belum bisa dimuat.</p>';
+  }
+  return `<section class="collection workroom-study-schedule" aria-labelledby="workroom-study-title">
+    <div class="workroom-study-heading"><h2 id="workroom-study-title">Jadwal kuliah <small>WITA</small></h2>${source}</div>
+    ${content}
+  </section>`;
+}
+
 async function workroomToday(request, url, env) {
   const db = env.WORKROOM_DB;
   const today = workroomDay.format(new Date());
@@ -752,13 +782,14 @@ async function workroomToday(request, url, env) {
 
   nextDate.setUTCDate(nextDate.getUTCDate() + 6);
   const through = nextDate.toISOString().slice(0, 10);
-  const [[focus, tasks, inbox], agenda] = await Promise.all([
+  const [[focus, tasks, inbox], agenda, studySchedule] = await Promise.all([
     db.batch([
       db.prepare('SELECT items FROM workroom_daily_focus WHERE day = ?').bind(today),
       db.prepare("SELECT id, kind, title, due, status FROM workroom_entries WHERE kind = 'task' AND status <> 'done' AND due <> '' AND due <= ? ORDER BY due, id DESC").bind(through),
       db.prepare('SELECT id, text FROM workroom_inbox ORDER BY rowid DESC'),
     ]),
     mode === 'full' ? renderAgenda() : '',
+    workroomStudySchedule(env, url, today),
   ]);
   const items = JSON.parse(focus.results[0]?.items ?? '[]');
   const e = escapeWorkroom;
@@ -772,6 +803,7 @@ async function workroomToday(request, url, env) {
   return workroomPage(`<div class="dashboard-content workroom-today">
     <div><h1>Hari Ini</h1><p>${e(date)} · WITA</p></div>
     ${(url.searchParams.has('saved') || url.searchParams.has('captured')) ? '<p class="save-notice" role="status">Perubahan tersimpan.</p>' : ''}
+    ${studySchedule}
     <div class="today-workspace-grid">
       <section class="collection today-focus"><h2>Fokus hari ini</h2>
         ${items.some(Boolean) ? `<ol>${items.filter(Boolean).map(item => `<li>${e(item)}</li>`).join('')}</ol>` : '<p>Belum ada fokus.</p>'}
@@ -877,7 +909,10 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
   const day = validWorkroomDay(selectedDay) ? selectedDay : today;
   const showGoogle = googleConfigured(env);
   const fullCalendar = params.get('calendar') === 'full';
-  const google = fullCalendar ? await googleMonth(env, day) : { entries: new Map(), status: 'disabled' };
+  const [google, studySchedule] = await Promise.all([
+    fullCalendar ? googleMonth(env, day) : { entries: new Map(), status: 'disabled' },
+    workroomStudySchedule(env, url, today),
+  ]);
   const tasks = entries.filter(entry => entry.kind === 'task' && entry.status !== 'done' && entry.due)
     .sort((a, b) => a.due.localeCompare(b.due));
   const isDue = entry => day === today ? entry.due <= today : entry.due === day;
@@ -893,6 +928,7 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
         <h1>Workroom</h1>
       </div>
       ${notice}
+      ${studySchedule}
       <div class="overview">
         <section class="today-panel" id="hari-ini">
           <div class="today-heading"><div>

@@ -275,8 +275,10 @@ function initializePage(signal) {
         people.textContent = teachers || 'Dosen belum tercantum';
         const url = new URL(session.getAttribute('href'), location.href);
         material.href = url.href;
+        const otherPage = url.pathname !== location.pathname;
         const lecture = document.getElementById(url.hash.slice(1));
-        material.hidden = !lecture?.querySelector('.study-material');
+        material.textContent = otherPage ? 'Lihat sesi' : 'Buka materi';
+        material.hidden = !otherPage && !lecture?.querySelector('.study-material');
       }
     }
 
