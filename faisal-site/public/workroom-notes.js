@@ -115,7 +115,18 @@ let entries=[];
 const dirty = new Set();
 let busy=false;
 const render = () => renderNotes(entries);
-function message(value) { el('note-status').textContent=value; }
+let trash = [];
+let trashOpen = false;
+function message(value, undoId) {
+  const status = el('note-status');
+  status.textContent = value;
+  if (!undoId) return;
+  const undo = document.createElement('button');
+  undo.type = 'button';
+  undo.dataset.restoreNote = undoId;
+  undo.textContent = 'Urungkan';
+  status.append(' ', undo);
+}
 async function request(data) {
   const response=await fetch('/workroom/notes/?notes-data', data ? {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)} : {});
   const result=await response.json().catch(()=>({}));
@@ -142,10 +153,17 @@ function renderNotes(notes) {
   const note = notes.find(item => item.id === activeNote) || notes[0];
   activeNote = note?.id;
   const options = Object.entries(noteCategories).filter(([key]) => key !== 'all');
+  const deleteCategory = noteCategory.startsWith('custom-') && Object.hasOwn(noteCategories, noteCategory)
+    ? `<button type="button" data-delete-category aria-label="Hapus kategori" title="Hapus kategori">${noteActionIcon('trash')}</button>` : '';
   editorRange = undefined;
+  const trashPanel = `<details class="note-trash"${trashOpen ? ' open' : ''}>
+    <summary>${noteActionIcon('trash')} Sampah <small>${trash.length}</small></summary>
+    ${trash.length ? '<ul>' + trash.map(note => `<li><span>${escape(note.title)}</span>
+      <button type="button" data-restore-note="${note.id}">Pulihkan</button></li>`).join('') + '</ul>' : '<p>Sampah kosong.</p>'}
+  </details>`;
   el('view').innerHTML = `<div class="notes-head"><h1>Catatan</h1><button class="primary" data-new-note>${noteActionIcon('plus')} Catatan baru</button></div>
     <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
-      <section class="note-categories" aria-label="Kategori"><div class="category-head"><h2>Kategori</h2><button id="add-category" aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('plus')}</button></div>${Object.entries(noteCategories).map(([key, label]) =>
+      <section class="note-categories" aria-label="Kategori"><div class="category-head"><h2>Kategori</h2><button id="add-category" aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('plus')}</button>${deleteCategory}</div>${Object.entries(noteCategories).map(([key, label]) =>
         `<button data-category="${key}" aria-pressed="${key === noteCategory}"><span>${escape(label)}</span><small class="note-category-count">${notes.filter(item => key === 'all' || (item.category || 'none') === key).length}</small></button>`).join('')}</section>
       <section class="note-index" aria-label="Daftar catatan"><input type="search" id="note-query" aria-label="Cari catatan" placeholder="Cari catatan…" value="${escape(noteQuery)}"><div class="note-mobile-category">
         <label><span class="note-sr-only">Kategori</span>${noteActionIcon('filter')}
@@ -153,7 +171,8 @@ function renderNotes(notes) {
             `<option value="${key}"${key === noteCategory ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select>
         </label>
         <button type="button" data-add-category aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('plus')}</button>
-      </div><details ${fromTime || toTime ? "open" : ""}><summary>Filter waktu<span class="muted"> · WITA</span></summary><label>Dari<input type="datetime-local" id="note-from" value="${escape(fromTime)}"></label><label>Sampai<input type="datetime-local" id="note-to" value="${escape(toTime)}"></label><button id="clear-time">Hapus filter waktu</button></details><div id="note-list"></div></section>
+        ${deleteCategory}
+      </div><details ${fromTime || toTime ? "open" : ""}><summary>Filter waktu<span class="muted"> · WITA</span></summary><label>Dari<input type="datetime-local" id="note-from" value="${escape(fromTime)}"></label><label>Sampai<input type="datetime-local" id="note-to" value="${escape(toTime)}"></label><button id="clear-time">Hapus filter waktu</button></details><div id="note-list"></div>${trashPanel}</section>
       <section class="note-sheet" aria-label="Editor catatan">${note ? `<div><button class="note-back" id="note-back">${noteActionIcon('arrow-left')} Daftar catatan</button></div>
         <input id="edit-title" placeholder="Catatan baru" aria-label="Judul catatan" maxlength="160" value="${escape(note.title)}">
         <div class="note-toolbar" role="group" aria-label="Format catatan">${toolbar.map(([mark, label, icon]) =>
@@ -166,11 +185,12 @@ function renderNotes(notes) {
           <button type="button" id="delete-note" aria-label="${note.id === null ? 'Buang draf' : 'Hapus catatan'}" title="${note.id === null ? 'Buang draf' : 'Hapus catatan'}">${noteActionIcon('trash')}</button>
         </div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
     </div>`;
+  el('view').querySelector('.note-trash').addEventListener('toggle', event => { trashOpen = event.target.open; });
   renderNoteIndex();
 }
 
 document.addEventListener('click', async event=>{
-  const button=event.target.closest('#view button');
+  const button=event.target.closest('#view button, #note-status button[data-restore-note]');
   if(!button || busy)return;
   if(button.id==='clear-time'){fromTime='';toTime='';render();el('note-query').focus();}
   if(button.dataset.category){noteCategory=button.dataset.category;noteEditing=false;render();}
@@ -182,16 +202,58 @@ document.addEventListener('click', async event=>{
   }
   if(button.dataset.mark) editFormat(button.dataset.mark, el('edit-body'));
 
+  if (button.hasAttribute('data-delete-category') || button.dataset.restoreNote) {
+    const deletingCategory = button.hasAttribute('data-delete-category');
+    const category = noteCategory;
+    if (deletingCategory && !confirm(`Hapus kategori “${noteCategories[category]}”? Catatannya akan dipindah ke Tanpa kategori.`)) return;
+    busy = true;
+    el('view').inert = true;
+    try {
+      if (deletingCategory) {
+        await request({ action: 'delete-category', id: category });
+        delete noteCategories[category];
+        for (const note of entries) {
+          if (note.category === category) note.category = 'none';
+        }
+        noteCategory = 'none';
+        render();
+        message('Kategori dihapus. Catatan tersedia di Tanpa kategori.');
+      } else {
+        const id = Number(button.dataset.restoreNote);
+        const note = await request({ action: 'restore', id });
+        trash = trash.filter(item => item.id !== id);
+        entries.push(note);
+        activeNote = id;
+        noteEditing = true;
+        noteCategory = 'all';
+        noteQuery = '';
+        fromTime = toTime = '';
+        render();
+        message('Catatan dipulihkan.');
+      }
+    } catch (error) {
+      if (deletingCategory) message(error.message);
+      else message(error.message, Number(button.dataset.restoreNote));
+    } finally {
+      busy = false;
+      el('view').inert = false;
+    }
+    return;
+  }
+
   if (button.id === 'pin-note' || button.id === 'delete-note') {
     const note = entries.find(item => item.id === activeNote);
     if (!note) return;
     const deleting = button.id === 'delete-note';
-    if (deleting && !confirm(note.id === null ? 'Buang draf ini?' : 'Hapus catatan ini secara permanen?')) return;
+    if (deleting && !confirm(note.id === null ? 'Buang draf ini?' : 'Pindahkan catatan ini ke Sampah? Perubahan yang belum disimpan akan dibuang.')) return;
     busy = true;
     el('view').inert = true;
     try {
       if (deleting) {
-        if (note.id !== null) await request({ action: 'delete', id: note.id });
+        if (note.id !== null) {
+          const removed = await request({ action: 'delete', id: note.id });
+          trash.unshift(removed);
+        }
         entries = entries.filter(item => item !== note);
         dirty.delete(note);
         activeNote = undefined;
@@ -203,7 +265,7 @@ document.addEventListener('click', async event=>{
         }
         render();
         el('note-query').focus();
-        message(note.id === null ? 'Draf dibuang.' : 'Catatan dihapus.');
+        message(note.id === null ? 'Draf dibuang.' : 'Catatan dipindah ke Sampah.', note.id);
       } else {
         const result = await request({ action: 'pin', id: note.id, pinned: !note.pinned });
         note.pinned = result.pinned;
@@ -256,7 +318,8 @@ document.addEventListener('change', event=>{
   const target=event.target;
   if (target.id === 'note-category-filter') {
     noteCategory = target.value;
-    renderNoteIndex();
+    render();
+    el('note-category-filter').focus();
     return;
   }
   if(target.id==='note-from' || target.id==='note-to'){
@@ -331,6 +394,7 @@ const initialNotes = bootstrap ? Promise.resolve().then(() => JSON.parse(bootstr
 initialNotes.then(data=>{
   bootstrap?.remove();
   entries=data.notes;
+  trash=data.trash ?? [];
   for(const {id,name} of data.categories)noteCategories[id]=name;
   const selected=Number(new URLSearchParams(location.search).get('edit'));
   if(entries.some(note=>note.id===selected)){activeNote=selected;noteEditing=true;}
