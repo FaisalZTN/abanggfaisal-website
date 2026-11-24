@@ -39,7 +39,7 @@
     item.className = 'task-detail-link';
     const toggle = document.createElement('button');
     toggle.type = 'button';
-    toggle.innerHTML = '<svg class="ui-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><use href="/gentleface-icons.svg#more-horizontal"/></svg>';
+    toggle.innerHTML = '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="/gentleface-icons.svg#more-horizontal"/></svg>';
     toggle.setAttribute('aria-label', 'Opsi link');
     toggle.title = 'Opsi link';
     toggle.dataset.linkOptions = '';
