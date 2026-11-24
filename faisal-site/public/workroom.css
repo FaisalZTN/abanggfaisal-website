@@ -959,3 +959,24 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-rendered [data-note-leading="3"] { line-height: 3; }
 
 .note-layout-popover button[hidden] { display: none; }
+
+.workroom-study-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: .5rem;
+}
+.workroom-study-heading small,
+.workroom-study-days time,
+.workroom-study-sessions small {
+  color: var(--muted);
+  font-size: .85rem;
+  font-weight: 400;
+}
+.workroom-study-days h3 { margin-block: .5rem; font-size: 1rem; }
+.workroom-study-days time { margin-inline-start: .35rem; }
+.workroom-study-days p { margin: .5rem 0 0; color: var(--muted); }
+.workroom-study-sessions { list-style: none; margin: 0; padding: 0; }
+.workroom-study-sessions li { padding: .5rem 0; border-top: 1px solid var(--line); }
+.workroom-study-sessions small { display: block; }
