@@ -1,4 +1,5 @@
-(() => {
+export function mount(panel, signal) {
+  const listen = (target, type, handler, options) => target.addEventListener(type, handler, { ...options, signal });
   const menu = document.createElement('div');
   menu.className = 'workroom-link-options';
   menu.hidden = true;
@@ -18,6 +19,8 @@
   status.setAttribute('role', 'status');
   menu.append(copy, open, status);
   document.body.append(menu);
+
+  signal.addEventListener('abort', () => { hide(); menu.remove(); }, { once: true });
 
   const allowed = '#edit-body a[href], .task-detail-preview a[href]';
   const eligible = link => link?.matches(allowed) && /^https?:$/.test(link.protocol);
@@ -52,7 +55,7 @@
     }, 220);
   };
   const hrefAt = target => target.closest?.(allowed);
-  document.addEventListener('pointerover', event => {
+  listen(document, 'pointerover', event => {
     if (event.pointerType !== 'mouse' || menu.contains(event.target)) return;
     const link = hrefAt(event.target);
     if (!eligible(link) || link.contains(event.relatedTarget)) return;
@@ -60,21 +63,21 @@
     if (active !== link) hoverTimer = setTimeout(() => show(link), 180);
     else clearTimeout(timer);
   });
-  document.addEventListener('pointerout', event => {
+  listen(document, 'pointerout', event => {
     const link = hrefAt(event.target);
     if (link && !link.contains(event.relatedTarget)) clearTimeout(hoverTimer);
     if (menu.contains(event.relatedTarget)) return;
     if (menu.contains(event.target) || active?.contains(event.target)) scheduleHide();
   });
   menu.addEventListener('pointerenter', () => clearTimeout(timer));
-  document.addEventListener('contextmenu', event => {
+  listen(document, 'contextmenu', event => {
     const link = hrefAt(event.target);
     if (eligible(link)) {
       event.preventDefault();
       show(link);
     }
   });
-  document.addEventListener('click', event => {
+  listen(document, 'click', event => {
     if (menu.contains(event.target)) return;
     const button = event.target.closest?.('.task-detail-preview [data-link-options]');
     if (button) {
@@ -93,7 +96,7 @@
     }
     hide();
   });
-  document.addEventListener('keydown', event => {
+  listen(document, 'keydown', event => {
     const link = hrefAt(event.target);
     if (event.altKey && event.key === 'ArrowDown' && eligible(link)) {
       event.preventDefault();
@@ -105,8 +108,8 @@
       hide();
     }
   });
-  window.addEventListener('scroll', hide, { capture: true, passive: true });
-  window.addEventListener('resize', hide);
+  listen(window, 'scroll', hide, { capture: true, passive: true });
+  listen(window, 'resize', hide);
   copy.onclick = async () => {
     try {
       await navigator.clipboard.writeText(open.href);
@@ -115,4 +118,4 @@
       status.textContent = 'Link belum bisa disalin.';
     }
   };
-})();
+}

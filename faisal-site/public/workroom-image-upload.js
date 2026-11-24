@@ -1,10 +1,11 @@
-(() => {
+export function mount(panel, signal) {
+  const listen = (target, type, handler, options) => target.addEventListener(type, handler, { ...options, signal });
   const pending = new WeakSet();
   function targetEditor(target) {
     return target.closest?.('#edit-body, .workspace-editor textarea[name="body"], #add-task textarea[name="body"]');
   }
   function status(editor, text) {
-    const message = editor.id === 'edit-body' ? document.getElementById('note-status')
+    const message = editor.id === 'edit-body' ? panel.querySelector('#' + 'note-status')
       : editor.closest('form').querySelector('.task-detail-status');
     if (message) message.textContent = text;
   }
@@ -54,7 +55,7 @@
     }
   }
   for (const type of ['paste', 'drop']) {
-    document.addEventListener(type, event => {
+    listen(document, type, event => {
       const editor = targetEditor(event.target);
       const transfer = type === 'paste' ? event.clipboardData : event.dataTransfer;
       const image = Array.from(transfer?.files || []).find(file => /^image\/(png|jpeg|webp|gif|avif|bmp)$/i.test(file.type));
@@ -64,9 +65,9 @@
       upload(editor, image);
     }, true);
   }
-  document.addEventListener('dragover', event => {
+  listen(document, 'dragover', event => {
     if (targetEditor(event.target) && Array.from(event.dataTransfer?.types || []).includes('Files')) {
       event.preventDefault();
     }
   });
-})();
+}

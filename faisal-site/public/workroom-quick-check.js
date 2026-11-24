@@ -1,5 +1,5 @@
-(() => {
-  const workspace = document.getElementById('workspace');
+export function mount(panel, signal) {
+  const workspace = panel.querySelector('#workspace');
   const select = workspace?.querySelector('[data-task-filter] select');
   if (!select) return;
 
@@ -95,4 +95,4 @@
       button.removeAttribute('aria-disabled');
     }
   });
-})();
+}
