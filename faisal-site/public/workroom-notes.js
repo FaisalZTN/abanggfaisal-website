@@ -46,6 +46,8 @@ export function mount(panel, signal) {
     blockEditor?.editor.setEditable(!split || !leftReadOnly, false);
     if (el('edit-title')) el('edit-title').readOnly = split && leftReadOnly;
     splitPreview?.editor.setEditable(!rightReadOnly, false);
+    blockEditor?.editor.view.dom.setAttribute('aria-readonly', String(split && leftReadOnly));
+    splitPreview?.editor.view.dom.setAttribute('aria-readonly', String(rightReadOnly));
     for (const [side, readOnly] of [['left', leftReadOnly], ['right', rightReadOnly]]) {
       const button = el('note-mode-' + side);
       if (!button) continue;
@@ -78,7 +80,7 @@ export function mount(panel, signal) {
       el('note-split-title').textContent = target.title || 'Catatan baru';
       splitPreview = mountBlockEditor(el('note-split-body'), readBlockNote(target.body) ?? legacyContent(target.body),
         document => updateNoteBody(target, document, 'right'),
-        attrs => { if (toolbarSide === 'right') syncLayout(attrs); });
+        attrs => { if (toolbarSide === 'right') syncLayout(attrs); }, 'Isi catatan panel kanan');
     }
     applyPaneModes();
   }
@@ -326,7 +328,7 @@ export function mount(panel, signal) {
             <button type="button" id="pin-note"${note.id === null ? ' hidden' : ''} aria-pressed="${Boolean(note.pinned)}" aria-label="${pinNoteLabel(note.pinned)}" title="${pinNoteLabel(note.pinned)}">${noteActionIcon('pin')}</button>
             <button type="button" id="delete-note" aria-label="${note.id === null ? 'Buang draf' : 'Hapus catatan'}" title="${note.id === null ? 'Buang draf' : 'Hapus catatan'}">${noteActionIcon('trash')}</button>
           </div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
-        <section id="note-split-pane" class="note-sheet" aria-label="Pratinjau catatan" hidden>
+        <section id="note-split-pane" class="note-sheet" aria-label="Panel catatan kanan" hidden>
           <div class="note-split-heading"><h2 id="note-split-title"></h2><button type="button" id="note-mode-right">Baca</button><button type="button" id="close-note-split" aria-label="Tutup Split View" title="Tutup Split View">×</button></div>
           <div id="note-split-body" class="note-rendered"></div>
         </section>
