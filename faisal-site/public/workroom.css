@@ -928,8 +928,6 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-block-menu p { margin: .5rem; color: var(--muted); }
 .note-block-menu button { display: block; width: 100%; text-align: start; border-radius: .35rem; background: transparent; color: var(--ink); }
 .note-block-menu button:is(:hover, [aria-selected="true"]) { background: var(--selected); }
-.note-toolbar #note-text-color { width: 44px; padding: .25rem; }
-.note-toolbar #note-text-size { width: auto; }
 .note-toolbar [data-layout-trigger] { display: inline-grid; place-items: center; }
 .note-rendered [data-note-alignment="left"] { text-align: left; }
 .note-rendered [data-note-alignment="center"] { text-align: center; }
@@ -1023,7 +1021,10 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 }
 .note-tabs { display: flex; gap: .35rem; overflow-x: auto; min-width: 0; flex: 1; }
 .note-tabs button { flex: none; max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.note-tabs [aria-current="true"] { background: var(--selected); color: var(--ink); }
+.note-tabs button { background: transparent; color: var(--muted); border: 1px solid transparent; border-radius: .55rem; }
+.note-tabs button:hover { background: var(--paper); color: var(--ink); }
+.note-tabs [aria-current="true"] { background: var(--paper); color: var(--ink); border-color: var(--line); box-shadow: inset 0 -2px var(--accent); }
+.note-fullscreen-exit { flex: none; border-radius: .65rem; }
 .notes-fullscreen :is(.notes-head, .note-categories, .note-index, .note-sheet label:has(#note-category),
     .note-sheet > div:has(> [data-note-fullscreen])) { display: none; }
 .notes-fullscreen .notes-desk { display: block; min-height: 0; flex: 1; }
@@ -1044,3 +1045,36 @@ body:has(#view.notes-fullscreen) #note-status:not(:empty) {
   color: var(--ink);
   pointer-events: none;
 }
+
+body:has(#view.notes-fullscreen) :is(.workroom-nav, .workroom-footer) { display: none; }
+
+.note-toolbar .note-icon-field {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: .5rem;
+  cursor: pointer;
+}
+.note-icon-field:is(:hover, :focus-within) { background: var(--selected); }
+.note-icon-field :is(input, select) {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.note-icon-field input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.note-text-size-icon { font-weight: 700; font-size: 1rem; }
