@@ -175,6 +175,7 @@ function workroomForm(kind, entry, projects, standalone = false, defaultDue = ''
     ${kind === 'task' ? `<label>Area<input name="task_area" list="task-areas" maxlength="60" value="${e(entry?.task_area ?? defaultArea)}" placeholder="Contoh: Akademik"></label>` : ''}
     ${kind !== 'project' ? `<label>Proyek<select name="project_id"><option value="">Tanpa proyek</option>${projectOptions}</select></label>` : ''}
     </div>
+    ${kind === 'task' && entry ? '<p data-task-save-status role="status"></p>' : ''}
     <button name="action" value="save">${entry ? 'Simpan perubahan' : 'Tambah'}</button>
     ${entry ? '<details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>' : ''}
   </form>`;
@@ -1595,8 +1596,11 @@ async function handleWorkroom(request, env, url) {
     await ensureTaskArea(db);
     const values = [title, body, status, due, priority, project, area];
     if (id) {
-      await db.prepare("UPDATE workroom_entries SET title = ?, body = ?, status = ?, due = ?, priority = ?, project_id = ?, task_area = COALESCE(?, task_area) WHERE id = ? AND kind = ? AND status <> 'trashed'")
+      const result = await db.prepare("UPDATE workroom_entries SET title = ?, body = ?, status = ?, due = ?, priority = ?, project_id = ?, task_area = COALESCE(?, task_area) WHERE id = ? AND kind = ? AND status <> 'trashed'")
         .bind(...values, id, kind).run();
+      if (kind === 'task' && get('autosave') === '1') {
+        return new Response(null, { status: result.meta.changes ? 204 : 404, headers: privateHeaders });
+      }
     } else {
       await db.prepare("INSERT INTO workroom_entries (title, body, status, due, priority, project_id, task_area, kind) VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, ''), ?)")
         .bind(...values, kind).run();
