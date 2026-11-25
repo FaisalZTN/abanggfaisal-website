@@ -1044,7 +1044,7 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   padding: .35rem .65rem .35rem .4rem;
   flex: none;
 }
-.note-title-field { display: grid; min-width: 0; }
+.note-title-field { position: relative; display: grid; min-width: 0; }
 .note-title-field::after, .note-sheet #edit-title {
   grid-area: 1 / 1;
   min-height: var(--note-control-size);
@@ -1056,7 +1056,15 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   overflow-wrap: anywhere;
 }
 .note-title-field::after { content: attr(data-title) ' '; visibility: hidden; }
-.note-sheet #edit-title { margin: 0; resize: none; overflow: hidden; }
+.note-sheet #edit-title {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  resize: none;
+  overflow: hidden;
+}
 .note-sheet :is(#edit-title, .note-screen-button):focus-visible {
   outline: 2px solid transparent;
   outline-offset: -2px;
