@@ -112,8 +112,8 @@ module.exports = async function checkWorkroom(browser, origin) {
     const formatted = editor.locator('p[data-note-alignment="justify"]');
     assert.equal(await formatted.getAttribute('data-note-leading'), '1.5');
     assert.equal(await formatted.getAttribute('data-note-spacing'), 'wide');
-    await page.getByRole('button', { name: 'Simpan', exact: true }).click();
-    await page.getByText('Catatan tersimpan.', { exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Simpan', exact: true }).count(), 0);
+    await page.getByText('Tersimpan otomatis.', { exact: true }).waitFor();
     const stored = db.prepare("SELECT body FROM workroom_entries WHERE title = ?").get('Catatan lama').body;
     assert.match(stored, /^workroom-blocks-v1:/);
     await page.getByRole('button', { name: /Catatan lama/ }).click();
