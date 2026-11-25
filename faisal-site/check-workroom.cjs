@@ -125,6 +125,30 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.waitForSelector('#workspace');
     await page.locator('.workroom-nav > a[aria-label="Catatan"]').click();
     await page.getByRole('button', { name: /Catatan lama/ }).click();
+    const checkTitleControls = () => page.evaluate(() => {
+      const title = document.querySelector('#edit-title');
+      const button = document.querySelector('.note-title-row [data-note-fullscreen]');
+      const short = title.getBoundingClientRect();
+      const icon = button.getBoundingClientRect();
+      const radius = getComputedStyle(title).borderRadius;
+      const titleField = title.parentElement;
+      const original = titleField.dataset.title;
+      titleField.dataset.title = 'Judul catatan yang panjang '.repeat(10);
+      const long = title.getBoundingClientRect();
+      titleField.dataset.title = original;
+      return {
+        sameHeight: Math.abs(short.height - icon.height) <= 1,
+        sameTop: Math.abs(short.top - icon.top) <= 1,
+        rounded: parseFloat(radius) > 0 && radius === getComputedStyle(button).borderRadius,
+        wraps: long.height > short.height && long.right <= icon.left,
+      };
+    });
+    const expectedTitleControls = { sameHeight: true, sameTop: true, rounded: true, wraps: true };
+    assert.deepEqual(await checkTitleControls(), expectedTitleControls);
+    const desktopViewport = page.viewportSize();
+    await page.setViewportSize({ width: 360, height: 800 });
+    assert.deepEqual(await checkTitleControls(), expectedTitleControls);
+    await page.setViewportSize(desktopViewport);
     const noteViewport = await page.evaluate(() => {
       const body = document.querySelector('#edit-body');
       const title = document.querySelector('#edit-title');
