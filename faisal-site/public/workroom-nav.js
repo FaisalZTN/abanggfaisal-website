@@ -57,6 +57,7 @@
 
   function selectRoute(path) {
     if (routes.get(path) === 'privateNotes') path = '/workroom/notes/';
+    if (routes.get(path) === 'project') path = '/workroom/tasks/';
     const more = sidebar.querySelector('.workroom-nav-more');
     more?.removeAttribute('data-active');
     for (const link of sidebar.querySelectorAll('a[aria-label]')) {

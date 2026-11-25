@@ -35,12 +35,16 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.route('**/workroom/**', async route => {
       const incoming = route.request();
       const headers = {
-        ...incoming.headers(),
+        ...await incoming.allHeaders(),
         'Cf-Access-Jwt-Assertion': token,
       };
-      const result = await worker.fetch(new Request(incoming.url(), {
+      let result = await worker.fetch(new Request(incoming.url(), {
         method: incoming.method(), headers, body: incoming.postDataBuffer(),
       }), env);
+      if (result.status === 303 && incoming.method() === 'POST') {
+        const destination = new URL(result.headers.get('Location'), incoming.url());
+        result = await worker.fetch(new Request(destination, { headers }), env);
+      }
       await route.fulfill({
         status: result.status,
         headers: Object.fromEntries(result.headers),
@@ -153,13 +157,34 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.waitForSelector('.workroom-review h1');
     assert.equal(await page.evaluate(()=>window.testDocument), true);
     for (const [label, panel] of [
-      ['Ringkasan', 'home'], ['Hari Ini', 'today'], ['Proyek', 'project'],
+      ['Ringkasan', 'home'], ['Hari Ini', 'today'], ['Tugas', 'task'],
       ['Goals', 'goal'], ['Pengaturan', 'settings'],
     ]) {
       await page.locator(`.workroom-nav > a[aria-label="${label}"]`).click();
       await page.locator(`main[data-workroom-panel="${panel}"]`).waitFor();
       assert.equal(await page.evaluate(() => window.testDocument), true);
     }
+    const project = db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('project', 'Tugas Akhir', '', 'active', '', 'normal')").run().lastInsertRowid;
+    db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority, project_id) VALUES ('task', 'Baca jurnal', '', 'active', '2027-09-30', 'normal', ?), ('task', 'Buat kerangka', '', 'done', '', 'normal', ?)").run(project, project);
+    await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
+    await page.getByRole('link', { name: 'Baca jurnal' }).click();
+    await page.locator('.workspace-editor').getByLabel('Area', { exact: true }).fill('Akademik');
+    await page.locator('.workspace-editor').getByRole('button', { name: 'Simpan perubahan' }).click();
+    await page.getByText('Perubahan tersimpan.', { exact: true }).waitFor();
+    assert.equal(db.prepare("SELECT task_area FROM workroom_entries WHERE title = 'Baca jurnal'").get().task_area, 'Akademik');
+    await page.getByLabel('Filter area', { exact: true }).selectOption('Akademik');
+    await page.getByRole('button', { name: 'Filter area', exact: true }).click();
+    await page.waitForURL('**/*area=Akademik*');
+    await page.getByRole('link', { name: 'Baca jurnal' }).waitFor();
+    assert.equal(await page.getByRole('link', { name: 'Buat kerangka' }).count(), 0);
+    await page.evaluate(() => { window.testDocument = true; });
+    await page.getByRole('navigation', { name: 'Kelola tugas' }).getByRole('link', { name: 'Proyek' }).click();
+    await page.locator('main[data-workroom-panel="project"]').waitFor();
+    assert.equal(await page.locator('.workroom-nav > a[aria-label="Tugas"]').getAttribute('aria-current'), 'page');
+    await page.getByText('1 dari 2 tugas selesai · Tenggat tugas terdekat: 2027-09-30').waitFor();
+    await page.getByRole('link', { name: 'Baca jurnal' }).waitFor();
+    await page.locator('.workroom-nav > a[aria-label="Pengaturan"]').click();
+    await page.getByRole('radio', { name: 'Biru' }).waitFor();
     assert.equal(await page.getByRole('radio', { name: 'Biru' }).isChecked(), true);
     await page.getByRole('radio', { name: 'Midnight' }).check();
     assert.equal(await page.locator('html').getAttribute('data-workroom-theme'), 'midnight');
