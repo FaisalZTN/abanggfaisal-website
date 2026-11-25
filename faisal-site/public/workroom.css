@@ -980,3 +980,21 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .workroom-study-sessions { list-style: none; margin: 0; padding: 0; }
 .workroom-study-sessions li { padding: .5rem 0; border-top: 1px solid var(--line); }
 .workroom-study-sessions small { display: block; }
+
+/* Replace the browser tap flash with feedback drawn inside each control's own border radius. */
+:where(a[href], button, summary, select, [role="button"], [role="checkbox"],
+       input:is([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"]),
+       .workroom-theme-option) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (forced-colors: none) {
+  /* Component hover and selected colors resume as soon as the press ends. */
+  :where(a[href], button, summary, [role="button"], [role="checkbox"],
+         input:is([type="button"], [type="submit"], [type="reset"]), .workroom-theme-option):active:not(:disabled, [aria-disabled="true"]) {
+    background: #393b40 !important;
+    color: #fff !important;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+}
