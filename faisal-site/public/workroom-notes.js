@@ -145,7 +145,7 @@ export function mount(panel, signal) {
     el('view').innerHTML = `<div class="note-fullscreen-bar">
       <nav class="note-tabs" aria-label="Buka catatan lain">${notes.map(item =>
         `<button type="button" data-open="${item.id ?? 'new'}"${item.id === note?.id ? ' aria-current="true"' : ''}>${escape(item.title || 'Catatan baru')}</button>`).join('')}</nav>
-      <button type="button" data-note-fullscreen>Keluar layar penuh</button>
+      <button type="button" class="note-fullscreen-exit" data-note-fullscreen>Keluar layar penuh</button>
     </div><div class="notes-head"><h1>Catatan</h1><div class="notes-head-actions"><a class="notes-private-link" href="/workroom/private-notes/" aria-label="Catatan Rahasia">${noteActionIcon('lock')}<span>Catatan Rahasia</span></a><button class="primary" data-new-note>${noteActionIcon('plus')}<span>Catatan baru</span></button></div></div>
       <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
         <section class="note-categories" aria-label="Kategori"><div class="category-head"><h2>Kategori</h2><div class="category-head-actions"><button type="button" id="add-category" aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('plus')}</button>${deleteCategory}</div></div>${Object.entries(noteCategories).map(([key, label]) =>
@@ -162,13 +162,25 @@ export function mount(panel, signal) {
           <input id="edit-title" placeholder="Catatan baru" aria-label="Judul catatan" maxlength="160" value="${escape(note.title)}">
           <div class="note-toolbar" role="group" aria-label="Format catatan">${toolbar.map(([mark, label, icon]) =>
             `<button data-mark="${mark}" aria-label="${label}" title="${label}">${noteActionIcon(icon)}</button>`).join('')}
-            <input type="color" id="note-text-color" aria-label="Warna teks" title="Warna teks" value="#1d97f1">
-            <select id="note-text-size" aria-label="Ukuran teks">
-              <option value="">Ukuran teks</option>
-              ${[10, 13, 16, 18, 24, 32, 48].map(px => `<option value="${px}px">${px} px</option>`).join('')}
-            </select>
+            <label class="note-icon-field" title="Palet warna">
+              <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <path d="M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1.5-3.3 1.4 1.4 0 0 1 1.1-2.3H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3Z"/>
+                <path stroke-linecap="round" stroke-width="2.8" d="M7.5 11h.01M10 7.5h.01M14 7.5h.01M17.5 10.5h.01"/>
+              </svg>
+              <input type="color" id="note-text-color" aria-label="Palet warna" value="#1d97f1">
+            </label>
+            <label class="note-icon-field" title="Ukuran teks">
+              <span class="note-text-size-icon" aria-hidden="true">A↕</span>
+              <select id="note-text-size" aria-label="Ukuran teks">
+                <option value="">Ukuran teks</option>
+                ${[10, 13, 16, 18, 24, 32, 48].map(px => `<option value="${px}px">${px} px</option>`).join('')}
+              </select>
+            </label>
             ${layoutControls()}
-            <input type="date" id="insert-date" aria-label="Sisipkan tanggal" title="Sisipkan tanggal">
+            <label class="note-icon-field" title="Sisipkan tanggal">
+              ${noteActionIcon('calendar-day')}
+              <input type="date" id="insert-date" aria-label="Sisipkan tanggal">
+            </label>
           </div>
           <div id="edit-body" class="note-rendered"></div>
           <div class="note-footer"><button class="note-save" id="save-note">Simpan</button><button type="button" id="copy-note-whatsapp">Salin untuk WhatsApp</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label>
