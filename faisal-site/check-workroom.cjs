@@ -35,12 +35,16 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.route('**/workroom/**', async route => {
       const incoming = route.request();
       const headers = {
-        ...incoming.headers(),
+        ...await incoming.allHeaders(),
         'Cf-Access-Jwt-Assertion': token,
       };
-      const result = await worker.fetch(new Request(incoming.url(), {
+      let result = await worker.fetch(new Request(incoming.url(), {
         method: incoming.method(), headers, body: incoming.postDataBuffer(),
       }), env);
+      if (result.status === 303 && incoming.method() === 'POST') {
+        const destination = new URL(result.headers.get('Location'), incoming.url());
+        result = await worker.fetch(new Request(destination, { headers }), env);
+      }
       await route.fulfill({
         status: result.status,
         headers: Object.fromEntries(result.headers),
