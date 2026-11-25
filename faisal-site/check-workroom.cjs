@@ -125,6 +125,24 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.waitForSelector('#workspace');
     await page.locator('.workroom-nav > a[aria-label="Catatan"]').click();
     await page.getByRole('button', { name: /Catatan lama/ }).click();
+    const noteViewport = await page.evaluate(() => {
+      const body = document.querySelector('#edit-body');
+      const title = document.querySelector('#edit-title');
+      const button = document.querySelector('.note-title-row [data-note-fullscreen]');
+      const content = body.querySelector('.tiptap');
+      content.style.minHeight = '1200px';
+      const pageScroll = window.scrollY;
+      body.scrollTop = 160;
+      const result = {
+        bodyScrolled: body.scrollTop === 160,
+        pageStayed: window.scrollY === pageScroll,
+        controlsSeparated: title.getBoundingClientRect().right <= button.getBoundingClientRect().left,
+      };
+      body.scrollTop = 0;
+      content.style.removeProperty('min-height');
+      return result;
+    });
+    assert.deepEqual(noteViewport, { bodyScrolled: true, pageStayed: true, controlsSeparated: true });
     await page.getByRole('button', { name: 'Layar penuh', exact: true }).click();
     await page.locator('.note-split-menu summary').click();
     await page.getByRole('button', { name: 'Catatan sekarang', exact: true }).click();
