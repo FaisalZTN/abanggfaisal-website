@@ -769,9 +769,8 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
              '<article class="reading study-tutorial">' + back()
              + head(f'{e(block_name)} · SKENARIO {e(item["number"])}', e(item['title']), e(item['short']))
              + '<p class="meta">Catatan belajar Faisal</p>'
+             + ('<p><a class="btn" href="/modul/pbl-corpus-alienum-kornea.html">Buka modul PBL kornea</a></p>'
+                if item['id'] == 'benda-asing-kornea' else '')
              + '<div class="prose study-tutorial-intro">' + render_article(item) + '</div>'
-             + ('<section aria-labelledby="modul-pbl"><h2 id="modul-pbl">Modul pembelajaran interaktif</h2>'
-                '<p><a class="btn" href="/modul/pbl-corpus-alienum-kornea.html">Buka modul PBL kornea</a></p></section>'
-                if item['title'].strip().casefold().startswith('mataku perih') else '')
              + tutorial_topics(item)
              + ('<h2>Kuliah terkait</h2><ul>' + related_links + '</ul>' if related else '') + '</article>')
