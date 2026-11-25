@@ -904,6 +904,52 @@ function workroomProjectCard(project, tasks, edit) {
   </article>`;
 }
 
+async function workroomDriveShortcuts(db, request, url) {
+  await db.prepare(`CREATE TABLE IF NOT EXISTS workroom_drive_shortcuts (
+    id INTEGER PRIMARY KEY, title TEXT NOT NULL, href TEXT NOT NULL
+  )`).run();
+  if (request) {
+    const data = await request.formData();
+    const title = String(data.get('title') ?? '').trim();
+    const href = String(data.get('href') ?? '').trim();
+    const id = String(data.get('id') ?? '');
+    const link = URL.canParse(href) ? new URL(href) : null;
+    if (!title || title.length > 100 || href.length > 2048 || link?.protocol !== 'https:' ||
+        !['drive.google.com', 'docs.google.com'].includes(link.hostname) ||
+        link.username || link.password || link.port || (id && !/^[1-9][0-9]{0,14}$/.test(id))) {
+      return workroomRedirect(url, workroomOverviewUrl + '&drive=invalid#pintasan-drive', 303);
+    }
+    if (id) {
+      await db.prepare('UPDATE workroom_drive_shortcuts SET title = ?, href = ? WHERE id = ?')
+        .bind(title, link.href, Number(id)).run();
+    } else {
+      await db.prepare('INSERT INTO workroom_drive_shortcuts (title, href) VALUES (?, ?)')
+        .bind(title, link.href).run();
+    }
+    return workroomRedirect(url, workroomOverviewUrl + '&drive=saved#pintasan-drive', 303);
+  }
+
+  const e = escapeWorkroom;
+  const { results } = await db.prepare('SELECT id, title, href FROM workroom_drive_shortcuts ORDER BY id').all();
+  const form = (item = {}) => `<form method="post" action="${WORKROOM}?drive=save">
+    <input type="hidden" name="id" value="${e(item.id)}">
+    <label>Nama pintasan<input name="title" required maxlength="100" value="${e(item.title)}"></label>
+    <label>Tautan Google Drive<input name="href" type="url" required maxlength="2048" value="${e(item.href)}"></label>
+    <button>Simpan pintasan</button>
+  </form>`;
+  const status = url.searchParams.get('drive');
+  return `<section class="collection recent-notes" id="pintasan-drive">
+    <h2>Pintasan Drive</h2>
+    ${status === 'saved' ? '<p role="status">Pintasan tersimpan.</p>' : ''}
+    ${status === 'invalid' ? '<p role="alert">Isi nama dan gunakan tautan HTTPS dari Google Drive atau Google Docs.</p>' : ''}
+    ${results.length ? '<ul>' + results.map(item => `<li>
+      <a href="${e(item.href)}" target="_blank" rel="noopener noreferrer"><strong>${e(item.title)}</strong></a>
+      <details><summary aria-label="Edit pintasan ${e(item.title)}">Edit</summary>${form(item)}</details>
+    </li>`).join('') + '</ul>' : '<p>Belum ada pintasan.</p>'}
+    <details><summary>Tambah pintasan</summary>${form()}</details>
+  </section>`;
+}
+
 async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
   const e = escapeWorkroom;
   const params = url.searchParams;
@@ -1026,6 +1072,7 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
           <a href="${workroomPages.note.path}">Catatan<strong>${counts.notes}</strong></a>
           <a href="${workroomPages.goal.path}">Goals aktif<strong>${counts.goals}</strong></a>
         </div>
+        ${await workroomDriveShortcuts(db, null, url)}
         <div class="collection calendar-agenda" id="agenda" data-day="${day}" data-today="${today}" data-google="${showGoogle}"${fullCalendar ? ' data-calendar-full' : ''}>
           ${workroomCalendar(day, tasks, today, google.entries, fullCalendar)}
           <template id="calendar-tasks">${tasks.filter(entry => !isDue(entry)).map(entry => workroomDueTask(entry, today)).join('')}</template>
@@ -1396,6 +1443,9 @@ async function handleWorkroom(request, env, url) {
   }
   if (request.method !== 'GET' && request.method !== 'POST') return workroomPage('<h1>Metode tidak didukung</h1>', 405);
 
+  if (page === 'home' && request.method === 'POST' && url.searchParams.get('drive') === 'save') {
+    return workroomDriveShortcuts(env.WORKROOM_DB, request, url);
+  }
   if (page === 'privateNotes') return workroomPrivateNotes(request, url, env);
 
   if (page === 'settings') {
