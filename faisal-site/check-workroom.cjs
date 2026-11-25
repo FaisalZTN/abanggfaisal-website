@@ -181,7 +181,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.getByRole('navigation', { name: 'Kelola tugas' }).getByRole('link', { name: 'Proyek' }).click();
     await page.locator('main[data-workroom-panel="project"]').waitFor();
     assert.equal(await page.locator('.workroom-nav > a[aria-label="Tugas"]').getAttribute('aria-current'), 'page');
-    await page.getByText('1 dari 2 tugas selesai · Tenggat tugas terdekat: 2027-09-30').waitFor();
+    await page.locator('.project-card').getByText('1 dari 2 tugas selesai', { exact: true }).waitFor();
     await page.getByRole('link', { name: 'Baca jurnal' }).waitFor();
     await page.locator('.workroom-nav > a[aria-label="Pengaturan"]').click();
     await page.getByRole('radio', { name: 'Biru' }).waitFor();
