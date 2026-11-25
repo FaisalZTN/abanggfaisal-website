@@ -1055,7 +1055,7 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.note-title-field::after { content: attr(data-title) ' '; visibility: hidden; }
+.note-title-field::after { box-sizing: border-box; content: attr(data-title) ' '; visibility: hidden; }
 .note-sheet #edit-title {
   position: absolute;
   inset: 0;
