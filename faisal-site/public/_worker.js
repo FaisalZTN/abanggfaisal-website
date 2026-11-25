@@ -869,13 +869,39 @@ async function ensureTaskArea(db) {
   }
 }
 
-function workroomProjectProgress(tasks) {
-  const open = tasks.filter(task => task.status !== 'done');
-  const upcoming = open.filter(task => task.due).sort((a, b) => a.due.localeCompare(b.due));
-  const next = upcoming[0] ?? open[0];
+const projectDate = new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeZone: 'UTC' });
+
+function projectDueDate(date) {
+  return validWorkroomDay(date)
+    ? `<time datetime="${date}">${projectDate.format(new Date(date + 'T12:00:00Z'))}</time>`
+    : 'Tanpa tenggat';
+}
+
+function workroomProjectCard(project, tasks, edit) {
   const e = escapeWorkroom;
-  return `<p>${tasks.length - open.length} dari ${tasks.length} tugas selesai · Tenggat tugas terdekat: ${e(upcoming[0]?.due || '—')}</p>
-    <p>${next ? `Tugas berikutnya: <a href="${workroomEntryLink(next)}#workspace">${e(next.title)}</a>` : 'Tidak ada tugas terbuka.'}</p>`;
+  const open = tasks.filter(task => task.status !== 'done');
+  const upcoming = open.filter(task => validWorkroomDay(task.due)).sort((a, b) => a.due.localeCompare(b.due));
+  const next = upcoming[0] ?? open[0];
+  const completed = tasks.length - open.length;
+  return `<article class="project-card">
+    <div class="project-card-heading">
+      <h2>${e(project.title)}</h2>
+      <span class="project-status">${workroomKinds.project.statuses[project.status]}</span>
+    </div>
+    <p class="project-due">Target proyek · ${projectDueDate(project.due)}</p>
+    <div class="project-metrics">
+      <div><span>Progres</span><strong>${completed} dari ${tasks.length} tugas selesai</strong>
+        ${tasks.length ? `<progress aria-label="Progres ${e(project.title)}" value="${completed}" max="${tasks.length}"></progress>` : ''}</div>
+      <div><span>Tenggat tugas terdekat</span><strong>${projectDueDate(upcoming[0]?.due)}</strong></div>
+    </div>
+    <div class="project-next">${next ? `<span>Tugas berikutnya</span>
+      <a href="${workroomEntryLink(next)}#workspace">${e(next.title)}</a>` :
+      `<p>${tasks.length ? 'Semua tugas sudah selesai.' : 'Belum ada tugas di proyek ini.'}</p>`}</div>
+    <details id="entry-${project.id}"${edit === String(project.id) ? ' open' : ''}>
+      <summary aria-label="Edit proyek ${e(project.title)}">Edit proyek</summary>
+      ${workroomForm('project', project, [])}
+    </details>
+  </article>`;
 }
 
 async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
@@ -921,16 +947,27 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
   const notice = params.has('saved') ? '<p class="save-notice" role="status">Perubahan tersimpan.</p>' : '';
   const projects = entries.filter(entry => entry.kind === 'project');
   const collection = kind => {
+    if (kind === 'project') {
+      return `<section class="project-list" id="project" aria-label="Daftar proyek">
+        <details class="collection project-add add-entry" id="add-project"${params.get('add') === 'project' ? ' open' : ''}>
+          <summary>${workroomIcon('plus')} Tambah proyek</summary>
+          ${workroomForm('project', null, [])}
+        </details>
+        ${projects.length ? `<div class="project-grid">${projects.map(project =>
+          workroomProjectCard(project, projectTasks.filter(task => task.project_id === project.id), edit)).join('')}</div>`
+          : '<p>Belum ada proyek.</p>'}
+      </section>`;
+    }
     const { title, statuses } = workroomKinds[kind];
     return `<section class="collection" id="${kind}">
       <details class="add-entry" id="add-${kind}"${params.get('add') === kind ? ' open' : ''}>
         <summary>Tambah ${title.toLowerCase()}</summary>${workroomForm(kind, null, projects, false, kind === 'task' && validWorkroomDay(params.get('due')) ? params.get('due') : '', areas.find(name => name === params.get('area')) || '')}
       </details>
       ${kind === 'task' ? '' : entries.filter(entry => entry.kind === kind).map(entry =>
-        `${kind === 'project' ? '<article class="project-progress">' : ''}<details id="entry-${entry.id}"${params.get('edit') === String(entry.id) ? ' open' : ''}>
+        `<details id="entry-${entry.id}"${params.get('edit') === String(entry.id) ? ' open' : ''}>
           <summary>${e(entry.title)} <small>${statuses[entry.status]}${entry.due ? ' · ' + e(entry.due) : ''}</small></summary>
           ${workroomForm(kind, entry, projects)}
-        </details>${kind === 'project' ? workroomProjectProgress(projectTasks.filter(task => task.project_id === entry.id)) + '</article>' : ''}`).join('')}
+        </details>`).join('')}
     </section>`;
   };
   if (page !== 'home') {
