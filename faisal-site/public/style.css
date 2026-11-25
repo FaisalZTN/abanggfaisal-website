@@ -1006,3 +1006,7 @@ details[open] > summary::after {
 .study-comments li p { margin: .3rem 0 0; white-space: pre-wrap; }
 
 .ui-icon { width: 24px; height: 24px; flex: none; vertical-align: -.15em; }
+
+/* Preserve link color and focus styling without underlines. */
+a:any-link, a:any-link:hover :is(h2, h3, strong) { text-decoration-line: none !important; }
+.reading p a:any-link, .reading li a:any-link { color: var(--accent); font-weight: 600; }
