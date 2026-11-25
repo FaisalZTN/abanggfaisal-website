@@ -1083,10 +1083,22 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   border-radius: var(--note-control-radius);
 }
 .note-screen-button .ui-icon { width: 1.25rem; height: 1.25rem; }
-.notes-desk .note-sheet:has(.note-title-row) {
+.notes-desk { --note-panel-height: clamp(18rem, 68dvh, 48rem); }
+#view:not(.notes-fullscreen) .notes-desk > :is(.note-categories, .note-index, .note-sheet) {
   align-self: start;
   min-height: 0;
-  height: clamp(18rem, 68dvh, 48rem);
+  height: var(--note-panel-height);
+}
+#view:not(.notes-fullscreen) .notes-desk > :is(.note-categories, .note-index) {
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+@media (max-width: 1000px) {
+  #view:not(.notes-fullscreen) .notes-desk > .note-categories {
+    height: auto;
+    max-height: min(9rem, 24dvh);
+  }
 }
 .notes-desk .note-sheet > .note-rendered {
   flex: 1 1 0;
