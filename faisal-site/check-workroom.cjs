@@ -117,6 +117,10 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.getByRole('button', { name: /Catatan lama/ }).click();
     assert.match(await formatted.textContent(), /disunting/);
 
+    await page.goForward();
+    await page.waitForSelector('#workspace');
+    await page.locator('.workroom-nav > a[aria-label="Catatan"]').click();
+    await page.getByRole('button', { name: /Catatan lama/ }).click();
     await page.getByRole('button', { name: 'Layar penuh', exact: true }).click();
     await page.locator('.note-split-menu summary').click();
     await page.getByRole('button', { name: 'Catatan sekarang', exact: true }).click();
@@ -145,8 +149,6 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.getByRole('button', { name: 'Keluar layar penuh', exact: true }).click();
     assert.equal(await editor.getAttribute('contenteditable'), 'true');
 
-    await page.goForward();
-    await page.waitForSelector('#workspace');
     await page.locator('.workroom-nav > a[aria-label="Review"]').click();
     await page.waitForSelector('.workroom-review h1');
     assert.equal(await page.evaluate(()=>window.testDocument), true);
