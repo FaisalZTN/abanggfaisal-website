@@ -108,6 +108,62 @@ export function mount(panel, signal) {
   let entries=[];
   const dirty = new Set();
   let busy=false;
+  let saveTimer;
+  let saving;
+  function scheduleSave(note) {
+    if (note) dirty.add(note);
+    clearTimeout(saveTimer);
+    if (!dirty.size || signal.aborted) return;
+    saveTimer = setTimeout(flushNotes, 700);
+  }
+
+  async function flushNotes() {
+    if (saving || signal.aborted) return;
+    if (busy) { scheduleSave(); return; }
+    const note = dirty.values().next().value;
+    if (!note) return;
+    const { id, title, body, category } = note;
+    const payload = { action:'save', id, title:title.trim() || 'Catatan baru', body, category:category || 'none' };
+    if (id === null) payload.createKey = note.createKey ??= crypto.randomUUID();
+    message('Menyimpan otomatis…');
+    saving = request(payload);
+    let succeeded = false;
+    try {
+      const result = await saving;
+      note.id = result.id;
+      note.updated = result.updated;
+      if (activeNote === id) activeNote = result.id;
+      if (splitNote === id && id === null) splitNote = result.id;
+      if (note.title === title && note.body === body && note.category === category) dirty.delete(note);
+      if (signal.aborted) return;
+      renderNoteIndex();
+      if (id === null) {
+        const tab = el('view').querySelector('.note-tabs [data-open="new"]');
+        if (tab) tab.dataset.open = String(result.id);
+        if (activeNote === result.id) {
+          el('delete-note')?.setAttribute('aria-label', 'Hapus catatan');
+          if (el('delete-note')) el('delete-note').title = 'Hapus catatan';
+          if (el('pin-note')) el('pin-note').hidden = false;
+        }
+      }
+      const tab = el('view').querySelector('.note-tabs [data-open="' + result.id + '"]');
+      if (tab) tab.textContent = note.title || 'Catatan baru';
+      succeeded = true;
+      message(dirty.size ? 'Menunggu simpan otomatis…' : 'Tersimpan otomatis.');
+    } catch (error) {
+      if (!signal.aborted) {
+        message(error.message);
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.id = 'retry-note-autosave';
+        retry.textContent = 'Coba lagi';
+        el('note-status').append(' ', retry);
+      }
+    } finally {
+      saving = undefined;
+      if (succeeded) scheduleSave();
+    }
+  }
   const render = () => renderNotes(entries);
   let trash = [];
   let trashOpen = false;
@@ -213,8 +269,8 @@ export function mount(panel, signal) {
             </label>
           </div>
           <div id="edit-body" class="note-rendered"></div>
-          <div class="note-footer"><button class="note-save" id="save-note">Simpan</button><button type="button" id="copy-note-whatsapp">Salin untuk WhatsApp</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label>
-            ${note.id !== null ? `<button type="button" id="pin-note" aria-pressed="${Boolean(note.pinned)}" aria-label="${pinNoteLabel(note.pinned)}" title="${pinNoteLabel(note.pinned)}">${noteActionIcon('pin')}</button>` : ''}
+          <div class="note-footer"><button type="button" id="copy-note-whatsapp">Salin untuk WhatsApp</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label>
+            <button type="button" id="pin-note"${note.id === null ? ' hidden' : ''} aria-pressed="${Boolean(note.pinned)}" aria-label="${pinNoteLabel(note.pinned)}" title="${pinNoteLabel(note.pinned)}">${noteActionIcon('pin')}</button>
             <button type="button" id="delete-note" aria-label="${note.id === null ? 'Buang draf' : 'Hapus catatan'}" title="${note.id === null ? 'Buang draf' : 'Hapus catatan'}">${noteActionIcon('trash')}</button>
           </div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
         <section id="note-split-pane" class="note-sheet" aria-label="Pratinjau catatan" hidden>
@@ -226,9 +282,8 @@ export function mount(panel, signal) {
       blockEditor = mountBlockEditor(el('edit-body'), readBlockNote(note.body) ?? legacyContent(note.body), document => {
         note.body = blockNoteBody(document);
         if (splitNote === 'current' || splitNote === note.id) splitPreview?.commands.setContent(document, { emitUpdate: false });
-        dirty.add(note);
+        scheduleSave(note);
         renderNoteIndex();
-        message('Perubahan belum disimpan.');
       }, syncLayout);
       syncLayout(blockEditor.editor.state.selection.$from.parent.attrs);
       for (const menu of panel.querySelectorAll('.note-layout-popover')) {
@@ -254,6 +309,7 @@ export function mount(panel, signal) {
   listen(document, 'click', async event=>{
     const button=event.target.closest('#view button, #note-status button');
     if(!button || busy)return;
+    if (button.id === 'retry-note-autosave') { clearTimeout(saveTimer); void flushNotes(); return; }
     if (button.dataset.splitNote || button.id === 'close-note-split') {
       splitNote = button.dataset.splitNote;
       const menu = el('view').querySelector('.note-split-menu');
@@ -278,6 +334,7 @@ export function mount(panel, signal) {
     if(button.hasAttribute('data-new-note')){
       if(!entries.some(note=>note.id===null))entries.unshift({id:null,kind:'note',title:'',body:'',category:noteCategory==='all'?'none':noteCategory});
       noteQuery=''; activeNote=null;noteEditing=true;render();el('edit-title').focus();
+      scheduleSave(entries.find(item => item.id === null));
     }
     if (button.dataset.layoutKey && blockEditor) {
       button.closest('[popover]').hidePopover();
@@ -305,6 +362,7 @@ export function mount(panel, signal) {
       busy = true;
       el('view').inert = true;
       try {
+        if (saving) await saving.catch(() => {});
         if (deletingCategory) {
           const removed = await request({ action: 'delete-category', id: category });
           archivedCategories = [removed, ...archivedCategories.filter(item => item.id !== category)];
@@ -402,33 +460,27 @@ export function mount(panel, signal) {
     }
 
     const addingCategory = button.id === 'add-category' || button.hasAttribute('data-add-category');
-    if(addingCategory || button.id==='save-note'){
-      const note=entries.find(item=>item.id===activeNote);
-      const name=addingCategory ? prompt('Nama kategori baru')?.trim() : '';
-      if(addingCategory && !name)return;
-      if(name && Object.values(noteCategories).some(label=>label.toLowerCase()===name.toLowerCase())){message('Kategori sudah ada.');return;}
-      if(!name && !note?.title.trim()){message('Isi judul sebelum menyimpan.');el('edit-title').focus();return;}
-      if (!name && note.body.length > (readBlockNote(note.body) ? 100000 : 10000)) {
-        message('Catatan terlalu panjang. Kurangi isi atau jumlah format sebelum menyimpan.');
+    if (addingCategory) {
+      const name = prompt('Nama kategori baru')?.trim();
+      if (!name) return;
+      if (Object.values(noteCategories).some(label => label.toLowerCase() === name.toLowerCase())) {
+        message('Kategori sudah ada.');
         return;
       }
-      busy=true;
-      el('view').inert=true;
-      message(name?'Membuat kategori…':'Menyimpan catatan…');
+      const note = entries.find(item => item.id === activeNote);
+      busy = true;
+      el('view').inert = true;
+      message('Membuat kategori…');
       try {
-        if(name){
-          const category=await request({action:'category',name});
-          noteCategories[category.id]=category.name;
-          if(note){note.category=category.id;dirty.add(note);}
-          else noteCategory=category.id;
-        } else {
-          Object.assign(note,await request({action:'save',id:note.id,title:note.title,body:note.body,category:note.category||'none'}));
-          activeNote=note.id;dirty.delete(note);
-        }
+        if (saving) await saving.catch(() => {});
+        const category = await request({action:'category', name});
+        noteCategories[category.id] = category.name;
+        if (note) { note.category = category.id; scheduleSave(note); }
+        else noteCategory = category.id;
         render();
-        message(name?'Kategori dibuat.':'Catatan tersimpan.');
-      } catch(error){message(error.message);}
-      finally {busy=false;el('view').inert=false;}
+        message('Kategori dibuat.');
+      } catch (error) { message(error.message); }
+      finally { busy = false; el('view').inert = false; }
     }
   });
   listen(document, 'change', event=>{
@@ -463,7 +515,7 @@ export function mount(panel, signal) {
 
     if(target.id==='note-category'){
       const item=entries.find(entry=>entry.id===activeNote);
-      item.category=target.value;dirty.add(item);renderNoteIndex();message('Perubahan belum disimpan.');
+      item.category=target.value;scheduleSave(item);renderNoteIndex();
     }
   });
   listen(document, 'input', event=>{
@@ -471,7 +523,7 @@ export function mount(panel, signal) {
     if (event.target.id !== 'edit-title') return;
     const note=entries.find(item=>item.id===activeNote);
     note.title = event.target.value;
-    dirty.add(note);renderNoteIndex();message('Perubahan belum disimpan.');
+    scheduleSave(note);renderNoteIndex();
   });
   listen(document, 'mousedown', event => {
     if (event.target.closest('.note-toolbar [data-mark]')) event.preventDefault();
@@ -493,6 +545,6 @@ export function mount(panel, signal) {
     render();
   }).catch(error=>{el('view').textContent=error.message;}).finally(()=>el('view').removeAttribute('aria-busy'));
 
-  signal.addEventListener('abort', () => { splitPreview?.destroy(); blockEditor?.destroy(); }, { once: true });
-  return () => busy ? "busy" : dirty.size > 0;
+  signal.addEventListener('abort', () => { clearTimeout(saveTimer); splitPreview?.destroy(); blockEditor?.destroy(); }, { once: true });
+  return () => busy || saving ? "busy" : dirty.size > 0;
 }
