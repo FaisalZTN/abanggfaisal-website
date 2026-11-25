@@ -13,6 +13,7 @@ export function mount(panel, signal) {
   const noteTime = item => item.updated ? clock.format(new Date(item.updated)) : '';
   let fromTime='', toTime='';
   let blockEditor;
+  let fullscreenNotes = false;
 
   function legacyContent(body) {
     const html = noteLines(body).map(line => {
@@ -140,7 +141,12 @@ export function mount(panel, signal) {
     </details>`;
     blockEditor?.destroy();
     blockEditor = undefined;
-    el('view').innerHTML = `<div class="notes-head"><h1>Catatan</h1><div class="notes-head-actions"><a class="notes-private-link" href="/workroom/private-notes/" aria-label="Catatan Rahasia">${noteActionIcon('lock')}<span>Catatan Rahasia</span></a><button class="primary" data-new-note>${noteActionIcon('plus')}<span>Catatan baru</span></button></div></div>
+    el('view').classList.toggle('notes-fullscreen', fullscreenNotes);
+    el('view').innerHTML = `<div class="note-fullscreen-bar">
+      <nav class="note-tabs" aria-label="Buka catatan lain">${notes.map(item =>
+        `<button type="button" data-open="${item.id ?? 'new'}"${item.id === note?.id ? ' aria-current="true"' : ''}>${escape(item.title || 'Catatan baru')}</button>`).join('')}</nav>
+      <button type="button" data-note-fullscreen>Keluar layar penuh</button>
+    </div><div class="notes-head"><h1>Catatan</h1><div class="notes-head-actions"><a class="notes-private-link" href="/workroom/private-notes/" aria-label="Catatan Rahasia">${noteActionIcon('lock')}<span>Catatan Rahasia</span></a><button class="primary" data-new-note>${noteActionIcon('plus')}<span>Catatan baru</span></button></div></div>
       <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
         <section class="note-categories" aria-label="Kategori"><div class="category-head"><h2>Kategori</h2><div class="category-head-actions"><button type="button" id="add-category" aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('plus')}</button>${deleteCategory}</div></div>${Object.entries(noteCategories).map(([key, label]) =>
           `<button data-category="${key}" aria-pressed="${key === noteCategory}"><span>${escape(label)}</span><small class="note-category-count">${notes.filter(item => key === 'all' || (item.category || 'none') === key).length}</small></button>`).join('')}</section>
@@ -152,7 +158,7 @@ export function mount(panel, signal) {
           <button type="button" data-add-category aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('plus')}</button>
           ${deleteCategory}
         </div><details ${fromTime || toTime ? "open" : ""}><summary>Filter waktu<span class="muted"> · WITA</span></summary><label>Dari<input type="datetime-local" id="note-from" value="${escape(fromTime)}"></label><label>Sampai<input type="datetime-local" id="note-to" value="${escape(toTime)}"></label><button id="clear-time">Hapus filter waktu</button></details><div id="note-list"></div>${trashPanel}</section>
-        <section class="note-sheet" aria-label="Editor catatan">${note ? `<div><button class="note-back" id="note-back">${noteActionIcon('arrow-left')} Daftar catatan</button></div>
+        <section class="note-sheet" aria-label="Editor catatan">${note ? `<div><button class="note-back" id="note-back">${noteActionIcon('arrow-left')} Daftar catatan</button><button type="button" data-note-fullscreen>Layar penuh</button></div>
           <input id="edit-title" placeholder="Catatan baru" aria-label="Judul catatan" maxlength="160" value="${escape(note.title)}">
           <div class="note-toolbar" role="group" aria-label="Format catatan">${toolbar.map(([mark, label, icon]) =>
             `<button data-mark="${mark}" aria-label="${label}" title="${label}">${noteActionIcon(icon)}</button>`).join('')}
@@ -200,6 +206,12 @@ export function mount(panel, signal) {
   listen(document, 'click', async event=>{
     const button=event.target.closest('#view button, #note-status button');
     if(!button || busy)return;
+    if (button.hasAttribute('data-note-fullscreen')) {
+      fullscreenNotes = !fullscreenNotes;
+      el('view').classList.toggle('notes-fullscreen', fullscreenNotes);
+      el('view').querySelector(fullscreenNotes ? '.note-fullscreen-bar [data-note-fullscreen]' : '.note-sheet [data-note-fullscreen]')?.focus();
+      return;
+    }
     if(button.id==='clear-time'){fromTime='';toTime='';render();el('note-query').focus();}
     if(button.dataset.category){noteCategory=button.dataset.category;noteEditing=false;render();}
     if(button.id==='note-back'){noteEditing=false;render();el('note-query').focus();}
