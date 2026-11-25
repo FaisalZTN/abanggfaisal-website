@@ -11,6 +11,8 @@ class Parser(HTMLParser):
         if t=='h1':self.h1+=1
 for preview in [False,True]:
     env=dict(os.environ,PREVIEW_CONTENT='1' if preview else '0');subprocess.run(['python3','build.py'],cwd=P,env=env,check=True)
+    scenario = P/'dist/ruang-belajar/tutorial/benda-asing-kornea/index.html'
+    assert 'href="/modul/pbl-corpus-alienum-kornea.html"' in scenario.read_text(), scenario
     files=list((P/'dist').rglob('*.html'))
     for f in files:
         if 'admin' in f.parts:continue
