@@ -1027,7 +1027,16 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-fullscreen-exit { flex: none; border-radius: .65rem; }
 .notes-fullscreen :is(.notes-head, .note-categories, .note-index, .note-sheet label:has(#note-category),
     .note-sheet > div:has(> [data-note-fullscreen])) { display: none; }
-.notes-fullscreen .notes-desk { display: block; min-height: 0; flex: 1; }
+.notes-fullscreen .notes-desk {
+  display: block;
+  min-height: 0;
+  flex: 1;
+  padding: clamp(.75rem, 2vw, 1.25rem) clamp(.5rem, 2vw, 1.25rem) 1rem;
+}
+.note-block-handle[data-has-block="false"] {
+  opacity: 0;
+  pointer-events: none !important;
+}
 .notes-fullscreen .notes-desk .note-sheet { display: flex; width: min(100%, 76rem); min-height: 100%; margin-inline: auto; }
 .notes-fullscreen .note-rendered { flex: 1; }
 .note-block-handle { translate: -.75rem 0; padding-inline: .2rem; font-size: 1.05rem; }
