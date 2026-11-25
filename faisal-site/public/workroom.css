@@ -41,7 +41,7 @@ header { display: flex; justify-content: space-between; align-items: center; min
 .workroom-wordmark { font-size: clamp(1.4rem, 2.5vw, 2.1rem); font-weight: 780; letter-spacing: -.045em; text-decoration: none; }
 .workroom-header nav { display: flex; gap: .25rem clamp(.65rem, 2vw, 1.5rem); flex-wrap: wrap; font-size: .9rem; }
 .workroom-header nav a { color: var(--muted); text-decoration: none; padding-block: .35rem; }
-.workroom-header nav a:hover { color: var(--ink); text-decoration: underline; }
+.workroom-header nav a:hover { color: var(--ink);  }
 .workroom-layout { display: flex; flex-direction: column; min-height: 100vh; }
 .workroom-footer {
   width: min(100% - 1rem, 84rem);
@@ -744,7 +744,21 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .quick-check-feedback { color: var(--muted); }
 .daily-task-title { font-weight: 650; }
 .daily-task-card .is-done .daily-task-title { color: var(--muted); text-decoration: line-through; }
-.daily-task-meta { display: flex; flex-wrap: wrap; gap: .25rem .6rem; color: var(--muted); }
+.daily-task-meta { display: flex; flex-wrap: wrap; gap: .35rem; margin-block-start: .3rem; }
+.task-badge {
+  display: inline-block;
+  max-inline-size: 100%;
+  padding: .12rem .55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: .75rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.task-badge-priority { background: var(--selected); color: var(--ink); }
+.daily-task-title:hover, .project-next a:hover { color: var(--accent); }
 .daily-task-card p { margin: 0; padding: .35rem .9rem .85rem; color: var(--muted); }
 
 #workspace [hidden] { display: none; }
@@ -1183,3 +1197,7 @@ body:has(#view.notes-fullscreen) :is(.workroom-nav, .workroom-footer) { display:
 @media (max-width: 700px) {
   .notes-fullscreen.notes-split .notes-desk { grid-template-rows: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Link affordance comes from color and keyboard focus. */
+a:any-link { text-decoration-line: none !important; }
+.daily-task-card .is-done .daily-task-title { text-decoration-line: line-through !important; }

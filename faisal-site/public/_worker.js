@@ -429,10 +429,10 @@ function workroomDailyTasks(tasks, projects, filter, area) {
             </form>
             <div><a class="daily-task-title" href="${workroomEntryLink(task)}#workspace">${e(task.title)}</a>
               ${task.task_area || project || task.priority === 'high' || task.status === 'doing' ? `<div class="daily-task-meta">
-                ${task.priority === 'high' ? '<small>Prioritas tinggi</small>' : ''}
-                ${task.status === 'doing' ? '<small data-task-doing>Dikerjakan</small>' : ''}
-                ${task.task_area ? `<small>${e(task.task_area)}</small>` : ''}
-                ${project ? `<small>${e(project)}</small>` : ''}
+                ${task.priority === 'high' ? '<small class="task-badge task-badge-priority">Prioritas tinggi</small>' : ''}
+                ${task.status === 'doing' ? '<small class="task-badge" data-task-doing>Dikerjakan</small>' : ''}
+                ${task.task_area ? `<small class="task-badge">Kategori: ${e(task.task_area)}</small>` : ''}
+                ${project ? `<small class="task-badge">${e(project)}</small>` : ''}
               </div>` : ''}
             </div>
           </li>`;
@@ -455,7 +455,7 @@ function workroomWorkspace(entries, params, areas) {
     const query = new URLSearchParams({ edit: entry.id, view });
     if (Object.hasOwn(workroomKinds.task.statuses, filter)) query.set('status', filter);
     if (area) query.set('area', area);
-    return `<a href="${path}?${e(query)}#workspace">${e(entry.title)}</a>${entry.priority === 'high' ? ' <small>Prioritas tinggi</small>' : ''}`;
+    return `<a href="${path}?${e(query)}#workspace">${e(entry.title)}</a>${entry.priority === 'high' ? ' <small class="task-badge task-badge-priority">Prioritas tinggi</small>' : ''}`;
   };
   const selected = entries.find(entry => entry.kind === 'task' && String(entry.id) === params.get('edit'));
   const tasks = entries.filter(entry => entry.kind === 'task' && (!area || entry.task_area.toLowerCase() === area.toLowerCase()));
@@ -468,9 +468,9 @@ function workroomWorkspace(entries, params, areas) {
       `<option value="${value}"${entry.status === value ? ' selected' : ''}>${label}</option>`).join('')}</select>
     <button name="action" value="status">Ubah</button></form>`;
   const table = view === 'table' ? `<div class="task-table"><table><thead><tr><th>Judul</th><th>Tenggat</th><th>Status</th></tr></thead>
-    <tbody>${tasks.map(entry => `<tr data-task-status="${e(entry.status)}"${filter && entry.status !== filter ? ' hidden' : ''}><td>${editLink(entry)}${entry.task_area ? ` <small>${e(entry.task_area)}</small>` : ''}</td><td>${e(entry.due || '—')}</td><td>${statusForm(entry)}</td></tr>`).join('')}</tbody></table></div>` : '';
+    <tbody>${tasks.map(entry => `<tr data-task-status="${e(entry.status)}"${filter && entry.status !== filter ? ' hidden' : ''}><td>${editLink(entry)}${entry.task_area ? ` <small class="task-badge">Kategori: ${e(entry.task_area)}</small>` : ''}</td><td>${e(entry.due || '—')}</td><td>${statusForm(entry)}</td></tr>`).join('')}</tbody></table></div>` : '';
   const board = view === 'board' ? `<div class="task-board">${statuses.map(([status, label]) => `<section data-status-column="${status}"${filter && filter !== status ? ' hidden' : ''}><h3>${label}</h3>
-    ${tasks.filter(entry => entry.status === status).map(entry => `<article data-task-status="${e(entry.status)}">${editLink(entry)}${entry.task_area ? ` <small>${e(entry.task_area)}</small>` : ''}${statusForm(entry)}</article>`).join('') || '<p>Belum ada tugas.</p>'}</section>`).join('')}</div>` : '';
+    ${tasks.filter(entry => entry.status === status).map(entry => `<article data-task-status="${e(entry.status)}">${editLink(entry)}${entry.task_area ? ` <small class="task-badge">Kategori: ${e(entry.task_area)}</small>` : ''}${statusForm(entry)}</article>`).join('') || '<p>Belum ada tugas.</p>'}</section>`).join('')}</div>` : '';
   const views = Object.entries({daily: 'Per tanggal', table: 'Tabel', board: 'Papan'}).map(([key, label]) => {
     const query = new URLSearchParams({view: key});
     if (Object.hasOwn(workroomKinds.task.statuses, filter)) query.set('status', filter);
