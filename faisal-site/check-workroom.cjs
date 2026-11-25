@@ -78,11 +78,9 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.getByRole('option', { name: 'Tabel' }).waitFor();
     await page.keyboard.press('Enter');
     await editor.locator('table').waitFor();
-    await page.locator('#edit-title').fill('Draf yang belum disimpan');
-    page.once('dialog', dialog => dialog.dismiss());
-    await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
-    assert.equal(await page.locator('#edit-title').inputValue(), 'Draf yang belum disimpan');
-    page.once('dialog', dialog => dialog.accept());
+    await page.locator('#edit-title').fill('Draf tersimpan otomatis');
+    await page.getByText('Tersimpan otomatis.', { exact: true }).waitFor();
+    assert.equal(db.prepare("SELECT COUNT(*) AS total FROM workroom_entries WHERE title = ?").get('Draf tersimpan otomatis').total, 1);
     await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
     await page.waitForSelector('#workspace');
     assert.equal(await page.evaluate(()=>window.testDocument), true);
