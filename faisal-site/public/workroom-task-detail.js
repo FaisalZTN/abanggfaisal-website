@@ -74,6 +74,84 @@ export function mount(panel, signal) {
     return item;
   }
 
+  const editor = panel.querySelector('.workspace-editor form');
+  let guard;
+  if (editor) {
+    const status = editor.querySelector('[data-task-save-status]');
+    const saveButton = editor.querySelector('button[value="save"]');
+    let saved = new URLSearchParams(new FormData(editor)).toString();
+    let timer;
+    let pending = false;
+    let dirty = false;
+
+    async function save() {
+      clearTimeout(timer);
+      if (pending || signal.aborted) return;
+      const data = new URLSearchParams(new FormData(editor));
+      const snapshot = data.toString();
+      dirty = snapshot !== saved;
+      if (!dirty) {
+        status.textContent = '';
+        return;
+      }
+      if (!editor.checkValidity() || !String(data.get('title')).trim()) {
+        status.textContent = 'Judul tugas wajib diisi.';
+        return;
+      }
+
+      pending = true;
+      status.textContent = 'Menyimpan…';
+      data.set('action', 'save');
+      data.set('autosave', '1');
+      let success = false;
+      try {
+        const response = await fetch(editor.getAttribute('action'), { method: 'POST', body: data });
+        if (!response.ok || !(await response.json()).saved) throw new Error('Save failed');
+        saved = snapshot;
+        success = true;
+        status.textContent = 'Tersimpan otomatis.';
+      } catch {
+        status.textContent = 'Gagal menyimpan. Klik Coba lagi.';
+        saveButton.textContent = 'Coba lagi';
+        saveButton.hidden = false;
+      } finally {
+        pending = false;
+        const current = new URLSearchParams(new FormData(editor)).toString();
+        dirty = current !== saved;
+        if (success) saveButton.hidden = true;
+        if (dirty && current !== snapshot) void save();
+      }
+    }
+
+    function schedule(event) {
+      if (!event.target.name) return;
+      dirty = true;
+      status.textContent = 'Menunggu untuk menyimpan…';
+      clearTimeout(timer);
+      timer = setTimeout(save, 500);
+    }
+
+    saveButton.hidden = true;
+    editor.addEventListener('input', schedule, { signal });
+    editor.addEventListener('change', schedule, { signal });
+    editor.addEventListener('submit', event => {
+      if (event.submitter?.value === 'delete') return;
+      event.preventDefault();
+      void save();
+    }, { signal });
+    window.addEventListener('beforeunload', event => {
+      if (!dirty && !pending) return;
+      event.preventDefault();
+      event.returnValue = '';
+    }, { signal });
+    signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
+    guard = () => {
+      if (!dirty && !pending) return false;
+      void save();
+      return 'busy';
+    };
+  }
+
   for (const tools of panel.querySelectorAll('.task-detail-tools')) {
     const field = tools.closest('form').elements.body;
     const preview = tools.querySelector('.task-detail-preview');
@@ -125,7 +203,8 @@ export function mount(panel, signal) {
       imageUrl.value = '';
       imageFields.hidden = true;
       toggle.setAttribute('aria-expanded', 'false');
-      status.textContent = 'Gambar ditambahkan. Simpan tugas untuk menyimpan perubahan.';
+      status.textContent = editor?.contains(field) ? 'Gambar ditambahkan.' : 'Gambar ditambahkan. Simpan tugas untuk menyimpan perubahan.';
+      field.dispatchEvent(new Event('input', { bubbles: true }));
       render();
       field.focus();
     }
@@ -141,7 +220,7 @@ export function mount(panel, signal) {
       const insert = '\n![](' + event.detail + ')\n';
       if (field.value.length + insert.length <= field.maxLength) {
         field.setRangeText(insert, cursor, cursor, 'end');
-        render();
+        field.dispatchEvent(new Event('input', { bubbles: true }));
         field.focus();
         event.preventDefault();
       }
@@ -150,4 +229,5 @@ export function mount(panel, signal) {
     tools.hidden = false;
     render();
   }
+  return guard;
 }
