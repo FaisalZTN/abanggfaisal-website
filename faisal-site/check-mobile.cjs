@@ -42,8 +42,10 @@ async function checkStudyFlow(page, width) {
   assert.doesNotMatch(await tomorrow.textContent(), /Antivirus/);
   if (width === 320) {
     const result = await page.request.get(base + '/ruang-belajar/kalender/kuliah-antivirus.ics');
-    assert.ok(result.ok());
-    assert.match(await result.text(), /DTSTART:20261125T050000Z/);
+    assert.equal(result.status(), 404);
+    const rescheduled = page.locator('#antivirus');
+    assert.match(await rescheduled.textContent(), /Waktu baru belum ditentukan/);
+    assert.equal(await rescheduled.locator('a[href$=".ics"]').count(), 0);
   }
 
   await page.evaluate(() => {
