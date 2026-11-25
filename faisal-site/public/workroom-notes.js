@@ -165,7 +165,7 @@ export function mount(panel, signal) {
             <input type="date" id="insert-date" aria-label="Sisipkan tanggal" title="Sisipkan tanggal">
           </div>
           <div id="edit-body" class="note-rendered"></div>
-          <div class="note-footer"><button class="note-save" id="save-note">Simpan</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label>
+          <div class="note-footer"><button class="note-save" id="save-note">Simpan</button><button type="button" id="copy-note-whatsapp">Salin untuk WhatsApp</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label>
             ${note.id !== null ? `<button type="button" id="pin-note" aria-pressed="${Boolean(note.pinned)}" aria-label="${pinNoteLabel(note.pinned)}" title="${pinNoteLabel(note.pinned)}">${noteActionIcon('pin')}</button>` : ''}
             <button type="button" id="delete-note" aria-label="${note.id === null ? 'Buang draf' : 'Hapus catatan'}" title="${note.id === null ? 'Buang draf' : 'Hapus catatan'}">${noteActionIcon('trash')}</button>
           </div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
@@ -211,6 +211,18 @@ export function mount(panel, signal) {
     if (button.dataset.layoutKey && blockEditor) {
       button.closest('[popover]').hidePopover();
       blockEditor.editor.chain().focus().setParagraphLayout(button.dataset.layoutKey, button.dataset.layoutValue).run();
+      return;
+    }
+    if (button.id === 'copy-note-whatsapp' && blockEditor) {
+      const title = el('edit-title').value.trim();
+      const text = [title ? '*' + title + '*' : '', blockEditor.whatsappText()].filter(Boolean).join('\n\n');
+      if (!text.trim()) { message('Catatan masih kosong.'); return; }
+      try {
+        await navigator.clipboard.writeText(text);
+        message('Catatan tersalin untuk WhatsApp.');
+      } catch {
+        message('Clipboard tidak dapat diakses. Periksa izin browser.');
+      }
       return;
     }
     if(button.dataset.mark) editFormat(button.dataset.mark);
