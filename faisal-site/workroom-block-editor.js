@@ -72,6 +72,53 @@ const SafeImage = Image.extend({
   },
 });
 
+function clipboardText(nodes, whatsapp = false, depth = 0) {
+  const children = node => clipboardText(node.content ?? [], whatsapp, depth);
+  return nodes.map(node => {
+    const { type, attrs = {} } = node;
+    if (type === 'text') {
+      let text = node.text;
+      const marks = node.marks ?? [];
+      const url = marks.find(mark => mark.type === 'link')?.attrs?.href;
+      if (!whatsapp || !text.trim()) return url && text !== url ? text + ' (' + url + ')' : text;
+      const [, leading, middle, trailing] = /^(\s*)([\s\S]*?)(\s*)$/.exec(text);
+      const symbols = {bold: '*', italic: '_', strike: '~', code: '`'};
+      text = marks.reduce((value, mark) => {
+        const symbol = symbols[mark.type];
+        return symbol ? symbol + value + symbol : value;
+      }, middle);
+      return leading + text + (url && middle !== url ? ' (' + url + ')' : '') + trailing;
+    }
+    if (type === 'hardBreak') return '\n';
+    if (type === 'horizontalRule') return '────────';
+    if (type === 'image') return [attrs.alt || 'Gambar', attrs.src].filter(Boolean).join(': ');
+    if (['bulletList', 'orderedList', 'taskList'].includes(type)) {
+      return (node.content ?? []).map((item, index) => {
+        const prefix = type === 'orderedList' ? (Number(attrs.start ?? 1) + index) + '. '
+          : type === 'taskList' ? (item.attrs?.checked ? '☑ ' : '☐ ') : '- ';
+        const parts = item.content ?? [];
+        return '  '.repeat(depth) + prefix + parts.map((part, i) => {
+          if (['bulletList', 'orderedList', 'taskList'].includes(part.type)) {
+            return '\n' + clipboardText([part], whatsapp, depth + 1);
+          }
+          const indent = '  '.repeat(depth + 1);
+          const text = clipboardText([part], whatsapp, depth).replaceAll('\n', '\n' + indent);
+          return i === 0 ? text : '\n' + indent + text;
+        }).join('');
+      }).join('\n');
+    }
+    if (type === 'tableRow') {
+      return (node.content ?? []).map(cell => children(cell).replace(/\s*\n\s*/g, ' / ')).join(' | ');
+    }
+    if (type === 'table') return (node.content ?? []).map(row => clipboardText([row], whatsapp, depth)).join('\n');
+    const text = children(node);
+    if (type === 'blockquote') return text.split('\n').map(line => '> ' + line).join('\n');
+    if (type === 'codeBlock' && whatsapp) return '```\n' + text + '\n```';
+    if (type === 'heading' && whatsapp) return '*' + clipboardText(node.content ?? [], false, depth) + '*';
+    return text;
+  }).join(nodes.every(node => ['text', 'hardBreak', 'image'].includes(node.type)) ? '' : '\n\n');
+}
+
 export function mountBlockEditor(root, content, onChange, onSelection) {
   const popup = document.createElement('div');
   popup.className = 'note-block-menu';
@@ -165,6 +212,7 @@ export function mountBlockEditor(root, content, onChange, onSelection) {
       DragHandle.configure({ render: () => handle, computePositionConfig: { placement: 'left-start' } }),
     ],
     editorProps: {
+      clipboardTextSerializer: slice => clipboardText(slice.content.toJSON() ?? []),
       attributes: { role: 'textbox', 'aria-label': 'Isi catatan', 'aria-multiline': 'true' },
       handleKeyDown(_view, event) {
         if (popup.hidden) return false;
@@ -191,6 +239,7 @@ export function mountBlockEditor(root, content, onChange, onSelection) {
   document.addEventListener('pointerdown', dismiss);
   return {
     editor,
+    whatsappText() { return clipboardText(editor.getJSON().content ?? [], true); },
     showBlocks() { manual = true; editor.commands.focus(); draw(true); },
     image(url) {
       if (!allowedImage(url)) return false;
