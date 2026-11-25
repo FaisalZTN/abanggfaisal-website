@@ -1,0 +1,1331 @@
+<!-- Chosen Palette: Warm Clinical Alabaster & Deep Teal (Background: #FAF9F6, Surface: #FFFFFF, Primary: #0F766E, Secondary: #1E293B, Subtle Accents: #B45309 & #BE123C) -->
+<!-- Application Structure Plan: Aplikasi dirancang sebagai Dasbor Penalaran Klinis PBL interaktif yang membagi materi kompleks menjadi 5 modul fungsional berbasis tugas belajar mahasiswa kedokteran: (1) Dasbor Profil Kasus Tn. T & Penalaran Klinis Interaktif untuk membedah rasionalisasi patofisiologi dari setiap temuan fisik; (2) Eksplorasi Mendalam Faktor Risiko dengan visualisasi kuantitatif determinan ketidakpatuhan APD, distribusi pekerjaan, serta filter multi-kategori yang memisahkan faktor risiko kejadian (agent-environment-host) dengan faktor risiko komplikasi; (3) Kaskade Patofisiologi & Klasifikasi Zona Kornea interaktif untuk memahami progresivitas rust ring dan urgensi lokasi sentral; (4) Alur Diagnosis, Pembanding Diagnosis Banding (termasuk Welder's Flash), dan Tata Laksana Farmakologi/SKDI; serta (5) Repositori Daftar Pustaka Harvard yang dapat dicari. Struktur non-linear ini dipilih agar mahasiswa dapat menghubungkan teori epidemiologi dan faktor risiko secara langsung dengan pengambilan keputusan klinis pada skenario tutorial. -->
+<!-- Visualization & Content Choices: 1. Data Kasus & Temuan Fisik -> Tujuan: Memahami korelasi klinis -> Metode: Kartu status oftalmologi interaktif dengan panel rasionalisasi dinamis -> Interaksi: Klik pada indikator klinis untuk menampilkan mekanisme patofisiologi dan poin UKMPPD -> Justifikasi: Melatih penalaran klinis aktif dibanding membaca teks pasif (HTML/Tailwind + Vanilla JS). 2. Determinan Ketidakpatuhan APD & Epidemiologi Pekerjaan -> Tujuan: Membandingkan proporsi faktor risiko empiris -> Metode: Grafik Batang Horizontal & Grafik Batang Komparasi -> Interaksi: Hover tooltip detail studi dan tombol pengalih dataset epidemiologi -> Justifikasi: Memvisualisasikan data kuantitatif riset Indonesia (RSUD Waled) dan literatur global secara jelas -> Library: Chart.js (Canvas). 3. Taksonomi Faktor Risiko Kejadian vs Komplikasi -> Tujuan: Mengorganisasi 5 dimensi faktor risiko (okupasional, perilaku/APD, lingkungan, faktor host/okular, demografi/iatrogenik) -> Metode: Grid kartu dengan filter kategori, pencarian kata kunci, dan sakelar mode Kejadian vs Komplikasi -> Interaksi: Filter real-time & audit kecocokan pada kasus Tn. T -> Justifikasi: Mencegah miskonsepsi mahasiswa antara penyebab masuknya partikel dan pemicu ulkus/sikatriks (HTML/Tailwind + Vanilla JS). 4. Kaskade Patofisiologi & Diagnosis Banding -> Tujuan: Menunjukkan perubahan berdasarkan waktu (onset 7 jam) dan membedakan penyakit serupa -> Metode: Stepper kronologis interaktif dan matriks perbandingan klinis -> Interaksi: Klik tahapan waktu dan tab diagnosis banding -> Justifikasi: Memperjelas pembentukan rust ring >=3 jam dan pembedaan dengan keratitis fotolistrik (HTML/Tailwind + Vanilla JS). -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <link rel="canonical" href="https://abanggfaisal.my.id/modul/pbl-corpus-alienum-kornea.html">
+    <meta name="description" content="Modul PBL interaktif tentang corpus alienum kornea, penalaran klinis, dan faktor risiko.">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PBL Oftalmologi: Corpus Alienum Cornea Oculi & Analisis Faktor Risiko</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #FAF9F6;
+            color: #1E293B;
+            overflow-x: hidden;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 340px;
+            }
+        }
+        .fade-in {
+            animation: fadeIn 0.25s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-teal-100 selection:text-teal-900">
+
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-stone-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-teal-700 text-white font-bold text-lg shadow-sm">👁</span>
+                    <div>
+                        <span class="block text-xs font-semibold uppercase tracking-wider text-teal-700">Tutorial PBL Blok Sistem Sensoris</span>
+                        <h1 class="text-sm sm:text-base font-bold text-slate-900 leading-tight">Corpus Alienum Cornea Oculi</h1>
+                    </div>
+                </div>
+
+                <nav class="hidden md:flex items-center gap-1 lg:gap-2">
+                    <a href="#kasus" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-teal-700 hover:bg-teal-50 transition">1. Kasus Tn. T</a>
+                    <a href="#faktor-risiko" class="px-3 py-2 rounded-lg text-sm font-semibold text-teal-800 bg-teal-50 border border-teal-200 hover:bg-teal-100 transition">2. Faktor Risiko</a>
+                    <a href="#patofisiologi" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-teal-700 hover:bg-teal-50 transition">3. Patofisiologi</a>
+                    <a href="#klinis-terapi" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-teal-700 hover:bg-teal-50 transition">4. Diagnosis &amp; Terapi</a>
+                    <a href="#pustaka" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-teal-700 hover:bg-teal-50 transition">5. Pustaka</a>
+                </nav>
+
+                <button id="mobileMenuBtn" type="button" class="md:hidden inline-flex items-center justify-center p-2 rounded-lg text-slate-600 hover:bg-stone-100 border border-stone-200" aria-label="Buka Menu">
+                    <span class="text-base font-bold">☰ Menu</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="mobileMenu" class="hidden md:hidden bg-white border-t border-stone-200 px-4 pt-2 pb-4 space-y-1">
+            <a href="#kasus" class="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-teal-50">1. Dasbor Kasus Tn. T</a>
+            <a href="#faktor-risiko" class="block px-3 py-2 rounded-lg text-sm font-semibold text-teal-800 bg-teal-50">2. Analisis Faktor Risiko</a>
+            <a href="#patofisiologi" class="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-teal-50">3. Patofisiologi &amp; Klasifikasi</a>
+            <a href="#klinis-terapi" class="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-teal-50">4. Diagnosis, DDx &amp; Tata Laksana</a>
+            <a href="#pustaka" class="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-teal-50">5. Daftar Pustaka Harvard</a>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-14">
+
+        <section class="bg-white rounded-2xl border border-stone-200 p-6 sm:p-8 shadow-sm">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                <div class="space-y-3 max-w-3xl">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold">
+                        <span>📋</span>
+                        <span>Sintesis Pembelajaran Berbasis Masalah (PBL) &bull; Berbasis Bukti Medis</span>
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                        Skenario: &ldquo;Mataku Perih, Mengganjal dan Kabur&rdquo;
+                    </h2>
+                    <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+                        Modul interaktif ini memandu Anda membedah sasaran belajar <strong>Corpus Alienum Cornea Oculi</strong> secara sistematis—dimulai dari penalaran klinis kasus <strong>Tn. T (25 tahun)</strong>, eksplorasi mendalam mengenai <strong>berbagai faktor risiko</strong> (okupasional, perilaku APD, lingkungan, hingga predisposisi okular <em>host</em>), mekanisme patofisiologi, hingga tata laksana sesuai pedoman nasional di Indonesia.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-3 shrink-0">
+                    <div class="bg-stone-50 border border-stone-200 rounded-xl p-3.5">
+                        <span class="block text-xs font-medium text-slate-500">Visus Oculus Sinistra</span>
+                        <span class="block text-lg font-extrabold text-rose-700 mt-0.5">1/60 &rarr; 6/20</span>
+                        <span class="block text-[11px] text-slate-600">Membaik dengan pinhole</span>
+                    </div>
+                    <div class="bg-stone-50 border border-stone-200 rounded-xl p-3.5">
+                        <span class="block text-xs font-medium text-slate-500">Lokasi &amp; Ukuran</span>
+                        <span class="block text-lg font-extrabold text-amber-700 mt-0.5">Sentral 1x1 mm</span>
+                        <span class="block text-[11px] text-slate-600">Tepat di aksis visual</span>
+                    </div>
+                    <div class="bg-stone-50 border border-stone-200 rounded-xl p-3.5">
+                        <span class="block text-xs font-medium text-slate-500">Onset &amp; Risiko Karat</span>
+                        <span class="block text-lg font-extrabold text-slate-900 mt-0.5">&plusmn; 7 Jam SMRS</span>
+                        <span class="block text-[11px] text-slate-600">Risiko rust ring (&ge;3 jam)</span>
+                    </div>
+                    <div class="bg-teal-50 border border-teal-200 rounded-xl p-3.5">
+                        <span class="block text-xs font-medium text-teal-800">Keputusan Klinis</span>
+                        <span class="block text-lg font-extrabold text-teal-900 mt-0.5">Rujuk Sp.M</span>
+                        <span class="block text-[11px] text-teal-700">Lesi sentral risiko sikatriks</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="kasus" class="scroll-mt-20 space-y-6">
+            <div class="space-y-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-teal-700">Bagian 1 &bull; Integrasi Skenario Klinis</span>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Dasbor Kasus Tn. T &amp; Penalaran Klinis Interaktif</h2>
+                <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+                    Bagian ini merangkum seluruh data anamnesis dan pemeriksaan fisik oftalmologi pada kasus Tn. T untuk melatih alur berpikir diagnostik. <strong>Klik salah satu temuan klinis di panel kanan</strong> untuk melihat penjelasan patofisiologi, makna diagnostik, serta implikasinya terhadap penentuan rujukan dan prognosis.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-5 bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm space-y-5">
+                    <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+                        <div>
+                            <h3 class="font-bold text-slate-900">Rekam Klinis IGD Rumah Sakit</h3>
+                            <p class="text-xs text-slate-500">Tn. T &bull; Laki-laki &bull; 25 Tahun &bull; Pekerja Las</p>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold">Trauma Okuli OS</span>
+                    </div>
+
+                    <div class="space-y-2 text-sm">
+                        <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Anamnesis Terarah</h4>
+                        <ul class="space-y-1.5 text-slate-600">
+                            <li>&bull; <strong>Keluhan Utama:</strong> Mata kiri perih, mengganjal, merah, berair, dan kabur sejak &plusmn; 7 jam SMRS.</li>
+                            <li>&bull; <strong>Riwayat Paparan:</strong> Mengelas pagar tanpa alat pelindung wajah (percikan las metalik panas).</li>
+                            <li>&bull; <strong>Anamnesis Negatif:</strong> Demam (-), gatal (-), riwayat penyakit/operasi mata (-), DM (-), hipertensi/jantung (-), alergi (-).</li>
+                        </ul>
+                    </div>
+
+                    <div class="space-y-2 text-sm border-t border-stone-100 pt-3">
+                        <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Status Generalis &amp; Lokalis Mata</h4>
+                        <div class="bg-stone-50 rounded-lg p-3 text-xs text-slate-700">
+                            <strong>Tanda Vital:</strong> Sakit sedang, compos mentis, TD 130/80 mmHg, Nadi 88x/mnt, RR 22x/mnt, Suhu 36,8&deg;C.
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            <div class="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
+                                <span class="block text-xs font-bold text-emerald-900">Oculus Dextra (OD)</span>
+                                <p class="text-xs text-slate-700 mt-1">Visus <strong>6/6</strong>, segmen anterior dan posterior dalam batas normal.</p>
+                            </div>
+                            <div class="rounded-xl border border-rose-200 bg-rose-50/40 p-3">
+                                <span class="block text-xs font-bold text-rose-900">Oculus Sinistra (OS)</span>
+                                <ul class="text-xs text-slate-700 mt-1 space-y-1">
+                                    <li>&bull; Visus: <strong>1/60</strong> &rarr; PH <strong>6/20</strong></li>
+                                    <li>&bull; Konjungtiva: Injeksi siliar (+), sekret (-)</li>
+                                    <li>&bull; Kornea: Keruh, edema (+), infiltrat (-), ulkus (-), <strong>corpus alienum (+) 1x1 mm sentral</strong></li>
+                                    <li>&bull; COA: Jernih, dalam; Iris/Pupil/Lensa/TIO normal</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-7 bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-5">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-slate-900">Pilih Indikator Klinis untuk Bedah Rasionalisasi</h3>
+                            <span class="text-xs text-teal-700 font-semibold">Interaktif &bull; 6 Poin Kunci</span>
+                        </div>
+                        <div id="clinicalCueButtons" class="flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <div id="clinicalCueDetail" class="bg-teal-50/60 border border-teal-200 rounded-xl p-5 space-y-3 fade-in">
+                        <div class="flex items-center justify-between gap-2">
+                            <span id="cueBadge" class="px-2.5 py-0.5 rounded-full bg-teal-700 text-white text-xs font-semibold">Analisis Media Refrakta</span>
+                            <span id="cueRef" class="text-xs text-slate-500 font-medium">Sumber: PPK PERDAMI &amp; StatPearls</span>
+                        </div>
+                        <h4 id="cueTitle" class="text-base sm:text-lg font-bold text-slate-900">Visus 1/60 Membaik dengan Pinhole Menjadi 6/20</h4>
+                        <p id="cueExplanation" class="text-sm text-slate-700 leading-relaxed">
+                            Penurunan tajam penglihatan drastis hingga 1/60 terjadi karena benda asing (1x1 mm) dan edema kornea lokal berada tepat di tengah (sentral/aksis visual), menyebabkan hamburan cahaya (light scattering) dan iregularitas kurvatura kornea. Perbaikan visus dengan pinhole (6/20) membuktikan bahwa penurunan penglihatan terutama disebabkan oleh gangguan refraksi/media kornea anterior, sementara makula dan nervus optikus masih berfungsi baik.
+                        </p>
+                        <div class="bg-white rounded-lg border border-teal-200/80 p-3 text-xs text-slate-700">
+                            <strong class="text-teal-800">Poin Kunci Ujian &amp; Tutorial:</strong> <span id="cueExamTip">Uji pinhole selalu wajib dilakukan sebelum rujukan untuk membedakan kelainan media refrakta anterior dari kelainan segmen posterior atau neuropati optik.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="faktor-risiko" class="scroll-mt-20 space-y-6">
+            <div class="space-y-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-teal-700">Bagian 2 &bull; Fokus Utama Analisis</span>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Spektrum Lengkap Faktor Risiko Corpus Alienum Cornea</h2>
+                <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+                    Selain kelalaian tidak memakai pelindung wajah saat mengelas seperti pada kasus Tn. T, bukti medis menunjukkan bahwa <em>corpus alienum kornea</em> dipicu oleh beragam faktor risiko—mulai dari jadwal kerja berlebihan, desain APD yang tidak rapat, aktivitas berkendara motor, penggunaan lensa kontak, hingga kerentanan anatomis permukaan mata (<em>host</em>). Gunakan grafik di bawah untuk mengeksplorasi data empiris, lalu saring kartu faktor risiko berdasarkan kategori atau bedakan antara <strong>Faktor Risiko Kejadian</strong> dan <strong>Faktor Risiko Komplikasi</strong>.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
+                    <div class="space-y-1">
+                        <span class="text-xs font-semibold text-teal-700">Data Empiris Indonesia &bull; RSUD Waled (2024)</span>
+                        <h3 class="text-base sm:text-lg font-bold text-slate-900">Penyebab Ketidakpatuhan Alat Pelindung Mata (APM)</h3>
+                        <p class="text-xs text-slate-600">
+                            Proporsi alasan pekerja dengan <em>korpus alienum</em> tidak memakai pelindung mata saat bekerja (Akturusiano, Budiman &amp; Rosady, 2025). Arahkan kursor pada batang grafik untuk detail analisis.
+                        </p>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chartPpeReasons"></canvas>
+                    </div>
+                    <div class="bg-stone-50 rounded-lg p-3 text-xs text-slate-600 border border-stone-200">
+                        <strong>Implikasi Klinis:</strong> Ketidaknyamanan fisik (79,4%) dan pengawasan K3 yang lemah (64,9% gabungan kurang/tanpa pengawasan) jauh lebih dominan daripada sekadar ketidaktahuan total.
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div class="space-y-1">
+                            <span id="chart2Badge" class="text-xs font-semibold text-teal-700">Distribusi Okupasional &bull; RSUD Waled (2024)</span>
+                            <h3 id="chart2Title" class="text-base sm:text-lg font-bold text-slate-900">Proporsi Kasus Berdasarkan Jenis Pekerjaan</h3>
+                            <p id="chart2Desc" class="text-xs text-slate-600">
+                                Pekerja las mendominasi (62%), namun sektor konstruksi dan pertukangan kayu juga menyumbang porsi bermakna.
+                            </p>
+                        </div>
+                        <div class="inline-flex rounded-lg border border-stone-200 bg-stone-50 p-1 shrink-0">
+                            <button id="btnDatasetJobs" type="button" class="px-2.5 py-1 rounded-md text-xs font-semibold bg-teal-700 text-white shadow-sm transition">Jenis Kerja</button>
+                            <button id="btnDatasetRisk" type="button" class="px-2.5 py-1 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-900 transition">Komparasi Risiko</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chartEpidemiology"></canvas>
+                    </div>
+                    <div id="chart2Footnote" class="bg-stone-50 rounded-lg p-3 text-xs text-slate-600 border border-stone-200">
+                        <strong>Catatan Epidemiologi:</strong> Laki-laki mencakup 97% pasien (RSUD Waled) hingga 100% pada studi rumah sakit di India, dengan kelompok usia produktif mendominasi.
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm space-y-5">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-stone-100 pb-4">
+                    <div class="space-y-1">
+                        <h3 class="text-lg font-bold text-slate-900">Taksonomi Interaktif Faktor Risiko</h3>
+                        <p class="text-xs sm:text-sm text-slate-600">
+                            Bedakan secara tajam antara faktor yang memicu <strong>masuknya benda asing ke kornea</strong> dan faktor yang memperberat <strong>komplikasi (ulkus/sikatriks)</strong>.
+                        </p>
+                    </div>
+
+                    <div class="inline-flex rounded-xl bg-stone-100 p-1 border border-stone-200 self-start">
+                        <button id="modeOccurrenceBtn" type="button" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold bg-teal-700 text-white shadow-sm transition">
+                            Faktor Risiko Kejadian (15)
+                        </button>
+                        <button id="modeComplicationBtn" type="button" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 transition">
+                            Faktor Risiko Komplikasi (4)
+                        </button>
+                    </div>
+                </div>
+
+                <div id="occurrenceFilterBar" class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div id="categoryPills" class="flex flex-wrap gap-1.5"></div>
+                    <div class="relative w-full lg:w-64">
+                        <input id="riskSearchInput" type="text" placeholder="Cari faktor (mis. lensa kontak, motor)..." class="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white">
+                        <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
+                    </div>
+                </div>
+
+                <div id="riskCardsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+                <div class="bg-teal-50/70 border border-teal-200 rounded-xl p-4 sm:p-5 space-y-2">
+                    <h4 class="text-sm font-bold text-teal-900 flex items-center gap-2">
+                        <span>🎯</span>
+                        <span>Sintesis Profil Risiko Khusus pada Kasus Tn. T (25 Tahun)</span>
+                    </h4>
+                    <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                        Pada skenario Tn. T, terdapat <strong>3 faktor risiko kejadian positif</strong>: (1) paparan okupasional pengelasan dengan proyektil metalik panas berkecepatan tinggi, (2) profil demografis laki-laki usia produktif (25 tahun), dan (3) perilaku tidak memakai alat pelindung wajah. Sebaliknya, Tn. T memiliki <strong>faktor protektif host yang menguntungkan</strong>: usia muda dengan kapasitas regenerasi epitel baik, riwayat diabetes melitus negatif, tidak ada riwayat operasi/penyakit mata sebelumnya, datang cukup dini (&plusmn; 7 jam), serta tidak meneteskan steroid atau ramuan tradisional sembarangan.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="patofisiologi" class="scroll-mt-20 space-y-6">
+            <div class="space-y-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-teal-700">Bagian 3 &bull; Mekanisme Biologis &amp; Anatomis</span>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Kaskade Patofisiologi (Onset 7 Jam) &amp; Klasifikasi Zona Kornea</h2>
+                <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+                    Percikan las bukan sekadar benda tumpul, melainkan partikel logam bersuhu tinggi yang memicu trauma mekanik sekaligus koagulasi termal. Klik setiap tahapan kronologis di bawah untuk menelusuri bagaimana paparan dalam <strong>7 jam</strong> menghasilkan seluruh gejala pada Tn. T, serta eksplorasi klasifikasi berdasarkan lokasi anatomis kornea.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-7 bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm space-y-5">
+                    <h3 class="font-bold text-slate-900">Kronologi Patofisiologi Percikan Las Metalik</h3>
+                    <div id="pathoSteps" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+                    <div id="pathoDetailPanel" class="bg-stone-50 border border-stone-200 rounded-xl p-4 sm:p-5 space-y-2.5 fade-in">
+                        <div class="flex items-center justify-between">
+                            <span id="pathoTimeBadge" class="text-xs font-bold uppercase tracking-wider text-teal-700">Tahap 1 &bull; Detik Awal Paparan</span>
+                            <span id="pathoManifestation" class="text-xs font-semibold px-2.5 py-0.5 rounded bg-amber-100 text-amber-900">Gejala: Perih &amp; Mengganjal</span>
+                        </div>
+                        <h4 id="pathoTitle" class="text-base font-bold text-slate-900">Trauma Mekanik-Termal &amp; Eksposur Ujung Saraf N. V1</h4>
+                        <p id="pathoText" class="text-sm text-slate-700 leading-relaxed">
+                            Serpihan besi panas berkecepatan tinggi menembus lapisan air mata dan merusak epitel hingga membran Bowman/stroma superfisial. Karena kornea memiliki kepadatan reseptor nyeri cabang oftalmik nervus trigeminus (N. V1) tertinggi di tubuh, kerusakan epitel langsung memicu nyeri tajam, sensasi mengganjal setiap kali kelopak mata berkedip, serta refleks lakrimasi berlebihan (mata berair) dan blefarospasme.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-5 bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-900">Klasifikasi Lokasi Kornea &amp; Dampak Klinis</h3>
+                    <p class="text-xs text-slate-600">Pilih zona lokasi benda asing untuk membandingkan dampak terhadap tajam penglihatan dan kewenangan rujukan:</p>
+                    <div id="zoneButtons" class="grid grid-cols-3 gap-2"></div>
+                    <div id="zoneDetailPanel" class="rounded-xl border border-rose-200 bg-rose-50/50 p-4 space-y-2 fade-in">
+                        <div class="flex items-center justify-between">
+                            <span id="zoneTitle" class="font-bold text-sm text-rose-900">Zona Sentral (Aksis Visual) &mdash; Kasus Tn. T</span>
+                            <span id="zoneRiskBadge" class="px-2 py-0.5 rounded bg-rose-700 text-white text-[11px] font-bold">Risiko Tinggi</span>
+                        </div>
+                        <p id="zoneDesc" class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                            Terletak tepat di bagian tengah kornea (zona optik sentral). Menyebabkan penurunan visus berat secara langsung (1/60 pada Tn. T) akibat kekeruhan/edema di jalur sinar masuk ke retina. Penyembuhan stroma di area ini berisiko meninggalkan leukoma/sikatriks sentral yang mengganggu penglihatan secara permanen sehingga wajib dirujuk ke dokter spesialis mata.
+                        </p>
+                    </div>
+                    <div class="border-t border-stone-100 pt-3 text-xs text-slate-600 space-y-1">
+                        <p><strong>Sifat Bahan pada Kasus:</strong> Anorganik &ndash; Metalik (gram besi panas) &rarr; bersifat reaktif (oksidasi karat dalam &ge; 3 jam), umumnya steril pada saat awal karena suhu tinggi, berbeda dengan benda organik (ranting/serangga) yang berisiko tinggi keratitis jamur.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="klinis-terapi" class="scroll-mt-20 space-y-6">
+            <div class="space-y-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-teal-700">Bagian 4 &bull; Pengambilan Keputusan Klinis</span>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Diagnosis, Diagnosis Banding &amp; Tata Laksana Sesuai SKDI</h2>
+                <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+                    Pada pasien dengan riwayat mengelas, klinisi wajib membedakan <em>corpus alienum kornea</em> dari <strong>keratitis fotolistrik (welder&rsquo;s flash)</strong> akibat radiasi ultraviolet busur las, serta memastikan tidak terjadi perforasi bola mata sebelum melakukan tindakan. Gunakan tab diagnosis banding dan panduan protokol terapi di bawah ini.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <h3 class="font-bold text-slate-900">Matriks Diagnosis Banding Nyeri Mata Akut Pasca-Mengelas</h3>
+                    <span class="text-xs text-slate-500">Geser ke samping pada layar kecil untuk melihat seluruh kolom</span>
+                </div>
+                <div class="overflow-x-auto border border-stone-200 rounded-xl">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                        <thead>
+                            <tr class="bg-stone-100 text-slate-800 border-b border-stone-200">
+                                <th class="p-3 font-bold">Parameter Klinis</th>
+                                <th class="p-3 font-bold bg-teal-50 text-teal-900">Corpus Alienum Kornea (Kasus Tn. T)</th>
+                                <th class="p-3 font-bold">Keratitis Fotolistrik (Welder&rsquo;s Flash)</th>
+                                <th class="p-3 font-bold">Abrasi Kornea Murni</th>
+                                <th class="p-3 font-bold">Ulkus Kornea Bakterialis</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-stone-200 text-slate-700">
+                            <tr>
+                                <td class="p-3 font-semibold text-slate-900">Onset Gejala</td>
+                                <td class="p-3 bg-teal-50/40">Segera setelah percikan mengenai mata (&plusmn; 7 jam SMRS)</td>
+                                <td class="p-3">Tertunda 6&ndash;12 jam setelah paparan sinar UV las</td>
+                                <td class="p-3">Segera setelah trauma goresan mekanik</td>
+                                <td class="p-3">Bertahap (24&ndash;72 jam pascatrauma/lensa kontak)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 font-semibold text-slate-900">Lateralitas</td>
+                                <td class="p-3 bg-teal-50/40">Umumnya unilateral (OS pada Tn. T)</td>
+                                <td class="p-3">Hampir selalu bilateral</td>
+                                <td class="p-3">Umumnya unilateral</td>
+                                <td class="p-3">Umumnya unilateral</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 font-semibold text-slate-900">Temuan Kornea</td>
+                                <td class="p-3 bg-teal-50/40">Tampak partikel logam 1x1 mm + edema lokal, infiltrat (-)</td>
+                                <td class="p-3">Keratitis pungtata superfisialis difus, tanpa benda asing</td>
+                                <td class="p-3">Defek epitel terwarnai fluorescein (+), tanpa benda asing</td>
+                                <td class="p-3">Defek epitel + infiltrat stroma putih-kuning, hipopion (+/-)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 font-semibold text-slate-900">Sekret &amp; Konjungtiva</td>
+                                <td class="p-3 bg-teal-50/40">Injeksi siliar (+), sekret (-)</td>
+                                <td class="p-3">Injeksi konjungtiva/siliar, lakrimasi berat, sekret (-)</td>
+                                <td class="p-3">Injeksi siliar/konjungtiva, sekret (-)</td>
+                                <td class="p-3">Injeksi siliar berat, sekret mukopurulen/purulen (+)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 font-semibold text-slate-900">Uji Diagnostik Kunci</td>
+                                <td class="p-3 bg-teal-50/40">Slit lamp/lup, Tes Fluorescein (+), Tes Seidel (-)</td>
+                                <td class="p-3">Fluorescein: titik-titik pungtata difus (punctate staining)</td>
+                                <td class="p-3">Fluorescein (+) berbatas tegas, Seidel (-)</td>
+                                <td class="p-3">Pewarnaan Gram/KOH &amp; kultur kerokan kornea</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm space-y-5">
+                <div class="flex flex-wrap gap-2 border-b border-stone-100 pb-4" id="mgmtTabs"></div>
+                <div id="mgmtContent" class="fade-in"></div>
+            </div>
+        </section>
+
+        <section id="pustaka" class="scroll-mt-20 space-y-5">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div class="space-y-1.5">
+                    <span class="text-xs font-bold uppercase tracking-wider text-teal-700">Bagian 5 &bull; Referensi Ilmiah Tervalidasi</span>
+                    <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Daftar Pustaka (Harvard Style)</h2>
+                    <p class="text-xs sm:text-sm text-slate-600">
+                        Seluruh klaim medis dalam modul ini merujuk pada pedoman resmi Kementerian Kesehatan RI, PERDAMI/IDI, serta literatur oftalmologi standar.
+                    </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="refFilterSelect" class="px-3 py-2 text-xs sm:text-sm bg-white border border-stone-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-600">
+                        <option value="all">Semua Referensi (22)</option>
+                        <option value="nasional">Pedoman &amp; Riset Indonesia</option>
+                        <option value="internasional">Literatur Internasional</option>
+                    </select>
+                    <input id="refSearchInput" type="text" placeholder="Cari penulis atau judul..." class="px-3 py-2 text-xs sm:text-sm bg-white border border-stone-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-600">
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm">
+                <ul id="referenceList" class="space-y-3 text-xs sm:text-sm text-slate-700 leading-relaxed divide-y divide-stone-100"></ul>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-stone-200 mt-12 py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <p>Materi Pembelajaran Tutorial PBL &bull; Blok Sistem Sensoris &amp; Integumentum (Oftalmologi)</p>
+            <p>Disusun berbasis PPK Kemenkes RI, PERDAMI, SKDI, dan Literatur Oftalmologi Klinis</p>
+        </div>
+    </footer>
+
+    <script>
+        const clinicalCues = [
+            {
+                id: 'visus',
+                label: 'Visus 1/60 → PH 6/20',
+                badge: 'Analisis Media Refrakta',
+                ref: 'Sumber: PPK PERDAMI & StatPearls (2025)',
+                title: 'Visus 1/60 Membaik dengan Pinhole Menjadi 6/20',
+                explanation: 'Penurunan tajam penglihatan drastis hingga 1/60 terjadi karena benda asing (1x1 mm) dan edema kornea lokal berada tepat di tengah (sentral/aksis visual), menyebabkan hamburan cahaya dan iregularitas permukaan refraktif kornea. Perbaikan visus dengan pinhole (6/20) membuktikan bahwa penurunan penglihatan terutama disebabkan oleh gangguan media refrakta anterior, sementara fungsi makula dan nervus optikus masih baik.',
+                examTip: 'Uji pinhole wajib dilakukan pada setiap penurunan visus akut untuk membedakan kelainan refraksi/media anterior dari gangguan segmen posterior atau saraf optik.'
+            },
+            {
+                id: 'sentral',
+                label: 'Lokasi Sentral 1x1 mm',
+                badge: 'Kriteria Rujukan SKDI',
+                ref: 'Sumber: KMK 1186/2022 & SKDI',
+                title: 'Benda Asing Tepat di Tengah (Sentral) Kornea',
+                explanation: 'Berdasarkan Standar Kompetensi Dokter Indonesia (SKDI) dan PPK Fasyankes Primer, dokter umum hanya berwenang melakukan ekstraksi benda asing superfisial di area perifer/parasentral konjungtiva atau kornea. Karena lokasi pada Tn. T berada tepat di aksis visual (sentral), manipulasi tanpa slit lamp biomikroskop atau terjadinya sikatriks/leukoma pasca-ekstraksi dapat menurunkan visus secara permanen. Pasien wajib dirujuk ke Dokter Spesialis Mata (Sp.M).',
+                examTip: 'Benda asing di zona sentral kornea, tertanam dalam, disertai cincin karat (rust ring) padat, atau dicurigai menembus stroma merupakan indikasi mutlak rujukan Sp.M.'
+            },
+            {
+                id: 'injeksi',
+                label: 'Injeksi Siliar (+), Sekret (-)',
+                badge: 'Respons Vaskular & Infeksi',
+                ref: 'Sumber: Vaughan & Asbury; Kemenkes RI',
+                title: 'Injeksi Siliar Tanpa Sekret Purulen',
+                explanation: 'Injeksi siliar (perikornea) mencerminkan vasodilatasi pembuluh darah arteri siliaris anterior yang memperdarahi kornea dan segmen anterior akibat iritasi mekanik-termal kornea. Ketiadaan sekret mukopurulen serta anamnesis gatal (-) dan demam (-) membantu menyingkirkan konjungtivitis bakterialis akut maupun konjungtivitis alergi sebagai penyebab utama mata merah.',
+                examTip: 'Injeksi siliar (merah keunguan paling padat di sekitar limbus, tidak ikut bergerak saat konjungtiva digerakkan) adalah tanda khas keterlibatan kornea atau uvea anterior.'
+            },
+            {
+                id: 'onset',
+                label: 'Onset ± 7 Jam (Percikan Las)',
+                badge: 'Oksidasi Besi & Rust Ring',
+                ref: 'Sumber: Reichman (2013) & Camodeca (2025)',
+                title: 'Paparan Gram Besi Panas Selama 7 Jam',
+                explanation: 'Percikan las mengandung partikel besi bersuhu tinggi. Kontak partikel logam besi dengan air mata dan jaringan kornea memicu oksidasi besi sehingga membentuk endapan cincin karat (rust ring) berwarna kecokelatan di stroma dalam waktu secepat 3 jam. Pada onset sekitar 7 jam, cincin karat sudah mulai terbentuk sehingga memerlukan pembersihan dengan ophthalmic burr di bawah slit lamp setelah partikel utama diangkat.',
+                examTip: 'Rust ring yang tertinggal memicu inflamasi persisten, nekrosis stroma lokal, dan memperlambat penyembuhan epitel kornea.'
+            },
+            {
+                id: 'coa',
+                label: 'COA Jernih & Dalam',
+                badge: 'Eksklusi Perforasi Bola Mata',
+                ref: 'Sumber: Hyde, Fu & Gurnani (2026)',
+                title: 'Camera Oculi Anterior (COA) Jernih dan Dalam',
+                explanation: 'Kedalaman COA yang normal (dalam) dan jernih menunjukkan bahwa aqueous humor tidak bocor keluar dan belum terjadi reaksi radang bilik mata depan berat (hipopion/hifema). Hal ini mengindikasikan bahwa benda asing masih terbatas pada lapisan kornea superfisial/stroma dan belum menembus seluruh ketebalan kornea (perforasi negatif). Konfirmasi tetap dilakukan dengan Tes Seidel.',
+                examTip: 'Jika ditemukan COA dangkal, pupil lonjong/peaked, atau Tes Seidel positif (aliran cairan hijau jernih), dilarang menekan bola mata dan segera pasang pelindung keras (eye shield).'
+            },
+            {
+                id: 'komorbid',
+                label: 'DM (-) & Riwayat Mata (-)',
+                badge: 'Analisis Faktor Host & Prognosis',
+                ref: 'Sumber: Educate Choroida (2026); Hyde (2026)',
+                title: 'Ketiadaan Komorbid Sistemik dan Okular',
+                explanation: 'Diabetes melitus dapat memperlambat proses re-epitelisasi kornea dan meningkatkan kerentanan infeksi pascatrauma. Ketiadaan DM, tidak adanya riwayat bedah refraktif (LASIK/PRK), tidak adanya sindrom mata kering berat, serta tidak ada penggunaan tetes kortikosteroid atau ramuan tradisional sembarangan menjadi faktor protektif yang mendukung penyembuhan epitel kornea Tn. T dengan baik.',
+                examTip: 'Selalu tanyakan riwayat penggunaan obat tetes mata sebelum ke IGD untuk menyingkirkan penyalahgunaan anestesi topikal atau steroid topikal.'
+            }
+        ];
+
+        const riskFactorsData = [
+            {
+                type: 'occurrence',
+                category: 'Okupasional & Jadwal',
+                categoryBadge: 'Okupasional & Jadwal Kerja',
+                title: 'Pekerjaan Berisiko Proyektil Kecepatan Tinggi',
+                detail: 'Selain mengelas, aktivitas menggerinda (grinding), mengebor, memalu logam-ke-logam, memotong keramik, konstruksi semen, pertukangan kayu, pemotongan sawit, dan pertanian melontarkan serpihan logam, mineral, atau tumbuhan berkecepatan tinggi ke kornea.',
+                evidence: 'Camodeca & Anderson (2025); Kemenkes RI (2022a); Nagar & Choudhary (2024)',
+                inPatient: 'Positif pada Tn. T (mengelas pagar)'
+            },
+            {
+                type: 'occurrence',
+                category: 'Okupasional & Jadwal',
+                categoryBadge: 'Okupasional & Jadwal Kerja',
+                title: 'Posisi Kerja Overhead & Ruang Sempit',
+                detail: 'Mengelas atau menggerinda di posisi atas kepala (overhead) atau di ruang tertutup membuat partikel terak logam dan debu jatuh secara vertikal menyelinap masuk melalui celah atas atau samping kacamata pelindung biasa.',
+                evidence: 'Bayshore Safety (t.t.)',
+                inPatient: 'Potensial saat mengelas bagian atas pagar'
+            },
+            {
+                type: 'occurrence',
+                category: 'Okupasional & Jadwal',
+                categoryBadge: 'Okupasional & Jadwal Kerja',
+                title: 'Jam Kerja Panjang (> 8 Jam) Tanpa Jeda Istirahat',
+                detail: 'Jam kerja harian lebih dari 8 jam dan bekerja terus-menerus tanpa waktu istirahat terbukti bermakna secara statistik (p < 0,001) meningkatkan kejadian benda asing kornea berulang (>= 4 kali/tahun) akibat kelelahan mata dan penurunan kewaspadaan.',
+                evidence: 'Ayyildiz & Ozturk (2020); Siswoyo et al. (2023)',
+                inPatient: 'Perlu digali pada anamnesis beban kerja'
+            },
+            {
+                type: 'occurrence',
+                category: 'Okupasional & Jadwal',
+                categoryBadge: 'Okupasional & Jadwal Kerja',
+                title: 'Efek Bifasik Masa Kerja (Pekerja Baru vs. Senior)',
+                detail: 'Pekerja baru (masa kerja singkat) rentan cedera karena kurangnya keterampilan keselamatan, sedangkan pekerja lama (> 5 tahun) tetap berisiko tinggi akibat paparan kumulatif, kejenuhan, dan rasa terlalu percaya diri (overconfidence).',
+                evidence: 'Ayyildiz & Ozturk (2020); Akturusiano et al. (2025); Nagar & Choudhary (2024)',
+                inPatient: 'Relevan pada usia pekerja muda 25 tahun'
+            },
+            {
+                type: 'occurrence',
+                category: 'Perilaku & APD',
+                categoryBadge: 'Perilaku & Desain APD',
+                title: 'Ketidakpatuhan Pemakaian APD (Faktor Nyaman & Pengawasan)',
+                detail: 'Pekerja yang tidak memakai pelindung mata berisiko 3,947 kali lebih besar kemasukan serpihan besi. Riset di RSUD Waled mengungkap penyebab utamanya adalah ketidaknyamanan (79,4%), pengetahuan sedang (54,6%), pengawasan lemah/nihil (64,9%), dan ketiadaan APD (34%).',
+                evidence: 'Siswoyo et al. (2023); Akturusiano, Budiman & Rosady (2025)',
+                inPatient: 'Positif pada Tn. T (tidak memakai pelindung wajah)'
+            },
+            {
+                type: 'occurrence',
+                category: 'Perilaku & APD',
+                categoryBadge: 'Perilaku & Desain APD',
+                title: 'Desain Pelindung Mata yang Suboptimal (Tanpa Side Shields)',
+                detail: 'Sebanyak 18% hingga 43% pasien tetap mengalami cedera kornea meski mengenakan kacamata pelindung karena kacamata tidak dilengkapi pelindung samping (side shields) atau hanya memakai face shield tanpa goggles tertutup di dalamnya.',
+                evidence: 'Nagar & Choudhary (2024); Ramakrishnan et al. (2012); Akualita (t.t.)',
+                inPatient: 'Edukasi pencegahan sekunder wajib diberikan'
+            },
+            {
+                type: 'occurrence',
+                category: 'Perilaku & APD',
+                categoryBadge: 'Perilaku & Desain APD',
+                title: 'Penggunaan Lensa Kontak & Higiene Buruk',
+                detail: 'Pemakaian lensa kontak jangka panjang, semalaman, atau di lingkungan berdebu dapat menjebak partikel debu mikro di bawah lensa terhadap kornea dan memicu abrasi epitel.',
+                evidence: 'Camodeca & Anderson (2025); Hyde, Fu & Gurnani (2026); Specialty Vision (t.t.)',
+                inPatient: 'Negatif pada Tn. T'
+            },
+            {
+                type: 'occurrence',
+                category: 'Perilaku & APD',
+                categoryBadge: 'Perilaku & Desain APD',
+                title: 'Alat Kosmetik & Kebiasaan Mengucek Mata',
+                detail: 'Serat alat rias (seperti sikat maskara), goresan kuku jari, dan kebiasaan mengucek mata secara agresif dapat langsung mencederai epitel atau mendorong partikel dari konjungtiva tertanam ke kornea.',
+                evidence: 'Camodeca & Anderson (2025); StatPearls (t.t.d)',
+                inPatient: 'Wajib diedukasi agar tidak mengucek mata'
+            },
+            {
+                type: 'occurrence',
+                category: 'Lingkungan & Non-Kerja',
+                categoryBadge: 'Lingkungan & Non-Okupasional',
+                title: 'Berkendara Sepeda Motor Tanpa Visor Helm Tertutup',
+                detail: 'Berkendara motor atau beraktivitas di jalan raya tanpa visor helm tertutup maupun kacamata pelindung memaparkan mata pada debu jalanan, pasir, serpihan aspal, hingga bagian tubuh serangga yang dapat menancap ke stroma kornea.',
+                evidence: 'Kemenkes RI (2022a); Jurnal Kedokteran Brawijaya (2025); Camodeca & Anderson (2025)',
+                inPatient: 'Faktor risiko umum harian di Indonesia'
+            },
+            {
+                type: 'occurrence',
+                category: 'Lingkungan & Non-Kerja',
+                categoryBadge: 'Lingkungan & Non-Okupasional',
+                title: 'Angin Kencang, Polusi Udara, Musim Panen & Ledakan',
+                detail: 'Lingkungan kering/berdebu, polusi partikulat kronis, musim panen di area agraris, aktivitas olahraga (paintball, menembak, bersepeda), bermain petasan, serta bencana alam atau ledakan meningkatkan paparan proyektil asing.',
+                evidence: 'Camodeca & Anderson (2025); Hyde, Fu & Gurnani (2026); Puskesmas Perampuan (t.t.)',
+                inPatient: 'Negatif pada riwayat Tn. T'
+            },
+            {
+                type: 'occurrence',
+                category: 'Faktor Host / Okular',
+                categoryBadge: 'Predisposisi Okular & Host',
+                title: 'Sindrom Mata Kering & Instabilitas Film Air Mata',
+                detail: 'Gangguan lapisan air mata menurunkan kapasitas pembilasan mekanis alami (tear clearance) dan membuat sawar epitel kornea lebih rentan mengalami kerusakan akibat partikel kecil.',
+                evidence: 'Hyde, Fu & Gurnani (2026); Educate Choroida (2026)',
+                inPatient: 'Negatif pada Tn. T'
+            },
+            {
+                type: 'occurrence',
+                category: 'Faktor Host / Okular',
+                categoryBadge: 'Predisposisi Okular & Host',
+                title: 'Lagoftalmos & Penurunan Refleks Berkedip',
+                detail: 'Kegagalan penutupan kelopak mata sempurna (lagoftalmos akibat paresis N. VII) maupun melambatnya refleks berkedip pada usia lanjut menghilangkan mekanisme sapuan mekanis pelindung kornea sehingga partikel mudah tertahan.',
+                evidence: 'Camodeca & Anderson (2025); WHO (1989)',
+                inPatient: 'Negatif pada Tn. T'
+            },
+            {
+                type: 'occurrence',
+                category: 'Faktor Host / Okular',
+                categoryBadge: 'Predisposisi Okular & Host',
+                title: 'Penurunan Sensasi Kornea (Hipestesia) & Riwayat Bedah Mata',
+                detail: 'Hipestesia kornea menghilangkan refleks nyeri protektif sehingga paparan tidak segera disadari. Sementara itu, riwayat operasi refraktif (LASIK/PRK) dan distrofi membran basal melemahkan perlekatan epitel kornea.',
+                evidence: 'Educate Choroida (2026); Hyde, Fu & Gurnani (2026); WHO (1989)',
+                inPatient: 'Negatif (riwayat operasi mata disangkal)'
+            },
+            {
+                type: 'occurrence',
+                category: 'Demografi & Iatrogenik',
+                categoryBadge: 'Demografis, Sosioekonomi & Iatrogenik',
+                title: 'Profil Usia, Jenis Kelamin & Kerentanan Bengkel Kecil',
+                detail: 'Laki-laki usia produktif mendominasi (68,3%–100%). Usia muda terkait frekuensi trauma berulang tinggi, usia >40–45 tahun terkait penurunan refleks fisiologis, dan pada bengkel las kecil pekerja perempuan dilaporkan berisiko 4,4 kali lebih tinggi (p = 0,003).',
+                evidence: 'Agrawal et al. (2020); Akturusiano et al. (2025); Siswoyo et al. (2023)',
+                inPatient: 'Positif (laki-laki usia produktif 25 tahun)'
+            },
+            {
+                type: 'occurrence',
+                category: 'Demografi & Iatrogenik',
+                categoryBadge: 'Demografis, Sosioekonomi & Iatrogenik',
+                title: 'Pendidikan Rendah, Pekerja Informal & Faktor Iatrogenik',
+                detail: 'Sebanyak 90% pasien pada studi di India berpendidikan kelas 10 ke bawah dan 55% pada studi di Turki merupakan pekerja informal tanpa asuransi/regulasi K3. Selain itu, debris saat pembedahan mata atau instrumen diagnostik yang tidak tepat dapat menjadi penyebab iatrogenik.',
+                evidence: 'Nagar & Choudhary (2024); Arquivos Brasileiros de Oftalmologia (t.t.); Camodeca & Anderson (2025)',
+                inPatient: 'Relevan pada pekerja bengkel las informal'
+            },
+            {
+                type: 'complication',
+                category: 'Komplikasi',
+                categoryBadge: 'Risiko Perburukan & Komplikasi',
+                title: 'Upaya Pengeluaran Mandiri yang Tidak Steril',
+                detail: 'Dilakukan oleh 45,1% hingga 58% pasien menggunakan kain/saputangan, tisu, uang kertas, kertas, jarum, atau tusuk gigi. Tindakan ini memperluas defek epitel dan menginokulasi bakteri/jamur langsung ke stroma kornea.',
+                evidence: 'Sharma et al. (t.t.); Nagar & Choudhary (2024); Arquivos Brasileiros de Oftalmologia (t.t.)',
+                inPatient: 'Negatif pada Tn. T (langsung ke IGD)'
+            },
+            {
+                type: 'complication',
+                category: 'Komplikasi',
+                categoryBadge: 'Risiko Perburukan & Komplikasi',
+                title: 'Keterlambatan Berobat (> 3 Jam) & Pembentukan Rust Ring',
+                detail: 'Penundaan pemeriksaan medis menyebabkan oksidasi partikel logam besi membentuk cincin karat (rust ring) mulai 3 jam pascapaparan, yang memicu nekrosis stroma lokal, inflamasi berkepanjangan, dan risiko sikatriks permanen.',
+                evidence: 'Reichman (2013); Camodeca & Anderson (2025)',
+                inPatient: 'Onset ± 7 jam: perlu evaluasi rust ring oleh Sp.M'
+            },
+            {
+                type: 'complication',
+                category: 'Komplikasi',
+                categoryBadge: 'Risiko Perburukan & Komplikasi',
+                title: 'Penyalahgunaan Anestesi Topikal & Steroid Topikal',
+                detail: 'Penggunaan tetes anestesi topikal secara berulang di rumah menghambat migrasi epitel dan merusak saraf kornea hingga memicu corneal melting/perforasi, sedangkan kortikosteroid topikal menekan imunitas lokal dan memicu keratitis infeksius berat.',
+                evidence: 'Topical Anesthetic Abuse Keratopathy (t.t.); RSI Sultan Agung (2026)',
+                inPatient: 'Negatif pada riwayat Tn. T'
+            },
+            {
+                type: 'complication',
+                category: 'Komplikasi',
+                categoryBadge: 'Risiko Perburukan & Komplikasi',
+                title: 'Obat Tetes Tradisional Tumbuh-tumbuhan & Komorbid DM',
+                detail: 'Penggunaan obat tetes tradisional berbasis ramuan tumbuhan atau kontaminasi benda organik (ranting/serangga) sangat berisiko memicu keratitis jamur yang sulit diobati, diperburuk bila pasien menderita diabetes melitus.',
+                evidence: 'RSI Sultan Agung (2026); Educate Choroida (2026)',
+                inPatient: 'Negatif pada Tn. T (DM -, tetes tradisional -)'
+            }
+        ];
+
+        const pathoStages = [
+            {
+                step: 'Tahap 1 • 0 Menit',
+                badge: 'Gejala: Perih & Mengganjal',
+                title: 'Trauma Mekanik-Termal & Eksposur Ujung Saraf N. V1',
+                text: 'Serpihan besi panas berkecepatan tinggi menembus lapisan air mata dan merusak epitel hingga membran Bowman/stroma superfisial. Karena kornea memiliki kepadatan reseptor nyeri cabang oftalmik nervus trigeminus (N. V1) tertinggi di tubuh, kerusakan epitel langsung memicu nyeri tajam, sensasi mengganjal saat berkedip, lakrimasi refleks (berair), dan blefarospasme.'
+            },
+            {
+                step: 'Tahap 2 • Menit Awal',
+                badge: 'Tanda: Injeksi Siliar (+)',
+                title: 'Pelepasan Mediator Inflamasi & Vasodilatasi Perikornea',
+                text: 'Kerusakan sel epitel memicu pelepasan prostaglandin, histamin, dan sitokin proinflamasi yang merangsang vasodilatasi pembuluh darah arteri siliaris anterior di sekitar limbus. Secara klinis tampak sebagai injeksi siliar (kemerahan perilimbus tanpa sekret purulen).'
+            },
+            {
+                step: 'Tahap 3 • ≥ 3 Jam',
+                badge: 'Risiko: Rust Ring Besi',
+                title: 'Oksidasi Besi & Pembentukan Cincin Karat (Rust Ring)',
+                text: 'Pada benda asing metalik mengandung besi, ion besi bereaksi dengan oksigen dan elektrolit air mata membentuk endapan oksida besi kecokelatan (rust ring) di stroma dalam waktu secepat 3 jam. Endapan ini bersifat toksik bagi keratosit dan memperluas reaksi inflamasi lokal.'
+            },
+            {
+                step: 'Tahap 4 • ± 7 Jam (IGD)',
+                badge: 'Tanda: Visus 1/60 → PH 6/20',
+                title: 'Edema Stroma Sentral & Hamburan Cahaya Aksis Visual',
+                text: 'Gangguan sawar pompa endotel/epitel lokal menyebabkan masuknya cairan ke lamela kolagen stroma sehingga kornea tampak keruh dan edema di sekitar benda asing 1x1 mm. Karena berada tepat di sentral kornea, cahaya yang masuk mengalami difraksi sehingga visus turun menjadi 1/60 namun membaik dengan pinhole menjadi 6/20.'
+            }
+        ];
+
+        const corneaZones = [
+            {
+                id: 'sentral',
+                label: 'Zona Sentral',
+                title: 'Zona Sentral (Aksis Visual) — Kasus Tn. T',
+                risk: 'Risiko Tinggi • Rujuk Sp.M',
+                style: 'border-rose-200 bg-rose-50/50',
+                badgeStyle: 'bg-rose-700 text-white',
+                titleStyle: 'text-rose-900',
+                desc: 'Terletak tepat di tengah kornea (jalur utama masuknya cahaya ke fovea). Menyebabkan penurunan visus berat secara langsung (1/60 pada Tn. T). Penyembuhan stroma di area ini berisiko meninggalkan leukoma/sikatriks sentral permanen sehingga wajib dirujuk ke dokter spesialis mata.'
+            },
+            {
+                id: 'parasentral',
+                label: 'Zona Parasentral',
+                title: 'Zona Parasentral (Mid-Perifer Kornea)',
+                risk: 'Risiko Sedang • Waspada Silau',
+                style: 'border-amber-200 bg-amber-50/50',
+                badgeStyle: 'bg-amber-700 text-white',
+                titleStyle: 'text-amber-900',
+                desc: 'Mengelilingi zona optik sentral. Penurunan visus umumnya lebih ringan dibanding lokasi sentral, namun sikatriks atau iregularitas astigmatisme di area ini tetap dapat memicu keluhan silau (glare) terutama saat pupil berdilatasi pada malam hari.'
+            },
+            {
+                id: 'perifer',
+                label: 'Zona Perifer',
+                title: 'Zona Perifer (Dekat Limbus Kornea)',
+                risk: 'Kompetensi Dokter Umum (Superfisial)',
+                style: 'border-teal-200 bg-teal-50/50',
+                badgeStyle: 'bg-teal-700 text-white',
+                titleStyle: 'text-teal-900',
+                desc: 'Berada di tepi kornea dekat limbus yang kaya vaskularisasi. Umumnya tidak langsung menghalangi aksis visual utama sehingga visus relatif terjaga, dan bila bersifat superfisial dapat diekstraksi di layanan primer sesuai pedoman nasional.'
+            }
+        ];
+
+        const mgmtSections = [
+            {
+                id: 'diagnostik',
+                title: '1. Alur Diagnostik & Pemeriksaan Penunjang',
+                html: `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-700">
+                        <div class="bg-stone-50 rounded-xl p-4 border border-stone-200 space-y-2">
+                            <h4 class="font-bold text-slate-900">Pemeriksaan Wajib di IGD / Fasyankes</h4>
+                            <ul class="space-y-1.5 text-xs sm:text-sm">
+                                <li>&bull; <strong>Pemeriksaan Visus &amp; Pinhole:</strong> Dilakukan sebelum pemberian tetes mata atau manipulasi apa pun sebagai data dasar medikolegal.</li>
+                                <li>&bull; <strong>Inspeksi Segmen Anterior (Slit Lamp / Lup):</strong> Menilai lokasi (sentral vs perifer), ukuran (1x1 mm), kedalaman, edema, infiltrat, COA, serta eversi kelopak mata atas untuk menyingkirkan benda asing subtarsal tersembunyi.</li>
+                                <li>&bull; <strong>Tes Fluorescein:</strong> Meneteskan fluorescein untuk melihat defek epitel kornea yang berpendar hijau di bawah cahaya biru kobalt.</li>
+                                <li>&bull; <strong>Tes Seidel:</strong> Menilai kebocoran <em>aqueous humor</em> untuk menyingkirkan perforasi kornea penuh (pada Tn. T didukung COA yang masih dalam dan jernih).</li>
+                            </ul>
+                        </div>
+                        <div class="bg-stone-50 rounded-xl p-4 border border-stone-200 space-y-2">
+                            <h4 class="font-bold text-slate-900">Indikasi Pencitraan Penunjang</h4>
+                            <p class="text-xs sm:text-sm leading-relaxed">
+                                Pada kasus Tn. T dengan partikel superfisial jelas dan COA dalam/jernih, pencitraan tidak rutin diperlukan. Namun, pencitraan wajib dilakukan bila dicurigai <strong>benda asing intraokular (IOFB)</strong> akibat proyektil kecepatan tinggi:
+                            </p>
+                            <ul class="space-y-1.5 text-xs sm:text-sm">
+                                <li>&bull; <strong>CT-Scan Orbita Non-Kontras (Potongan Tipis):</strong> Baku emas untuk mendeteksi dan melokalisasi benda asing metalik intraokular.</li>
+                                <li>&bull; <strong>Kontraindikasi MRI:</strong> MRI dilarang keras bila dicurigai benda asing bersifat feromagnetik/metalik karena medan magnet dapat menggerakkan logam dan merusak jaringan intraokular.</li>
+                            </ul>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'rujukan',
+                title: '2. Tingkat Kompetensi SKDI & Teknik Ekstraksi',
+                html: `
+                    <div class="space-y-4 text-sm text-slate-700">
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                            <h4 class="font-bold text-amber-900">Analisis Kompetensi SKDI &amp; Alasan Rujukan pada Kasus Tn. T</h4>
+                            <p class="text-xs sm:text-sm text-slate-800 mt-1 leading-relaxed">
+                                Menurut <strong>KMK No. HK.01.07/MENKES/1186/2022</strong> dan SKDI, ekstraksi benda asing superfisial di konjungtiva maupun kornea perifer tanpa komplikasi merupakan kompetensi dokter layanan primer. Namun, pasien <strong>wajib dirujuk ke Dokter Spesialis Mata</strong> apabila benda asing terletak di <strong>sentral/aksis visual kornea (seperti kasus Tn. T)</strong>, tertanam dalam di stroma, disertai <em>rust ring</em> padat, terdapat penurunan visus berat, atau dicurigai perforasi/infeksi sekunder.
+                            </p>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs sm:text-sm">
+                            <div class="border border-stone-200 rounded-xl p-3.5">
+                                <span class="font-bold text-teal-800 block mb-1">Langkah A: Anestesi &amp; Irigasi</span>
+                                Pemberian anestesi topikal (tetrakain 0,5% atau pantokain) di fasilitas kesehatan untuk menghilangkan blefarospasme, diikuti irigasi lembut menggunakan NaCl 0,9% steril.
+                            </div>
+                            <div class="border border-stone-200 rounded-xl p-3.5">
+                                <span class="font-bold text-teal-800 block mb-1">Langkah B: Ekstraksi Terarah</span>
+                                Bila tidak terlepas dengan irigasi, benda asing diangkat hati-hati di bawah <em>slit lamp</em> menggunakan ujung jarum spuit 25G&ndash;27G steril secara tangensial (sejajar permukaan kornea) untuk mencegah perforasi.
+                            </div>
+                            <div class="border border-stone-200 rounded-xl p-3.5">
+                                <span class="font-bold text-teal-800 block mb-1">Langkah C: Debridement Rust Ring</span>
+                                Sisa cincin karat di sekitar partikel besi dibersihkan menggunakan <em>ophthalmic burr</em> bermotor halus atau ujung jarum halus oleh spesialis mata agar re-epitelisasi optimal.
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'farmakologi',
+                title: '3. Terapi Farmakologi Pasca-Ekstraksi',
+                html: `
+                    <div class="overflow-x-auto border border-stone-200 rounded-xl">
+                        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                            <thead>
+                                <tr class="bg-stone-100 text-slate-800 border-b border-stone-200">
+                                    <th class="p-3 font-bold">Golongan Obat</th>
+                                    <th class="p-3 font-bold">Contoh Sediaan &amp; Dosis Lazim</th>
+                                    <th class="p-3 font-bold">Tujuan Terapi Klinis</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-stone-200 text-slate-700">
+                                <tr>
+                                    <td class="p-3 font-semibold text-slate-900">Antibiotik Topikal Profilaksis</td>
+                                    <td class="p-3">Levofloxacin 0,5% tetes mata (1 tetes tiap 2&ndash;4 jam) atau Kloramfenikol 0,5%&ndash;1% / Tobramycin tetes atau salep mata</td>
+                                    <td class="p-3">Mencegah infeksi sekunder (keratitis bakterialis) selama sawar epitel kornea masih terbuka pasca-ekstraksi.</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold text-slate-900">Sikloplegik Kerja Pendek</td>
+                                    <td class="p-3">Siklopentolat 1% atau Homatropin 2% tetes mata (1&ndash;2 kali sehari jangka pendek)</td>
+                                    <td class="p-3">Mengistirahatkan otot siliaris dan sfingter pupil untuk meredakan nyeri hebat akibat spasme siliar refleks.</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold text-slate-900">Lubrikan / Artificial Tears</td>
+                                    <td class="p-3">Carboxymethylcellulose (CMC) atau Sodium Hyaluronate bebas pengawet (tiap 2&ndash;4 jam)</td>
+                                    <td class="p-3">Menjaga kelembapan permukaan okular, mengurangi gesekan kelopak mata, dan mempercepat migrasi sel epitel.</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold text-slate-900">Analgetik Oral</td>
+                                    <td class="p-3">Paracetamol 500 mg atau Ibuprofen 400 mg per oral bila nyeri</td>
+                                    <td class="p-3">Mengontrol nyeri pascatindakan secara sistemik secara aman tanpa merusak epitel kornea.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `
+            },
+            {
+                id: 'kontraindikasi',
+                title: '4. Kontraindikasi Mutlak & Pencegahan K3',
+                html: `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
+                        <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 space-y-2">
+                            <h4 class="font-bold text-rose-900">Obat yang DILARANG Dibawa Pulang Pasien</h4>
+                            <ul class="space-y-1.5 text-slate-800">
+                                <li>&bull; <strong>Anestesi Topikal (Tetrakain/Pantokain):</strong> Hanya digunakan sekali di ruang pemeriksaan. Pemakaian berulang di rumah menghambat mitosis epitel, merusak saraf kornea, dan memicu <em>corneal melting</em> hingga perforasi.</li>
+                                <li>&bull; <strong>Kortikosteroid Topikal:</strong> Menekan respons imun lokal terhadap bakteri/jamur dan menghambat sintesis kolagen stroma sehingga mempertinggi risiko ulkus infeksius dan perforasi.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-teal-50 border border-teal-200 rounded-xl p-4 space-y-2">
+                            <h4 class="font-bold text-teal-900">Pencegahan Primer &amp; Sekunder Pekerja Las</h4>
+                            <ul class="space-y-1.5 text-slate-800">
+                                <li>&bull; <strong>Proteksi Berlapis Standar K3 (ANSI Z87.1 / SNI ISO 6161):</strong> Menggunakan <em>safety goggles</em> atau kacamata pengaman dengan <em>side shields</em> di bawah helm las (<em>welding helmet</em>) atau <em>face shield</em>.</li>
+                                <li>&bull; <strong>Manajemen Kerja &amp; Edukasi:</strong> Menerapkan jeda istirahat berkala pada pekerjaan lebih dari 8 jam, menyediakan APD yang ergonomis/nyaman, tidak mengucek mata saat kelilipan, dan segera membilas dengan air bersih mengalir sebelum ke fasyankes.</li>
+                            </ul>
+                        </div>
+                    </div>
+                `
+            }
+        ];
+
+        const referencesData = [
+            {
+                type: 'nasional',
+                text: 'Akturusiano, M.F.A., Budiman dan Rosady, D.S. (2025) \'Gambaran Faktor Penyebab Ketidakpatuhan Penggunaan Alat Pelindung Mata pada Pekerja yang Mengalami Korpus Alienum di RSUD Waled Tahun 2024\', <em>Bandung Conference Series: Medical Science</em>, 5(1), hlm. 1347–1354.'
+            },
+            {
+                type: 'nasional',
+                text: 'Akualita (t.t.) <em>Jenis Alat Pelindung Diri (APD) Menurut Permenakertrans 08/2010</em>. Tersedia di: https://akualita.com/news/jenis-apd/.'
+            },
+            {
+                type: 'nasional',
+                text: '<em>Jurnal Kedokteran Brawijaya</em> (2025) \'Remained Insect\'s Body Part in the Corneal Stroma: A Rare Case Report\', <em>Jurnal Kedokteran Brawijaya</em>, 33(3), hlm. 251–255.'
+            },
+            {
+                type: 'nasional',
+                text: 'Kementerian Kesehatan Republik Indonesia (2022a) <em>Keputusan Menteri Kesehatan Republik Indonesia Nomor HK.01.07/MENKES/1186/2022 tentang Panduan Praktik Klinis bagi Dokter di Fasilitas Pelayanan Kesehatan Tingkat Pertama</em>. Jakarta: Kementerian Kesehatan RI.'
+            },
+            {
+                type: 'nasional',
+                text: 'Keselamatan dan Kesehatan Kerja (2026) <em>Jenis APD di Kawasan Industri</em>. Tersedia di: https://www.keselamatandankesehatankerja.com/2026/11/jenis-apd-di-kawasan-industri-panduan.html.'
+            },
+            {
+                type: 'nasional',
+                text: 'Puskesmas Perampuan (t.t.) <em>Benda Asing pada Mata</em>. Dinas Kesehatan Kabupaten Lombok Barat.'
+            },
+            {
+                type: 'nasional',
+                text: 'RSI Sultan Agung (2026) <em>Peraturan Direktur Utama Rumah Sakit Islam Sultan Agung Nomor 5280/PER/RSI-SA/IX/2026 tentang Panduan Praktik Klinis Mata</em>. Semarang: Rumah Sakit Islam Sultan Agung.'
+            },
+            {
+                type: 'nasional',
+                text: 'Siswoyo, Kushariyadi dan Komaria, A. (2023) \'Gambaran Pengetahuan tentang Corpus Alienum Mata pada Pekerja Las: Literature Review\', <em>Bima Nursing Journal</em>, 4(2), Mei 2023.'
+            },
+            {
+                type: 'internasional',
+                text: 'Agrawal, C., Girgis, S., Sethi, A., Sethi, V., Konale, M., Lokwani, P. dan Sethi, R. (2020) \'Etiological causes and epidemiological characteristics of patients with occupational corneal foreign bodies: A prospective study in a hospital-based setting in India\', <em>Indian Journal of Ophthalmology</em>, 68(1), hlm. 54–57.'
+            },
+            {
+                type: 'internasional',
+                text: '<em>Arquivos Brasileiros de Oftalmologia</em> (t.t.) <em>Studi Klinis Benda Asing Kornea Metalik pada Pekerja di Turki</em>. Tersedia di: https://www.scielo.br/j/abo/a/CW9YybNf4qJxG7VLS3ZFRzq/?lang=en.'
+            },
+            {
+                type: 'internasional',
+                text: 'Ayyildiz, T. dan Ozturk, Y. (2020) \'Investigating the factors that affect the frequency of visits due to corneal foreign bodies\', <em>SANAMED</em>, 15(2).'
+            },
+            {
+                type: 'internasional',
+                text: 'Bayshore Safety (t.t.) <em>Eye Protection for Grinding and Cutting</em>. Tersedia di: https://www.bayshoresafety.com/guides/eye-protection-for-grinding-and-cutting/.'
+            },
+            {
+                type: 'internasional',
+                text: 'Camodeca, A.J. dan Anderson, E.P. (2025) <em>Corneal Foreign Body</em>. StatPearls [Internet]. Treasure Island (FL): StatPearls Publishing.'
+            },
+            {
+                type: 'internasional',
+                text: 'Educate Choroida (2026) <em>Corneal Abrasion</em>. Tersedia di: https://educate.choroida.com/2026/08/20/corneal-abrasion/.'
+            },
+            {
+                type: 'internasional',
+                text: 'Hyde, M.R., Fu, L. dan Gurnani, B. (2026) <em>Corneal Trauma: Evaluation and Management of Ocular Surface Injuries</em>. StatPearls [Internet]. Treasure Island (FL): StatPearls Publishing.'
+            },
+            {
+                type: 'internasional',
+                text: 'Nagar, V.K. dan Choudhary, N.S. (2024) \'A hospital based study to evaluate etiology and epidemiology of occupational corneal foreign bodies\', <em>Panacea Journal of Medical Sciences</em>, 14(1), hlm. 149–152.'
+            },
+            {
+                type: 'internasional',
+                text: 'Ramakrishnan, T., Constantinou, M., Jhanji, V. dan Vajpayee, R.B. (2012) \'Corneal metallic foreign body injuries due to suboptimal ocular protection\', <em>Archives of Environmental & Occupational Health</em>, 67(1), hlm. 48–50.'
+            },
+            {
+                type: 'internasional',
+                text: 'Reichman (2013) <em>Corneal Rust Ring Removal</em>, dalam <em>Emergency Medicine Procedures</em>. New York: The McGraw-Hill Companies.'
+            },
+            {
+                type: 'internasional',
+                text: 'Sharma, A. et al. (t.t.) <em>Epidemiological pattern of corneal foreign bodies and utilization of protective eye devices: a hospital-based cross-sectional study</em>, hlm. 88–89.'
+            },
+            {
+                type: 'internasional',
+                text: 'Specialty Vision (t.t.) <em>Dust Exposure and Dry Eye</em>. Tersedia di: https://specialty.vision/article/dust-exposure-and-dry-eye/.'
+            },
+            {
+                type: 'internasional',
+                text: 'StatPearls (t.t.d) <em>Corneal Abrasions</em> (NBK532960). Treasure Island (FL): StatPearls Publishing.'
+            },
+            {
+                type: 'internasional',
+                text: 'World Health Organization (WHO) (1989) <em>WHO/PBL/89.16</em>. Geneva: World Health Organization.'
+            }
+        ];
+
+        function wrapLabel(label, maxChars = 16) {
+            if (label.length <= maxChars) return label;
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = '';
+            words.forEach(word => {
+                if ((currentLine + ' ' + word).trim().length <= maxChars) {
+                    currentLine = (currentLine + ' ' + word).trim();
+                } else {
+                    if (currentLine) lines.push(currentLine);
+                    currentLine = word;
+                }
+            });
+            if (currentLine) lines.push(currentLine);
+            return lines;
+        }
+
+        let activeCueId = 'visus';
+        function renderClinicalCues() {
+            const container = document.getElementById('clinicalCueButtons');
+            container.innerHTML = clinicalCues.map(cue => {
+                const isActive = cue.id === activeCueId;
+                return `<button type="button" data-cue="${cue.id}" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${isActive ? 'bg-teal-700 text-white border-teal-700 shadow-sm' : 'bg-stone-50 text-slate-700 border-stone-200 hover:bg-teal-50 hover:border-teal-300'}">${cue.label}</button>`;
+            }).join('');
+
+            const selected = clinicalCues.find(c => c.id === activeCueId);
+            const panel = document.getElementById('clinicalCueDetail');
+            panel.classList.remove('fade-in');
+            void panel.offsetWidth;
+            panel.classList.add('fade-in');
+            document.getElementById('cueBadge').textContent = selected.badge;
+            document.getElementById('cueRef').textContent = selected.ref;
+            document.getElementById('cueTitle').textContent = selected.title;
+            document.getElementById('cueExplanation').textContent = selected.explanation;
+            document.getElementById('cueExamTip').textContent = selected.examTip;
+
+            container.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    activeCueId = btn.getAttribute('data-cue');
+                    renderClinicalCues();
+                });
+            });
+        }
+
+        let riskMode = 'occurrence';
+        let selectedCategory = 'Semua';
+        let riskQuery = '';
+
+        function renderRiskSection() {
+            const occBtn = document.getElementById('modeOccurrenceBtn');
+            const compBtn = document.getElementById('modeComplicationBtn');
+            const filterBar = document.getElementById('occurrenceFilterBar');
+
+            if (riskMode === 'occurrence') {
+                occBtn.className = 'px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold bg-teal-700 text-white shadow-sm transition';
+                compBtn.className = 'px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 transition';
+                filterBar.classList.remove('hidden');
+            } else {
+                compBtn.className = 'px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold bg-amber-700 text-white shadow-sm transition';
+                occBtn.className = 'px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 transition';
+                filterBar.classList.add('hidden');
+            }
+
+            const categories = ['Semua', 'Okupasional & Jadwal', 'Perilaku & APD', 'Lingkungan & Non-Kerja', 'Faktor Host / Okular', 'Demografi & Iatrogenik'];
+            const pillsContainer = document.getElementById('categoryPills');
+            pillsContainer.innerHTML = categories.map(cat => {
+                const isSelected = cat === selectedCategory;
+                return `<button type="button" data-cat="${cat}" class="px-3 py-1.5 rounded-full text-xs font-semibold border transition ${isSelected ? 'bg-slate-800 text-white border-slate-800' : 'bg-stone-50 text-slate-600 border-stone-200 hover:bg-stone-100'}">${cat}</button>`;
+            }).join('');
+
+            pillsContainer.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectedCategory = btn.getAttribute('data-cat');
+                    renderRiskSection();
+                });
+            });
+
+            const filtered = riskFactorsData.filter(item => {
+                if (item.type !== riskMode) return false;
+                if (riskMode === 'occurrence' && selectedCategory !== 'Semua' && item.category !== selectedCategory) return false;
+                if (riskQuery.trim() !== '') {
+                    const q = riskQuery.toLowerCase();
+                    return item.title.toLowerCase().includes(q) || item.detail.toLowerCase().includes(q) || item.categoryBadge.toLowerCase().includes(q);
+                }
+                return true;
+            });
+
+            const grid = document.getElementById('riskCardsGrid');
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-8 text-sm text-slate-500 bg-stone-50 rounded-xl border border-stone-200">Tidak ada faktor risiko yang sesuai dengan kata kunci pencarian.</div>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(item => {
+                const isComp = item.type === 'complication';
+                const badgeClass = isComp ? 'bg-amber-100 text-amber-900' : 'bg-teal-50 text-teal-800 border border-teal-200';
+                const statusClass = item.inPatient.startsWith('Positif') ? 'text-rose-700 bg-rose-50 border-rose-200' : 'text-slate-700 bg-stone-50 border-stone-200';
+                return `
+                    <article class="rounded-xl border border-stone-200 bg-white p-4 shadow-sm flex flex-col justify-between space-y-3 hover:border-teal-300 transition fade-in">
+                        <div class="space-y-2">
+                            <span class="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-semibold ${badgeClass}">${item.categoryBadge}</span>
+                            <h4 class="font-bold text-sm sm:text-base text-slate-900 leading-snug">${item.title}</h4>
+                            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">${item.detail}</p>
+                        </div>
+                        <div class="space-y-2 pt-2 border-t border-stone-100">
+                            <div class="px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold ${statusClass}">
+                                Kasus Tn. T: ${item.inPatient}
+                            </div>
+                            <p class="text-[11px] text-slate-400">Rujukan: ${item.evidence}</p>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        let activePathoIndex = 0;
+        function renderPatho() {
+            const container = document.getElementById('pathoSteps');
+            container.innerHTML = pathoStages.map((s, idx) => {
+                const active = idx === activePathoIndex;
+                return `<button type="button" data-idx="${idx}" class="p-2.5 rounded-xl border text-left transition ${active ? 'bg-teal-700 text-white border-teal-700 shadow-sm' : 'bg-stone-50 text-slate-700 border-stone-200 hover:bg-teal-50'}">
+                    <span class="block text-[11px] font-bold">${s.step}</span>
+                </button>`;
+            }).join('');
+
+            const current = pathoStages[activePathoIndex];
+            const panel = document.getElementById('pathoDetailPanel');
+            panel.classList.remove('fade-in');
+            void panel.offsetWidth;
+            panel.classList.add('fade-in');
+            document.getElementById('pathoTimeBadge').textContent = current.step;
+            document.getElementById('pathoManifestation').textContent = current.badge;
+            document.getElementById('pathoTitle').textContent = current.title;
+            document.getElementById('pathoText').textContent = current.text;
+
+            container.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    activePathoIndex = Number(btn.getAttribute('data-idx'));
+                    renderPatho();
+                });
+            });
+        }
+
+        let activeZoneId = 'sentral';
+        function renderZones() {
+            const container = document.getElementById('zoneButtons');
+            container.innerHTML = corneaZones.map(z => {
+                const active = z.id === activeZoneId;
+                return `<button type="button" data-zone="${z.id}" class="px-2.5 py-2 rounded-lg text-xs font-bold border transition ${active ? 'bg-slate-800 text-white border-slate-800' : 'bg-stone-50 text-slate-700 border-stone-200 hover:bg-stone-100'}">${z.label}</button>`;
+            }).join('');
+
+            const zone = corneaZones.find(z => z.id === activeZoneId);
+            const panel = document.getElementById('zoneDetailPanel');
+            panel.className = `rounded-xl border p-4 space-y-2 fade-in ${zone.style}`;
+            const titleEl = document.getElementById('zoneTitle');
+            titleEl.className = `font-bold text-sm ${zone.titleStyle}`;
+            titleEl.textContent = zone.title;
+            const badgeEl = document.getElementById('zoneRiskBadge');
+            badgeEl.className = `px-2 py-0.5 rounded text-[11px] font-bold ${zone.badgeStyle}`;
+            badgeEl.textContent = zone.risk;
+            document.getElementById('zoneDesc').textContent = zone.desc;
+
+            container.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    activeZoneId = btn.getAttribute('data-zone');
+                    renderZones();
+                });
+            });
+        }
+
+        let activeMgmtId = 'diagnostik';
+        function renderMgmt() {
+            const tabs = document.getElementById('mgmtTabs');
+            tabs.innerHTML = mgmtSections.map(sec => {
+                const active = sec.id === activeMgmtId;
+                return `<button type="button" data-mgmt="${sec.id}" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold border transition ${active ? 'bg-teal-700 text-white border-teal-700 shadow-sm' : 'bg-stone-50 text-slate-700 border-stone-200 hover:bg-teal-50'}">${sec.title}</button>`;
+            }).join('');
+
+            const selected = mgmtSections.find(s => s.id === activeMgmtId);
+            const content = document.getElementById('mgmtContent');
+            content.classList.remove('fade-in');
+            void content.offsetWidth;
+            content.classList.add('fade-in');
+            content.innerHTML = selected.html;
+
+            tabs.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    activeMgmtId = btn.getAttribute('data-mgmt');
+                    renderMgmt();
+                });
+            });
+        }
+
+        function renderReferences() {
+            const filterVal = document.getElementById('refFilterSelect').value;
+            const queryVal = document.getElementById('refSearchInput').value.toLowerCase().trim();
+            const list = document.getElementById('referenceList');
+
+            const filtered = referencesData.filter(r => {
+                if (filterVal !== 'all' && r.type !== filterVal) return false;
+                if (queryVal !== '' && !r.text.toLowerCase().includes(queryVal)) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = `<li class="py-4 text-center text-slate-500">Tidak ada referensi yang cocok dengan filter pencarian.</li>`;
+                return;
+            }
+
+            list.innerHTML = filtered.map(r => {
+                const badge = r.type === 'nasional'
+                    ? '<span class="inline-block mr-2 px-2 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200 text-[10px] font-bold uppercase">Nasional</span>'
+                    : '<span class="inline-block mr-2 px-2 py-0.5 rounded bg-stone-100 text-slate-700 border border-stone-200 text-[10px] font-bold uppercase">Internasional</span>';
+                return `<li class="pt-3 first:pt-0">${badge}${r.text}</li>`;
+            }).join('');
+        }
+
+        let chartPpeInstance = null;
+        let chartEpiInstance = null;
+
+        function initCharts() {
+            const ctx1 = document.getElementById('chartPpeReasons').getContext('2d');
+            const labels1 = [
+                'Ketidaknyamanan saat memakai APM',
+                'Tingkat pengetahuan sedang',
+                'Pengawasan kerja kurang ketat',
+                'Ketiadaan APM & protokol SOP',
+                'Tidak ada pengawasan sama sekali'
+            ].map(l => wrapLabel(l, 22));
+
+            chartPpeInstance = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: labels1,
+                    datasets: [{
+                        label: 'Persentase Responden (%)',
+                        data: [79.4, 54.6, 50.5, 34.0, 14.4],
+                        backgroundColor: ['#0F766E', '#14B8A6', '#0284C7', '#D97706', '#64748B'],
+                        borderRadius: 6,
+                        barPercentage: 0.68
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` ${ctx.parsed.x}% pekerja (RSUD Waled, 2024)`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { callback: val => val + '%', font: { size: 11 } },
+                            grid: { color: '#F1F5F9' }
+                        },
+                        y: {
+                            ticks: { font: { size: 11, weight: '600' }, color: '#334155' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('chartEpidemiology').getContext('2d');
+            chartEpiInstance = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: ['Pekerja Las', 'Konstruksi', 'Pekerjaan Lainnya', 'Pengrajin Kayu'].map(l => wrapLabel(l, 16)),
+                    datasets: [{
+                        label: 'Proporsi Kasus (%)',
+                        data: [62, 19, 13, 6],
+                        backgroundColor: ['#0F766E', '#0284C7', '#94A3B8', '#D97706'],
+                        borderRadius: 6,
+                        barPercentage: 0.58
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` ${ctx.parsed.y}% dari total kasus korpus alienum`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { callback: val => val + '%', font: { size: 11 } },
+                            grid: { color: '#F1F5F9' }
+                        },
+                        x: {
+                            ticks: { font: { size: 11, weight: '600' }, color: '#334155' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function switchChart2(mode) {
+            const btnJobs = document.getElementById('btnDatasetJobs');
+            const btnRisk = document.getElementById('btnDatasetRisk');
+            const badge = document.getElementById('chart2Badge');
+            const title = document.getElementById('chart2Title');
+            const desc = document.getElementById('chart2Desc');
+            const footnote = document.getElementById('chart2Footnote');
+
+            if (mode === 'jobs') {
+                btnJobs.className = 'px-2.5 py-1 rounded-md text-xs font-semibold bg-teal-700 text-white shadow-sm transition';
+                btnRisk.className = 'px-2.5 py-1 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-900 transition';
+                badge.textContent = 'Distribusi Okupasional • RSUD Waled (2024)';
+                title.textContent = 'Proporsi Kasus Berdasarkan Jenis Pekerjaan';
+                desc.textContent = 'Pekerja las mendominasi (62%), namun sektor konstruksi dan pertukangan kayu juga menyumbang porsi bermakna.';
+                footnote.innerHTML = '<strong>Catatan Epidemiologi:</strong> Laki-laki mencakup 97% pasien (RSUD Waled) hingga 100% pada studi rumah sakit di India, dengan kelompok usia produktif mendominasi.';
+
+                chartEpiInstance.data.labels = ['Pekerja Las', 'Konstruksi', 'Pekerjaan Lainnya', 'Pengrajin Kayu'].map(l => wrapLabel(l, 16));
+                chartEpiInstance.data.datasets[0].data = [62, 19, 13, 6];
+                chartEpiInstance.data.datasets[0].backgroundColor = ['#0F766E', '#0284C7', '#94A3B8', '#D97706'];
+                chartEpiInstance.options.plugins.tooltip.callbacks.label = ctx => ` ${ctx.parsed.y}% dari total kasus korpus alienum`;
+            } else {
+                btnRisk.className = 'px-2.5 py-1 rounded-md text-xs font-semibold bg-teal-700 text-white shadow-sm transition';
+                btnJobs.className = 'px-2.5 py-1 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-900 transition';
+                badge.textContent = 'Sintesis Literatur • Siswoyo et al. (2023)';
+                title.textContent = 'Perbandingan Kejadian Cedera & Keluhan Mata (%)';
+                desc.textContent = 'Membandingkan pekerja tidak patuh APD vs patuh APD, serta durasi kerja > 8 jam vs <= 8 jam per hari.';
+                footnote.innerHTML = '<strong>Interpretasi Klinis:</strong> Pekerja tidak patuh APD berisiko 3,947 kali lebih besar kemasukan serpihan besi (78,9% vs 20%), dan kerja > 8 jam meningkatkan keluhan visual (83,3% vs 50%).';
+
+                chartEpiInstance.data.labels = [
+                    'Tidak Patuh APD',
+                    'Patuh Pakai APD',
+                    'Kerja > 8 Jam/Hari',
+                    'Kerja <= 8 Jam/Hari'
+                ].map(l => wrapLabel(l, 16));
+                chartEpiInstance.data.datasets[0].data = [78.9, 20.0, 83.3, 50.0];
+                chartEpiInstance.data.datasets[0].backgroundColor = ['#BE123C', '#0F766E', '#D97706', '#0284C7'];
+                chartEpiInstance.options.plugins.tooltip.callbacks.label = ctx => ` ${ctx.parsed.y}% mengalami serpihan mata / keluhan visual`;
+            }
+            chartEpiInstance.update();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderClinicalCues();
+            renderRiskSection();
+            renderPatho();
+            renderZones();
+            renderMgmt();
+            renderReferences();
+            initCharts();
+
+            document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+                document.getElementById('mobileMenu').classList.toggle('hidden');
+            });
+
+            document.getElementById('modeOccurrenceBtn').addEventListener('click', () => {
+                riskMode = 'occurrence';
+                renderRiskSection();
+            });
+
+            document.getElementById('modeComplicationBtn').addEventListener('click', () => {
+                riskMode = 'complication';
+                renderRiskSection();
+            });
+
+            document.getElementById('riskSearchInput').addEventListener('input', e => {
+                riskQuery = e.target.value;
+                renderRiskSection();
+            });
+
+            document.getElementById('btnDatasetJobs').addEventListener('click', () => switchChart2('jobs'));
+            document.getElementById('btnDatasetRisk').addEventListener('click', () => switchChart2('risk'));
+
+            document.getElementById('refFilterSelect').addEventListener('change', renderReferences);
+            document.getElementById('refSearchInput').addEventListener('input', renderReferences);
+        });
+    </script>
+</body>
+</html>
