@@ -177,6 +177,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.waitForURL('**/*area=Akademik*');
     await page.getByRole('link', { name: 'Baca jurnal' }).waitFor();
     assert.equal(await page.getByRole('link', { name: 'Buat kerangka' }).count(), 0);
+    await page.evaluate(() => { window.testDocument = true; });
     await page.getByRole('navigation', { name: 'Kelola tugas' }).getByRole('link', { name: 'Proyek' }).click();
     await page.locator('main[data-workroom-panel="project"]').waitFor();
     assert.equal(await page.locator('.workroom-nav > a[aria-label="Tugas"]').getAttribute('aria-current'), 'page');
