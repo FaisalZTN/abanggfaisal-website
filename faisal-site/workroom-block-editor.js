@@ -127,6 +127,7 @@ export function mountBlockEditor(root, content, onChange, onSelection) {
   popup.hidden = true;
   const handle = document.createElement('span');
   handle.className = 'note-block-handle';
+  handle.dataset.hasBlock = 'false';
   handle.textContent = '⠿';
   handle.title = 'Geser blok';
   handle.setAttribute('aria-hidden', 'true');
@@ -209,7 +210,11 @@ export function mountBlockEditor(root, content, onChange, onSelection) {
       StarterKit.configure({ link: { openOnClick: false, defaultProtocol: 'https' } }),
       ParagraphLayout, TaskList, TaskItem.configure({ nested: true }), TableKit, TextStyleKit, Superscript, Subscript,
       SafeImage.configure({ allowBase64: false, HTMLAttributes: { loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer' } }),
-      DragHandle.configure({ render: () => handle, computePositionConfig: { placement: 'left-start' } }),
+      DragHandle.configure({
+        render: () => handle,
+        computePositionConfig: { placement: 'left-start' },
+        onNodeChange: ({ node }) => { handle.dataset.hasBlock = String(Boolean(node)); },
+      }),
     ],
     editorProps: {
       clipboardTextSerializer: slice => clipboardText(slice.content.toJSON() ?? []),

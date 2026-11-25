@@ -219,6 +219,7 @@ export function mount(panel, signal) {
     const button=event.target.closest('#view button, #note-status button');
     if(!button || busy)return;
     if (button.hasAttribute('data-note-fullscreen')) {
+      blockEditor?.editor.commands.setMeta('hideDragHandle', true);
       fullscreenNotes = !fullscreenNotes;
       el('view').classList.toggle('notes-fullscreen', fullscreenNotes);
       el('view').querySelector(fullscreenNotes ? '.note-fullscreen-bar [data-note-fullscreen]' : '.note-sheet [data-note-fullscreen]')?.focus();
