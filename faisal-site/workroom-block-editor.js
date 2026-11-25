@@ -140,7 +140,7 @@ export function mountNotePreview(root, content) {
   });
 }
 
-export function mountBlockEditor(root, content, onChange, onSelection) {
+export function mountBlockEditor(root, content, onChange, onSelection, label = 'Isi catatan') {
   const popup = document.createElement('div');
   popup.className = 'note-block-menu';
   popup.setAttribute('role', 'listbox');
@@ -237,7 +237,7 @@ export function mountBlockEditor(root, content, onChange, onSelection) {
     ],
     editorProps: {
       clipboardTextSerializer: slice => clipboardText(slice.content.toJSON() ?? []),
-      attributes: { role: 'textbox', 'aria-label': 'Isi catatan', 'aria-multiline': 'true' },
+      attributes: { role: 'textbox', 'aria-label': label, 'aria-multiline': 'true' },
       handleKeyDown(_view, event) {
         if (popup.hidden) return false;
         if (event.key === 'Escape') { close(); return true; }
