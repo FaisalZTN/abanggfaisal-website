@@ -69,7 +69,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(await page.locator('#edit-body strong').textContent(), 'Tebal');
     assert.equal(await page.locator('#edit-body input[type=checkbox]').isChecked(), true);
     await page.locator('[data-new-note]').click();
-    const editor = page.getByRole('textbox', { name: 'Isi catatan' });
+    const editor = page.getByRole('textbox', { name: 'Isi catatan', exact: true });
     await editor.click();
     await page.keyboard.type('# Judul blok');
     await editor.locator('h1').filter({ hasText: 'Judul blok' }).waitFor();
