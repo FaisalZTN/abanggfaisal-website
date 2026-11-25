@@ -78,11 +78,9 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.getByRole('option', { name: 'Tabel' }).waitFor();
     await page.keyboard.press('Enter');
     await editor.locator('table').waitFor();
-    await page.locator('#edit-title').fill('Draf yang belum disimpan');
-    page.once('dialog', dialog => dialog.dismiss());
-    await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
-    assert.equal(await page.locator('#edit-title').inputValue(), 'Draf yang belum disimpan');
-    page.once('dialog', dialog => dialog.accept());
+    await page.locator('#edit-title').fill('Draf tersimpan otomatis');
+    await page.getByText('Tersimpan otomatis.', { exact: true }).waitFor();
+    assert.equal(db.prepare("SELECT COUNT(*) AS total FROM workroom_entries WHERE title = ?").get('Draf tersimpan otomatis').total, 1);
     await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
     await page.waitForSelector('#workspace');
     assert.equal(await page.evaluate(()=>window.testDocument), true);
@@ -112,8 +110,8 @@ module.exports = async function checkWorkroom(browser, origin) {
     const formatted = editor.locator('p[data-note-alignment="justify"]');
     assert.equal(await formatted.getAttribute('data-note-leading'), '1.5');
     assert.equal(await formatted.getAttribute('data-note-spacing'), 'wide');
-    await page.getByRole('button', { name: 'Simpan', exact: true }).click();
-    await page.getByText('Catatan tersimpan.', { exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Simpan', exact: true }).count(), 0);
+    await page.getByText('Tersimpan otomatis.', { exact: true }).waitFor();
     const stored = db.prepare("SELECT body FROM workroom_entries WHERE title = ?").get('Catatan lama').body;
     assert.match(stored, /^workroom-blocks-v1:/);
     await page.getByRole('button', { name: /Catatan lama/ }).click();

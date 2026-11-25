@@ -985,7 +985,7 @@ const builtInNoteCategories = { belajar: 'Belajar', ide: 'Ide', pribadi: 'Pribad
 async function ensureWorkroomNotes(db) {
   const columns = async () => (await db.prepare('PRAGMA table_info(workroom_entries)').all()).results;
   const current = await columns();
-  for (const [name, type] of [['note_category', 'TEXT'], ['note_updated', 'INTEGER'], ['note_pinned', 'INTEGER NOT NULL DEFAULT 0']]) {
+  for (const [name, type] of [['note_category', 'TEXT'], ['note_updated', 'INTEGER'], ['note_pinned', 'INTEGER NOT NULL DEFAULT 0'], ['note_create_key', 'TEXT']]) {
     if (current.some(column => column.name === name)) continue;
     try {
       await db.prepare(`ALTER TABLE workroom_entries ADD COLUMN ${name} ${type}`).run();
@@ -996,6 +996,7 @@ async function ensureWorkroomNotes(db) {
   await db.batch([
     db.prepare('CREATE TABLE IF NOT EXISTS workroom_note_categories (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE)'),
     db.prepare('CREATE TABLE IF NOT EXISTS workroom_archived_categories (id TEXT PRIMARY KEY)'),
+    db.prepare('CREATE UNIQUE INDEX IF NOT EXISTS workroom_note_create_key ON workroom_entries (note_create_key)'),
   ]);
 }
 
@@ -1083,6 +1084,20 @@ async function workroomNotesData(request, db) {
 
   const updated = Date.now();
   const values = [title.trim(), body, category, updated];
+  if (id === null && data.createKey !== undefined) {
+    if (typeof data.createKey !== 'string' || !/^[a-f0-9-]{36}$/.test(data.createKey)) {
+      return reply({error:'Identitas draf tidak valid.'}, 400);
+    }
+    const saved = await db.prepare(`INSERT INTO workroom_entries
+      (title, body, note_category, note_updated, note_create_key, kind, status, due, priority)
+      SELECT ?, ?, ?, ?, ?, 'note', 'active', '', 'normal' WHERE ${categoryCheck}
+      ON CONFLICT(note_create_key) DO UPDATE SET title = excluded.title, body = excluded.body,
+        note_category = excluded.note_category, note_updated = excluded.note_updated
+      WHERE workroom_entries.status <> 'trashed'
+      RETURNING id`).bind(...values, data.createKey, Number(custom), category, category).first();
+    if (!saved) return reply({error:'Catatan atau kategori sudah berubah. Muat ulang halaman.'}, 409);
+    return reply({id:saved.id, kind:'note', title:title.trim(), body, category, updated});
+  }
   const result = id === null
     ? await db.prepare(`INSERT INTO workroom_entries (title, body, note_category, note_updated, kind, status, due, priority) SELECT ?, ?, ?, ?, 'note', 'active', '', 'normal' WHERE ${categoryCheck}`).bind(...values, Number(custom), category, category).run()
     : await db.prepare(`UPDATE workroom_entries SET title = ?, body = ?, note_category = CASE
