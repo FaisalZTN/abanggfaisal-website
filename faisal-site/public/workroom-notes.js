@@ -1,5 +1,5 @@
 import { noteInline, noteLines, notePreview, readBlockNote, blockNoteBody } from './workroom-note-format.js';
-import { mountBlockEditor, mountNotePreview } from '/workroom-block-editor.js';
+import { mountBlockEditor } from '/workroom-block-editor.js';
 
 export function mount(panel, signal) {
   const el = id => panel.querySelector('#' + id);
@@ -17,20 +17,70 @@ export function mount(panel, signal) {
   let splitNote;
   let splitPreview;
 
+  let leftReadOnly = false;
+  let rightReadOnly = true;
+  let toolbarSide = 'left';
+
+  function splitTarget() {
+    return fullscreenNotes && splitNote !== undefined
+      ? entries.find(note => note.id === (splitNote === 'current' ? activeNote : splitNote))
+      : undefined;
+  }
+
+  function formatEditor() {
+    return toolbarSide === 'right' ? splitPreview : blockEditor;
+  }
+
+  function showFormatting(side) {
+    toolbarSide = side;
+    const toolbar = el('view').querySelector('.note-toolbar');
+    const host = el(side === 'right' ? 'note-split-body' : 'edit-body');
+    if (!toolbar || !host) return;
+    if (toolbar.nextElementSibling !== host) host.before(toolbar);
+    toolbar.hidden = side === 'right' ? rightReadOnly : leftReadOnly;
+    syncLayout(formatEditor()?.editor.state.selection.$from.parent.attrs);
+  }
+
+  function applyPaneModes() {
+    const split = Boolean(splitTarget());
+    blockEditor?.editor.setEditable(!split || !leftReadOnly, false);
+    if (el('edit-title')) el('edit-title').readOnly = split && leftReadOnly;
+    splitPreview?.editor.setEditable(!rightReadOnly, false);
+    for (const [side, readOnly] of [['left', leftReadOnly], ['right', rightReadOnly]]) {
+      const button = el('note-mode-' + side);
+      if (!button) continue;
+      button.textContent = readOnly ? 'Baca' : 'Edit';
+      button.setAttribute('aria-label', (side === 'left' ? 'Panel kiri' : 'Panel kanan') +
+        (readOnly ? ' dalam mode baca. Beralih ke edit' : ' dalam mode edit. Beralih ke baca'));
+    }
+    showFormatting(!split || (toolbarSide === 'right' && rightReadOnly && !leftReadOnly) ? 'left' : toolbarSide);
+  }
+
+  function updateNoteBody(note, document, side) {
+    note.body = blockNoteBody(document);
+    if (splitTarget()?.id === activeNote) {
+      const other = side === 'left' ? splitPreview : blockEditor;
+      other?.editor.commands.setContent(document, { emitUpdate: false });
+    }
+    scheduleSave(note);
+    renderNoteIndex();
+  }
+
   function refreshSplitView() {
+    showFormatting('left');
     splitPreview?.destroy();
     splitPreview = undefined;
     const view = el('view');
-    const target = fullscreenNotes && splitNote !== undefined
-      ? entries.find(note => note.id === (splitNote === 'current' ? activeNote : splitNote))
-      : null;
-    const pane = el('note-split-pane');
-    pane.hidden = !target;
+    const target = splitTarget();
+    el('note-split-pane').hidden = !target;
     view.classList.toggle('notes-split', Boolean(target));
-    if (!target) return;
-    const title = el('note-split-title');
-    title.textContent = target.title || 'Catatan baru';
-    splitPreview = mountNotePreview(el('note-split-body'), readBlockNote(target.body) ?? legacyContent(target.body));
+    if (target) {
+      el('note-split-title').textContent = target.title || 'Catatan baru';
+      splitPreview = mountBlockEditor(el('note-split-body'), readBlockNote(target.body) ?? legacyContent(target.body),
+        document => updateNoteBody(target, document, 'right'),
+        attrs => { if (toolbarSide === 'right') syncLayout(attrs); });
+    }
+    applyPaneModes();
   }
 
   function legacyContent(body) {
@@ -89,7 +139,8 @@ export function mount(panel, signal) {
   }
 
   function editFormat(mark) {
-    if (!blockEditor) return;
+    const blockEditor = formatEditor();
+    if (!blockEditor?.editor.isEditable) return;
     if (mark === 'blocks') return blockEditor.showBlocks();
     const chain = blockEditor.editor.chain().focus();
     const commands = { bold: 'toggleBold', italic: 'toggleItalic', underline: 'toggleUnderline',
@@ -217,6 +268,7 @@ export function mount(panel, signal) {
     splitPreview = undefined;
     blockEditor?.destroy();
     blockEditor = undefined;
+    toolbarSide = 'left';
     el('view').classList.toggle('notes-fullscreen', fullscreenNotes);
     el('view').innerHTML = `<div class="note-fullscreen-bar">
       <nav class="note-tabs" aria-label="Buka catatan lain">${notes.map(item =>
@@ -245,6 +297,7 @@ export function mount(panel, signal) {
           ${deleteCategory}
         </div><details ${fromTime || toTime ? "open" : ""}><summary>Filter waktu<span class="muted"> · WITA</span></summary><label>Dari<input type="datetime-local" id="note-from" value="${escape(fromTime)}"></label><label>Sampai<input type="datetime-local" id="note-to" value="${escape(toTime)}"></label><button id="clear-time">Hapus filter waktu</button></details><div id="note-list"></div>${trashPanel}</section>
         <section class="note-sheet" aria-label="Editor catatan">${note ? `<div><button class="note-back" id="note-back">${noteActionIcon('arrow-left')} Daftar catatan</button><button type="button" data-note-fullscreen>Layar penuh</button></div>
+          <div class="note-split-mode-left"><button type="button" id="note-mode-left">Edit</button></div>
           <input id="edit-title" placeholder="Catatan baru" aria-label="Judul catatan" maxlength="160" value="${escape(note.title)}">
           <div class="note-toolbar" role="group" aria-label="Format catatan">${toolbar.map(([mark, label, icon]) =>
             `<button data-mark="${mark}" aria-label="${label}" title="${label}">${noteActionIcon(icon)}</button>`).join('')}
@@ -274,18 +327,14 @@ export function mount(panel, signal) {
             <button type="button" id="delete-note" aria-label="${note.id === null ? 'Buang draf' : 'Hapus catatan'}" title="${note.id === null ? 'Buang draf' : 'Hapus catatan'}">${noteActionIcon('trash')}</button>
           </div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
         <section id="note-split-pane" class="note-sheet" aria-label="Pratinjau catatan" hidden>
-          <div class="note-split-heading"><h2 id="note-split-title"></h2><button type="button" id="close-note-split" aria-label="Tutup Split View" title="Tutup Split View">×</button></div>
+          <div class="note-split-heading"><h2 id="note-split-title"></h2><button type="button" id="note-mode-right">Baca</button><button type="button" id="close-note-split" aria-label="Tutup Split View" title="Tutup Split View">×</button></div>
           <div id="note-split-body" class="note-rendered"></div>
         </section>
       </div>`;
     if (note) {
-      blockEditor = mountBlockEditor(el('edit-body'), readBlockNote(note.body) ?? legacyContent(note.body), document => {
-        note.body = blockNoteBody(document);
-        if (splitNote === 'current' || splitNote === note.id) splitPreview?.commands.setContent(document, { emitUpdate: false });
-        scheduleSave(note);
-        renderNoteIndex();
-      }, syncLayout);
-      syncLayout(blockEditor.editor.state.selection.$from.parent.attrs);
+      blockEditor = mountBlockEditor(el('edit-body'), readBlockNote(note.body) ?? legacyContent(note.body),
+        document => updateNoteBody(note, document, 'left'),
+        attrs => { if (toolbarSide === 'left') syncLayout(attrs); });
       for (const menu of panel.querySelectorAll('.note-layout-popover')) {
         menu.addEventListener('beforetoggle', event => {
           if (event.newState !== 'open') return;
@@ -310,6 +359,14 @@ export function mount(panel, signal) {
     const button=event.target.closest('#view button, #note-status button');
     if(!button || busy)return;
     if (button.id === 'retry-note-autosave') { clearTimeout(saveTimer); void flushNotes(); return; }
+    if (button.id === 'note-mode-left' || button.id === 'note-mode-right') {
+      const side = button.id === 'note-mode-left' ? 'left' : 'right';
+      if (side === 'left') leftReadOnly = !leftReadOnly;
+      else rightReadOnly = !rightReadOnly;
+      toolbarSide = side;
+      applyPaneModes();
+      return;
+    }
     if (button.dataset.splitNote || button.id === 'close-note-split') {
       splitNote = button.dataset.splitNote;
       const menu = el('view').querySelector('.note-split-menu');
@@ -336,9 +393,9 @@ export function mount(panel, signal) {
       noteQuery=''; activeNote=null;noteEditing=true;render();el('edit-title').focus();
       scheduleSave(entries.find(item => item.id === null));
     }
-    if (button.dataset.layoutKey && blockEditor) {
+    if (button.dataset.layoutKey && formatEditor()?.editor.isEditable) {
       button.closest('[popover]').hidePopover();
-      blockEditor.editor.chain().focus().setParagraphLayout(button.dataset.layoutKey, button.dataset.layoutValue).run();
+      formatEditor().editor.chain().focus().setParagraphLayout(button.dataset.layoutKey, button.dataset.layoutValue).run();
       return;
     }
     if (button.id === 'copy-note-whatsapp' && blockEditor) {
@@ -503,13 +560,13 @@ export function mount(panel, signal) {
       if(target.id==='note-from')fromTime=target.value;else toTime=target.value;
       renderNoteIndex();
     }
-    if (target.id === 'note-text-color') blockEditor?.editor.chain().focus().setColor(target.value).run();
+    if (target.id === 'note-text-color') formatEditor()?.editor.chain().focus().setColor(target.value).run();
     if (target.id === 'note-text-size') {
-      const chain = blockEditor?.editor.chain().focus();
+      const chain = formatEditor()?.editor.chain().focus();
       if (chain) (target.value ? chain.setFontSize(target.value) : chain.unsetFontSize()).run();
     }
     if(target.id==='insert-date' && target.value){
-      blockEditor?.editor.chain().focus().insertContent(target.value).run();
+      formatEditor()?.editor.chain().focus().insertContent(target.value).run();
       target.value='';
     }
 
@@ -525,11 +582,16 @@ export function mount(panel, signal) {
     note.title = event.target.value;
     scheduleSave(note);renderNoteIndex();
   });
+  listen(document, 'focusin', event => {
+    if (!splitTarget()) return;
+    if (event.target.closest('#note-split-body') && !rightReadOnly) showFormatting('right');
+    if (event.target.closest('#edit-body') && !leftReadOnly) showFormatting('left');
+  });
   listen(document, 'mousedown', event => {
     if (event.target.closest('.note-toolbar [data-mark]')) event.preventDefault();
   });
   listen(document, 'workroom-image', event => {
-    if (event.target === el('edit-body') && !busy && blockEditor?.image(event.detail)) event.preventDefault();
+    if (event.target === el('edit-body') && !busy && formatEditor()?.editor.isEditable && formatEditor().image(event.detail)) event.preventDefault();
   });
   listen(window, 'beforeunload',event=>{if(dirty.size){event.preventDefault();event.returnValue='';}});
   const bootstrap = el('workroom-notes-data');
