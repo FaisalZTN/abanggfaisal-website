@@ -169,8 +169,8 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
     await page.getByRole('link', { name: 'Baca jurnal' }).click();
     await page.locator('.workspace-editor').getByLabel('Area', { exact: true }).fill('Akademik');
-    await page.locator('.workspace-editor').getByRole('button', { name: 'Simpan perubahan' }).click();
-    await page.getByText('Perubahan tersimpan.', { exact: true }).waitFor();
+    assert.equal(await page.locator('.workspace-editor').getByRole('button', { name: 'Simpan perubahan' }).count(), 0);
+    await page.locator('.workspace-editor').getByText('Tersimpan otomatis.', { exact: true }).waitFor();
     assert.equal(db.prepare("SELECT task_area FROM workroom_entries WHERE title = 'Baca jurnal'").get().task_area, 'Akademik');
     await page.getByLabel('Filter area', { exact: true }).selectOption('Akademik');
     await page.getByRole('button', { name: 'Filter area', exact: true }).click();
