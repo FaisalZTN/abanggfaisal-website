@@ -1599,7 +1599,10 @@ async function handleWorkroom(request, env, url) {
       const result = await db.prepare("UPDATE workroom_entries SET title = ?, body = ?, status = ?, due = ?, priority = ?, project_id = ?, task_area = COALESCE(?, task_area) WHERE id = ? AND kind = ? AND status <> 'trashed'")
         .bind(...values, id, kind).run();
       if (kind === 'task' && get('autosave') === '1') {
-        return new Response(null, { status: result.meta.changes ? 204 : 404, headers: privateHeaders });
+        return Response.json({ saved: Boolean(result.meta.changes) }, {
+          status: result.meta.changes ? 200 : 404,
+          headers: { ...privateHeaders, 'Content-Type': 'application/json; charset=utf-8' },
+        });
       }
     } else {
       await db.prepare("INSERT INTO workroom_entries (title, body, status, due, priority, project_id, task_area, kind) VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, ''), ?)")
