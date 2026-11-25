@@ -1,5 +1,5 @@
 import { noteInline, noteLines, notePreview, readBlockNote, blockNoteBody } from './workroom-note-format.js';
-import { mountBlockEditor } from '/workroom-block-editor.js';
+import { mountBlockEditor, mountNotePreview } from '/workroom-block-editor.js';
 
 export function mount(panel, signal) {
   const el = id => panel.querySelector('#' + id);
@@ -14,6 +14,24 @@ export function mount(panel, signal) {
   let fromTime='', toTime='';
   let blockEditor;
   let fullscreenNotes = false;
+  let splitNote;
+  let splitPreview;
+
+  function refreshSplitView() {
+    splitPreview?.destroy();
+    splitPreview = undefined;
+    const view = el('view');
+    const target = fullscreenNotes && splitNote !== undefined
+      ? entries.find(note => note.id === (splitNote === 'current' ? activeNote : splitNote))
+      : null;
+    const pane = el('note-split-pane');
+    pane.hidden = !target;
+    view.classList.toggle('notes-split', Boolean(target));
+    if (!target) return;
+    const title = el('note-split-title');
+    title.textContent = target.title || 'Catatan baru';
+    splitPreview = mountNotePreview(el('note-split-body'), readBlockNote(target.body) ?? legacyContent(target.body));
+  }
 
   function legacyContent(body) {
     const html = noteLines(body).map(line => {
@@ -139,12 +157,24 @@ export function mount(panel, signal) {
         <button type="button" data-restore-category="${escape(category.id)}">Pulihkan</button></li>`).join('') + '</ul>' : ''}
       ${trash.length || archivedCategories.length ? '' : '<p>Sampah kosong.</p>'}
     </details>`;
+    splitPreview?.destroy();
+    splitPreview = undefined;
     blockEditor?.destroy();
     blockEditor = undefined;
     el('view').classList.toggle('notes-fullscreen', fullscreenNotes);
     el('view').innerHTML = `<div class="note-fullscreen-bar">
       <nav class="note-tabs" aria-label="Buka catatan lain">${notes.map(item =>
         `<button type="button" data-open="${item.id ?? 'new'}"${item.id === note?.id ? ' aria-current="true"' : ''}>${escape(item.title || 'Catatan baru')}</button>`).join('')}</nav>
+      ${note ? `<details class="note-split-menu">
+        <summary title="Split View" aria-label="Split View"><span aria-hidden="true" class="note-split-icon"></span></summary>
+        <div class="note-split-options">
+          <button type="button" data-split-note="current">Catatan sekarang</button>
+          ${notes.some(item => item.id !== note.id) ? `<label>Catatan lain
+            <select id="note-split-select"><option value="">Pilih catatan</option>${notes.filter(item => item.id !== note.id).map(item =>
+              `<option value="${item.id ?? 'new'}">${escape(item.title || 'Catatan baru')}</option>`).join('')}</select>
+          </label>` : ''}
+        </div>
+      </details>` : ''}
       <button type="button" class="note-fullscreen-exit" data-note-fullscreen>Keluar layar penuh</button>
     </div><div class="notes-head"><h1>Catatan</h1><div class="notes-head-actions"><a class="notes-private-link" href="/workroom/private-notes/" aria-label="Catatan Rahasia">${noteActionIcon('lock')}<span>Catatan Rahasia</span></a><button class="primary" data-new-note>${noteActionIcon('plus')}<span>Catatan baru</span></button></div></div>
       <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
@@ -187,10 +217,15 @@ export function mount(panel, signal) {
             ${note.id !== null ? `<button type="button" id="pin-note" aria-pressed="${Boolean(note.pinned)}" aria-label="${pinNoteLabel(note.pinned)}" title="${pinNoteLabel(note.pinned)}">${noteActionIcon('pin')}</button>` : ''}
             <button type="button" id="delete-note" aria-label="${note.id === null ? 'Buang draf' : 'Hapus catatan'}" title="${note.id === null ? 'Buang draf' : 'Hapus catatan'}">${noteActionIcon('trash')}</button>
           </div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
+        <section id="note-split-pane" class="note-sheet" aria-label="Pratinjau catatan" hidden>
+          <div class="note-split-heading"><h2 id="note-split-title"></h2><button type="button" id="close-note-split" aria-label="Tutup Split View" title="Tutup Split View">×</button></div>
+          <div id="note-split-body" class="note-rendered"></div>
+        </section>
       </div>`;
     if (note) {
       blockEditor = mountBlockEditor(el('edit-body'), readBlockNote(note.body) ?? legacyContent(note.body), document => {
         note.body = blockNoteBody(document);
+        if (splitNote === 'current' || splitNote === note.id) splitPreview?.commands.setContent(document, { emitUpdate: false });
         dirty.add(note);
         renderNoteIndex();
         message('Perubahan belum disimpan.');
@@ -213,14 +248,25 @@ export function mount(panel, signal) {
     }
     el('view').querySelector('.note-trash').addEventListener('toggle', event => { trashOpen = event.target.open; });
     renderNoteIndex();
+    refreshSplitView();
   }
 
   listen(document, 'click', async event=>{
     const button=event.target.closest('#view button, #note-status button');
     if(!button || busy)return;
+    if (button.dataset.splitNote || button.id === 'close-note-split') {
+      splitNote = button.dataset.splitNote;
+      const menu = el('view').querySelector('.note-split-menu');
+      if (menu) menu.open = false;
+      refreshSplitView();
+      menu?.querySelector('summary')?.focus();
+      return;
+    }
     if (button.hasAttribute('data-note-fullscreen')) {
       blockEditor?.editor.commands.setMeta('hideDragHandle', true);
       fullscreenNotes = !fullscreenNotes;
+      if (!fullscreenNotes) splitNote = undefined;
+      refreshSplitView();
       el('view').classList.toggle('notes-fullscreen', fullscreenNotes);
       el('view').querySelector(fullscreenNotes ? '.note-fullscreen-bar [data-note-fullscreen]' : '.note-sheet [data-note-fullscreen]')?.focus();
       return;
@@ -387,6 +433,14 @@ export function mount(panel, signal) {
   });
   listen(document, 'change', event=>{
     const target=event.target;
+    if (target.id === 'note-split-select' && target.value) {
+      splitNote = target.value === 'new' ? null : Number(target.value);
+      target.closest('details').open = false;
+      target.value = '';
+      refreshSplitView();
+      target.closest('details').querySelector('summary').focus();
+      return;
+    }
     if (target.id === 'note-category-filter') {
       noteCategory = target.value;
       render();
@@ -439,6 +493,6 @@ export function mount(panel, signal) {
     render();
   }).catch(error=>{el('view').textContent=error.message;}).finally(()=>el('view').removeAttribute('aria-busy'));
 
-  signal.addEventListener('abort', () => blockEditor?.destroy(), { once: true });
+  signal.addEventListener('abort', () => { splitPreview?.destroy(); blockEditor?.destroy(); }, { once: true });
   return () => busy ? "busy" : dirty.size > 0;
 }

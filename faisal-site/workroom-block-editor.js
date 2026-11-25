@@ -122,6 +122,24 @@ function clipboardText(nodes, whatsapp = false, depth = 0) {
   }).join(nodes.every(node => ['text', 'hardBreak', 'image'].includes(node.type)) ? '' : whatsapp ? '\n' : '\n\n');
 }
 
+function noteExtensions() {
+  return [
+  StarterKit.configure({ link: { openOnClick: false, defaultProtocol: 'https' } }),
+  ParagraphLayout, TaskList, TaskItem.configure({ nested: true }), TableKit, TextStyleKit, Superscript, Subscript,
+  SafeImage.configure({ allowBase64: false, HTMLAttributes: { loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer' } }),
+  ];
+}
+
+export function mountNotePreview(root, content) {
+  return new Editor({
+    element: root,
+    content,
+    editable: false,
+    injectCSS: false,
+    extensions: noteExtensions(),
+  });
+}
+
 export function mountBlockEditor(root, content, onChange, onSelection) {
   const popup = document.createElement('div');
   popup.className = 'note-block-menu';
@@ -210,9 +228,7 @@ export function mountBlockEditor(root, content, onChange, onSelection) {
     content,
     injectCSS: false,
     extensions: [
-      StarterKit.configure({ link: { openOnClick: false, defaultProtocol: 'https' } }),
-      ParagraphLayout, TaskList, TaskItem.configure({ nested: true }), TableKit, TextStyleKit, Superscript, Subscript,
-      SafeImage.configure({ allowBase64: false, HTMLAttributes: { loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer' } }),
+      ...noteExtensions(),
       DragHandle.configure({
         render: () => handle,
         computePositionConfig: { placement: 'left-start' },
