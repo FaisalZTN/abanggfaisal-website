@@ -1031,3 +1031,16 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .notes-fullscreen .note-rendered { flex: 1; }
 .note-block-handle { translate: -.75rem 0; padding-inline: .2rem; font-size: 1.05rem; }
 .note-rendered:has(.tiptap) { padding-inline-start: max(2rem, 5%); }
+
+body:has(#view.notes-fullscreen) { overflow: hidden; }
+body:has(#view.notes-fullscreen) #note-status:not(:empty) {
+  position: fixed;
+  z-index: 13;
+  inset: auto 1rem 1rem auto;
+  max-width: calc(100% - 2rem);
+  padding: .45rem .75rem;
+  border-radius: .5rem;
+  background: var(--card);
+  color: var(--ink);
+  pointer-events: none;
+}
