@@ -149,6 +149,22 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.setViewportSize({ width: 360, height: 800 });
     assert.deepEqual(await checkTitleControls(), expectedTitleControls);
     await page.setViewportSize(desktopViewport);
+    const sidePanels = await page.evaluate(() => {
+      const editor = document.querySelector('#edit-body');
+      return [...document.querySelectorAll('.note-categories, .note-index')].map(panel => {
+        const spacer = document.createElement('div');
+        spacer.style.height = '1400px';
+        panel.append(spacer);
+        const pageScroll = window.scrollY;
+        const editorScroll = editor.scrollTop;
+        panel.scrollTop = 160;
+        const result = panel.scrollTop === 160 && window.scrollY === pageScroll && editor.scrollTop === editorScroll;
+        panel.scrollTop = 0;
+        spacer.remove();
+        return result;
+      });
+    });
+    assert.deepEqual(sidePanels, [true, true]);
     const noteViewport = await page.evaluate(() => {
       const body = document.querySelector('#edit-body');
       const title = document.querySelector('#edit-title');
