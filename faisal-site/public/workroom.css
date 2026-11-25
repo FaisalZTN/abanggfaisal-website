@@ -191,6 +191,27 @@ h2 { font-size: 1.65rem; }
 .dashboard-stats a:hover { border-color: var(--green); }
 .dashboard-stats strong { display: block; font-size: 1.65rem; color: var(--ink); }
 .collection { min-inline-size: 0; }
+.project-list { display: grid; gap: 1.25rem; margin-block-start: 1.25rem; }
+.project-add { justify-self: start; max-inline-size: 100%; padding: .2rem .9rem; }
+.project-add[open] { justify-self: stretch; padding: .55rem 1rem; }
+.project-add > summary { display: flex; align-items: center; gap: .45rem; list-style: none; }
+.project-add > summary::-webkit-details-marker { display: none; }
+.project-add .ui-icon { inline-size: 1.1rem; block-size: 1.1rem; }
+.project-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 1rem; align-items: start; }
+.project-card { min-inline-size: 0; padding: clamp(1rem, 2vw, 1.4rem); background: var(--card); border: 1px solid var(--line); border-radius: .95rem; overflow-wrap: anywhere; }
+.project-card-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: .4rem .75rem; }
+.project-card h2 { margin: 0; font-size: 1.25rem; }
+.project-status { padding: .15rem .55rem; border-radius: 1rem; background: var(--selected); font-size: .8rem; }
+.project-due { margin: .4rem 0 1rem; color: var(--muted); font-size: .85rem; }
+.project-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); gap: .85rem; padding: .8rem; border: 1px solid var(--line); background: var(--paper); border-radius: .65rem; }
+.project-metrics span, .project-next span { display: block; color: var(--muted); font-size: .82rem; }
+.project-metrics strong { display: block; margin-top: .2rem; font-size: .9rem; }
+.project-metrics progress { display: block; inline-size: 100%; block-size: .45rem; margin-top: .55rem; accent-color: var(--accent); }
+.project-next { margin-block: .9rem; font-size: .9rem; }
+.project-next a { display: inline-block; margin-top: .2rem; }
+.project-next p { margin: 0; color: var(--muted); }
+.project-card > details { border-top: 1px solid var(--line); }
+.project-card > details > summary { color: var(--muted); font-size: .85rem; }
 .collection h2 { margin-block-end: .65rem; }
 .collection > details { border-top: 1px solid var(--line); }
 summary { min-height: 44px; padding: .55rem 0; cursor: pointer; font-weight: 650; overflow-wrap: anywhere; }
