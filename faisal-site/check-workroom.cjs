@@ -168,7 +168,10 @@ module.exports = async function checkWorkroom(browser, origin) {
     db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority, project_id) VALUES ('task', 'Baca jurnal', '', 'active', '2027-09-30', 'normal', ?), ('task', 'Buat kerangka', '', 'done', '', 'normal', ?)").run(project, project);
     await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
     await page.getByRole('link', { name: 'Baca jurnal' }).click();
+    const autosave = page.waitForResponse(response => response.request().method() === 'POST' && response.request().postData()?.includes('autosave=1'));
     await page.locator('.workspace-editor').getByLabel('Area', { exact: true }).fill('Akademik');
+    const savedTask = await autosave;
+    assert.equal(savedTask.status(), 200, (await savedTask.text()).slice(0, 400));
     assert.equal(await page.locator('.workspace-editor').getByRole('button', { name: 'Simpan perubahan' }).count(), 0);
     await page.locator('.workspace-editor').getByText('Tersimpan otomatis.', { exact: true }).waitFor();
     assert.equal(db.prepare("SELECT task_area FROM workroom_entries WHERE title = 'Baca jurnal'").get().task_area, 'Akademik');
