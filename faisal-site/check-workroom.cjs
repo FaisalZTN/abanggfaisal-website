@@ -69,7 +69,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(await page.locator('#edit-body strong').textContent(), 'Tebal');
     assert.equal(await page.locator('#edit-body input[type=checkbox]').isChecked(), true);
     await page.locator('[data-new-note]').click();
-    const editor = page.getByRole('textbox', { name: 'Isi catatan' });
+    const editor = page.getByRole('textbox', { name: 'Isi catatan', exact: true });
     await editor.click();
     await page.keyboard.type('# Judul blok');
     await editor.locator('h1').filter({ hasText: 'Judul blok' }).waitFor();
@@ -119,6 +119,36 @@ module.exports = async function checkWorkroom(browser, origin) {
 
     await page.goForward();
     await page.waitForSelector('#workspace');
+    await page.locator('.workroom-nav > a[aria-label="Catatan"]').click();
+    await page.getByRole('button', { name: /Catatan lama/ }).click();
+    await page.getByRole('button', { name: 'Layar penuh', exact: true }).click();
+    await page.locator('.note-split-menu summary').click();
+    await page.getByRole('button', { name: 'Catatan sekarang', exact: true }).click();
+    const right = page.locator('#note-split-body .tiptap');
+    assert.equal(await right.getAttribute('contenteditable'), 'false');
+    await page.locator('#note-mode-right').click();
+    assert.equal(await right.getAttribute('contenteditable'), 'true');
+    await page.locator('#note-mode-left').click();
+    assert.equal(await editor.getAttribute('contenteditable'), 'false');
+    await right.locator('p').first().click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' dari kanan');
+    await editor.getByText(/dari kanan/).waitFor();
+    await page.getByText('Tersimpan otomatis.', { exact: true }).waitFor();
+    const scrollState = await page.evaluate(() => {
+      const view = document.querySelector('#view');
+      const left = document.querySelector('#edit-body');
+      const right = document.querySelector('#note-split-body');
+      for (const pane of [left, right]) pane.querySelector('.tiptap').style.minHeight = '1200px';
+      left.scrollTop = 160;
+      const leftOnly = [left.scrollTop, right.scrollTop, view.scrollTop];
+      right.scrollTop = 240;
+      return [leftOnly, [left.scrollTop, right.scrollTop, view.scrollTop]];
+    });
+    assert.deepEqual(scrollState, [[160, 0, 0], [160, 240, 0]]);
+    await page.getByRole('button', { name: 'Keluar layar penuh', exact: true }).click();
+    assert.equal(await editor.getAttribute('contenteditable'), 'true');
+
     await page.locator('.workroom-nav > a[aria-label="Review"]').click();
     await page.waitForSelector('.workroom-review h1');
     assert.equal(await page.evaluate(()=>window.testDocument), true);
