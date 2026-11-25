@@ -127,7 +127,7 @@ export function mountBlockEditor(root, content, onChange, onSelection) {
   popup.hidden = true;
   const handle = document.createElement('span');
   handle.className = 'note-block-handle';
-  handle.textContent = '⋮⋮';
+  handle.textContent = '⠿';
   handle.title = 'Geser blok';
   handle.setAttribute('aria-hidden', 'true');
   let match;

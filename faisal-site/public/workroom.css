@@ -998,3 +998,49 @@ main:has(.notes-desk) { padding-top:1.5rem; }
     -webkit-box-decoration-break: clone;
   }
 }
+
+.note-fullscreen-bar { display: none; }
+.note-sheet [data-note-fullscreen] { align-self: center; margin-inline-start: auto; }
+.note-sheet > div:has(> [data-note-fullscreen]) { display: flex; padding: .25rem .75rem; }
+#view.notes-fullscreen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 12;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--paper);
+}
+.notes-fullscreen .note-fullscreen-bar {
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  gap: .5rem;
+  padding: .5rem;
+  background: var(--card);
+}
+.note-tabs { display: flex; gap: .35rem; overflow-x: auto; min-width: 0; flex: 1; }
+.note-tabs button { flex: none; max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-tabs [aria-current="true"] { background: var(--selected); color: var(--ink); }
+.notes-fullscreen :is(.notes-head, .note-categories, .note-index, .note-sheet label:has(#note-category),
+    .note-sheet > div:has(> [data-note-fullscreen])) { display: none; }
+.notes-fullscreen .notes-desk { display: block; min-height: 0; flex: 1; }
+.notes-fullscreen .notes-desk .note-sheet { display: flex; width: min(100%, 76rem); min-height: 100%; margin-inline: auto; }
+.notes-fullscreen .note-rendered { flex: 1; }
+.note-block-handle { translate: -.75rem 0; padding-inline: .2rem; font-size: 1.05rem; }
+.note-rendered:has(.tiptap) { padding-inline-start: max(2rem, 5%); }
+
+body:has(#view.notes-fullscreen) { overflow: hidden; }
+body:has(#view.notes-fullscreen) #note-status:not(:empty) {
+  position: fixed;
+  z-index: 13;
+  inset: auto 1rem 1rem auto;
+  max-width: calc(100% - 2rem);
+  padding: .45rem .75rem;
+  border-radius: .5rem;
+  background: var(--card);
+  color: var(--ink);
+  pointer-events: none;
+}
