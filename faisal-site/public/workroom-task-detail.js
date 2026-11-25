@@ -105,7 +105,7 @@ export function mount(panel, signal) {
       data.set('autosave', '1');
       let success = false;
       try {
-        const response = await fetch(editor.action, { method: 'POST', body: data });
+        const response = await fetch(editor.getAttribute('action'), { method: 'POST', body: data });
         if (!response.ok || !(await response.json()).saved) throw new Error('Save failed');
         saved = snapshot;
         success = true;
