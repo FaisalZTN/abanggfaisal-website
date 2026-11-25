@@ -114,9 +114,12 @@ function clipboardText(nodes, whatsapp = false, depth = 0) {
     const text = children(node);
     if (type === 'blockquote') return text.split('\n').map(line => '> ' + line).join('\n');
     if (type === 'codeBlock' && whatsapp) return '```\n' + text + '\n```';
-    if (type === 'heading' && whatsapp) return '*' + clipboardText(node.content ?? [], false, depth) + '*';
+    if (type === 'heading' && whatsapp) {
+      const heading = clipboardText(node.content ?? [], false, depth);
+      return heading.trim() ? '*' + heading + '*' : '';
+    }
     return text;
-  }).join(nodes.every(node => ['text', 'hardBreak', 'image'].includes(node.type)) ? '' : '\n\n');
+  }).join(nodes.every(node => ['text', 'hardBreak', 'image'].includes(node.type)) ? '' : whatsapp ? '\n' : '\n\n');
 }
 
 export function mountBlockEditor(root, content, onChange, onSelection) {
