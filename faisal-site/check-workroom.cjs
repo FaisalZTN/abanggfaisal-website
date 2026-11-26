@@ -3,6 +3,9 @@ const { DatabaseSync } = require('node:sqlite');
 module.exports = async function checkWorkroom(browser, origin) {
   const worker = (await import('./dist/_worker.js')).default;
   const db = new DatabaseSync(':memory:');
+  const folderUrl = process.env.WORKROOM_DRIVE_TEST_URL || 'https://drive.google.com/drive/folders/test-folder?hl=ID';
+  db.exec('CREATE TABLE workroom_drive_shortcuts (id INTEGER PRIMARY KEY, title TEXT NOT NULL, href TEXT NOT NULL)');
+  db.prepare('INSERT INTO workroom_drive_shortcuts (title, href) VALUES (?, ?)').run('Pintasan lama', folderUrl);
   const adapt = (sql, values = []) => ({
     bind: (...args) => adapt(sql,args),
     run: async () => {
@@ -303,15 +306,12 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.evaluate(() => document.fonts.load('400 16px "Plus Jakarta Sans"'));
     assert.match(await page.locator('main h1').evaluate(element => getComputedStyle(element).fontFamily), /Plus Jakarta Sans/);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    const folderUrl = process.env.WORKROOM_DRIVE_TEST_URL || 'https://drive.google.com/drive/folders/test-folder?hl=ID';
     const editedUrl = 'https://drive.google.com/drive/folders/another-folder?hl=ID';
     const overview = origin + '/workroom/?view=overview';
     const drivePageUrl = origin + '/workroom/drive/';
     const unauthenticated = await worker.fetch(new Request(drivePageUrl), env);
     assert.equal(unauthenticated.status, 403);
     assert.doesNotMatch(await unauthenticated.text(), /pintasan-drive/);
-    db.exec('CREATE TABLE workroom_drive_shortcuts (id INTEGER PRIMARY KEY, title TEXT NOT NULL, href TEXT NOT NULL)');
-    db.prepare('INSERT INTO workroom_drive_shortcuts (title, href) VALUES (?, ?)').run('Pintasan lama', folderUrl);
 
     await page.setViewportSize({ width: 1280, height: 900 });
     const desktopDrive = page.locator('.workroom-nav > a[aria-label="Pintasan Drive"]');
