@@ -34,6 +34,10 @@
   --green: #242428;
   --selected: #1b1b1f;
   --accent: #ee8a5e;
+  --workroom-motion-quick: 120ms;
+  --workroom-motion-reveal: 180ms;
+  --workroom-motion-ease: cubic-bezier(.22, 1, .36, 1);
+  --workroom-press: color-mix(in srgb, var(--selected) 79%, var(--ink));
 }
 :root[data-workroom-theme="blue"] {
   --sidebar: var(--card);
@@ -45,10 +49,6 @@
   --green: #0841c9;
   --selected: #032c7d;
   --accent: #1d97f1;
-  --workroom-motion-quick: 120ms;
-  --workroom-motion-reveal: 180ms;
-  --workroom-motion-ease: cubic-bezier(.22, 1, .36, 1);
-  --workroom-press: color-mix(in srgb, var(--selected) 79%, var(--ink));
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 1rem/1.55 var(--font-ui); }
