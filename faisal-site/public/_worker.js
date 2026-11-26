@@ -41,7 +41,12 @@ function taskCheckboxIcons() {
   return workroomIcon('square', 'ui-icon check-empty') + workroomIcon('checkbox', 'ui-icon check-marked');
 }
 
-function workroomDocument(content, page) {
+function workroomDriveLink(item, content, attributes = '') {
+  const title = escapeWorkroom(item.title);
+  return `<a href="${escapeWorkroom(item.href)}" target="_blank" rel="noopener noreferrer" aria-label="${title} (dibuka di tab baru)"${attributes}>${content}</a>`;
+}
+
+function workroomDocument(content, page, driveShortcuts = []) {
   const wordmark = '<a class="workroom-wordmark" href="/">Faysaruworks.</a>';
   const currentPage = page === 'privateNotes' ? 'note' : page === 'project' ? 'task' : page;
   const secondaryPages = ['goal', 'review', 'settings'];
@@ -52,9 +57,13 @@ function workroomDocument(content, page) {
       <span aria-hidden="true">${!extra && key === 'home' ? '<span class="workroom-nav-full">Ringkasan</span><span class="workroom-nav-short">Ringkas</span>' : title}</span>
     </a>`;
   };
+  const driveLinks = (desktop = false) => driveShortcuts.map(item =>
+    workroomDriveLink(item, workroomIcon('folder') + `<span>${escapeWorkroom(item.title)}</span>`,
+      desktop ? ' data-drive-shortcut class="workroom-nav-secondary"' : ' data-drive-shortcut')).join('');
   const sidebar = page ? `<nav class="workroom-nav" aria-label="Navigasi Workroom">
     ${wordmark}
     ${Object.entries(workroomPages).filter(([key]) => !['privateNotes', 'project'].includes(key)).map(entry => sidebarLink(entry)).join('')}
+    ${driveLinks(true)}
     <details class="workroom-nav-more"${secondaryPages.includes(currentPage) ? ' data-active' : ''}>
       <summary aria-label="Lainnya">
         ${workroomIcon('more-horizontal')}
@@ -62,6 +71,7 @@ function workroomDocument(content, page) {
       </summary>
       <div class="workroom-nav-menu">
         ${secondaryPages.map(key => sidebarLink([key, workroomPages[key]], true)).join('')}
+        ${driveLinks()}
       </div>
     </details>
   </nav><script src="/workroom-nav.js" defer></script>` : '';
@@ -84,13 +94,13 @@ function workroomDocument(content, page) {
     </footer>` : ''}</body></html>`;
 }
 
-function workroomPage(content, status = 200, page = null) {
-  return new Response(workroomDocument(content, page), { status, headers: privateHeaders });
+function workroomPage(content, status = 200, page = null, driveShortcuts = []) {
+  return new Response(workroomDocument(content, page, driveShortcuts), { status, headers: privateHeaders });
 }
 
-function streamWorkroomPage(page, render) {
+function streamWorkroomPage(page, render, driveShortcuts) {
   const marker = '<!--workroom-content-->';
-  const [before, after] = workroomDocument(marker, page).split(marker);
+  const [before, after] = workroomDocument(marker, page, driveShortcuts).split(marker);
   const encoder = new TextEncoder();
   const body = new ReadableStream({
     async start(controller) {
@@ -772,7 +782,7 @@ async function workroomStudySchedule(env, url, today) {
   </section>`;
 }
 
-async function workroomToday(request, url, env) {
+async function workroomToday(request, url, env, renderPage) {
   const db = env.WORKROOM_DB;
   const today = workroomDay.format(new Date());
   const path = workroomPages.today.path;
@@ -801,13 +811,13 @@ async function workroomToday(request, url, env) {
   if (request.method === 'POST') {
     const data = await request.formData();
     if (['capture', 'triage'].includes(data.get('action'))) {
-      if (!await workroomInbox(db, data)) return workroomPage('<h1>Entri Inbox tidak valid</h1><a href="/workroom/today/#inbox">Kembali ke Inbox</a>', 400, 'today');
+      if (!await workroomInbox(db, data)) return renderPage('<h1>Entri Inbox tidak valid</h1><a href="/workroom/today/#inbox">Kembali ke Inbox</a>', 400, 'today');
       return workroomRedirect(url, path + '?captured#inbox', 303);
     }
     if (data.get('action') === 'focus') {
       const items = ['focus-1', 'focus-2', 'focus-3'].map(name => String(data.get(name) ?? '').trim());
       if (data.get('day') !== today || items.some(item => item.length > 160)) {
-        return workroomPage('<h1>Fokus belum tersimpan</h1><p>Periksa tanggal dan panjang setiap fokus.</p><a href="/workroom/today/">Kembali ke Hari Ini</a>', 400, 'today');
+        return renderPage('<h1>Fokus belum tersimpan</h1><p>Periksa tanggal dan panjang setiap fokus.</p><a href="/workroom/today/">Kembali ke Hari Ini</a>', 400, 'today');
       }
       await db.prepare('INSERT INTO workroom_daily_focus (day, items) VALUES (?, ?) ON CONFLICT(day) DO UPDATE SET items = excluded.items')
         .bind(today, JSON.stringify(items)).run();
@@ -815,7 +825,7 @@ async function workroomToday(request, url, env) {
       await ensureWorkroomActivity(db);
       await db.prepare("UPDATE workroom_entries SET status = 'done' WHERE id = ? AND kind = 'task'").bind(data.get('id')).run();
     } else {
-      return workroomPage('<h1>Permintaan tidak valid</h1><a href="/workroom/today/">Kembali ke Hari Ini</a>', 400, 'today');
+      return renderPage('<h1>Permintaan tidak valid</h1><a href="/workroom/today/">Kembali ke Hari Ini</a>', 400, 'today');
     }
     return workroomRedirect(url, path + '?saved', 303);
   }
@@ -840,7 +850,7 @@ async function workroomToday(request, url, env) {
   const list = (entries, empty) => `<ul class="due-list"${entries.length ? '' : ' hidden'}>${entries.map(task => workroomDueTask(task, today, path)).join('')}</ul>
     <p data-due-empty${entries.length ? ' hidden' : ''}>${empty}</p>`;
   const deferred = googleConfigured(env) && mode !== 'full';
-  return workroomPage(`<div class="dashboard-content workroom-today">
+  return renderPage(`<div class="dashboard-content workroom-today">
     <div><h1>Hari Ini</h1><p>${e(date)} · WITA</p></div>
     ${(url.searchParams.has('saved') || url.searchParams.has('captured')) ? '<p class="save-notice" role="status">Perubahan tersimpan.</p>' : ''}
     ${studySchedule}
@@ -935,33 +945,42 @@ function workroomProjectCard(project, tasks, edit) {
   </article>`;
 }
 
-async function workroomDriveShortcuts(db, request, url) {
+async function ensureWorkroomDriveShortcuts(db) {
   await db.prepare(`CREATE TABLE IF NOT EXISTS workroom_drive_shortcuts (
     id INTEGER PRIMARY KEY, title TEXT NOT NULL, href TEXT NOT NULL
   )`).run();
-  if (request) {
-    const data = await request.formData();
-    const title = String(data.get('title') ?? '').trim();
-    const href = String(data.get('href') ?? '').trim();
-    const id = String(data.get('id') ?? '');
-    const link = URL.canParse(href) ? new URL(href) : null;
-    if (!title || title.length > 100 || href.length > 2048 || link?.protocol !== 'https:' ||
-        !['drive.google.com', 'docs.google.com'].includes(link.hostname) ||
-        link.username || link.password || link.port || (id && !/^[1-9][0-9]{0,14}$/.test(id))) {
-      return workroomRedirect(url, workroomOverviewUrl + '&drive=invalid#pintasan-drive', 303);
-    }
-    if (id) {
-      await db.prepare('UPDATE workroom_drive_shortcuts SET title = ?, href = ? WHERE id = ?')
-        .bind(title, link.href, Number(id)).run();
-    } else {
-      await db.prepare('INSERT INTO workroom_drive_shortcuts (title, href) VALUES (?, ?)')
-        .bind(title, link.href).run();
-    }
-    return workroomRedirect(url, workroomOverviewUrl + '&drive=saved#pintasan-drive', 303);
-  }
+}
 
-  const e = escapeWorkroom;
+async function readWorkroomDriveShortcuts(db) {
+  await ensureWorkroomDriveShortcuts(db);
   const { results } = await db.prepare('SELECT id, title, href FROM workroom_drive_shortcuts ORDER BY id').all();
+  return results;
+}
+
+async function saveWorkroomDriveShortcut(db, request, url) {
+  await ensureWorkroomDriveShortcuts(db);
+  const data = await request.formData();
+  const title = String(data.get('title') ?? '').trim();
+  const href = String(data.get('href') ?? '').trim();
+  const id = String(data.get('id') ?? '');
+  const link = URL.canParse(href) ? new URL(href) : null;
+  if (!title || title.length > 100 || href.length > 2048 || link?.protocol !== 'https:' ||
+      !['drive.google.com', 'docs.google.com'].includes(link.hostname) ||
+      link.username || link.password || link.port || (id && !/^[1-9][0-9]{0,14}$/.test(id))) {
+    return workroomRedirect(url, workroomOverviewUrl + '&drive=invalid#pintasan-drive', 303);
+  }
+  if (id) {
+    await db.prepare('UPDATE workroom_drive_shortcuts SET title = ?, href = ? WHERE id = ?')
+      .bind(title, link.href, Number(id)).run();
+  } else {
+    await db.prepare('INSERT INTO workroom_drive_shortcuts (title, href) VALUES (?, ?)')
+      .bind(title, link.href).run();
+  }
+  return workroomRedirect(url, workroomOverviewUrl + '&drive=saved#pintasan-drive', 303);
+}
+
+function renderWorkroomDriveShortcuts(results, url) {
+  const e = escapeWorkroom;
   const form = (item = {}) => `<form method="post" action="${WORKROOM}?drive=save">
     <input type="hidden" name="id" value="${e(item.id)}">
     <label>Nama pintasan<input name="title" required maxlength="100" value="${e(item.title)}"></label>
@@ -974,14 +993,14 @@ async function workroomDriveShortcuts(db, request, url) {
     ${status === 'saved' ? '<p role="status">Pintasan tersimpan.</p>' : ''}
     ${status === 'invalid' ? '<p role="alert">Isi nama dan gunakan tautan HTTPS dari Google Drive atau Google Docs.</p>' : ''}
     ${results.length ? '<ul>' + results.map(item => `<li>
-      <a href="${e(item.href)}" target="_blank" rel="noopener noreferrer"><strong>${e(item.title)}</strong></a>
+      ${workroomDriveLink(item, `<strong>${e(item.title)}</strong>`)}
       <details><summary aria-label="Edit pintasan ${e(item.title)}">Edit</summary>${form(item)}</details>
     </li>`).join('') + '</ul>' : '<p>Belum ada pintasan.</p>'}
     <details><summary>Tambah pintasan</summary>${form()}</details>
   </section>`;
 }
 
-async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
+async function renderWorkroom(db, page, url, env, renderPage, driveShortcuts = []) {
   const e = escapeWorkroom;
   const params = url.searchParams;
   const edit = params.get('edit');
@@ -1077,7 +1096,7 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: workroomTimeZone, hour: '2-digit', hourCycle: 'h23' }).format(now));
   const greetings = { morning: 'Good morning, Faisal!', afternoon: 'Good afternoon, Faisal!', night: 'Good night, Faisal!' };
   const period = hour < 6 || hour >= 18 ? 'night' : hour < 12 ? 'morning' : 'afternoon';
-  return workroomPage(`<div class="dashboard-content overview-shell">
+  return renderPage(`<div class="dashboard-content overview-shell">
       ${notice}
       <header class="overview-header">
         <h1>Ringkasan</h1>
@@ -1136,7 +1155,7 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
           <noscript><p><a href="${workroomOverviewUrl}&amp;exams=full#ujian-terdekat">Muat jadwal ujian</a></p></noscript>
           <script type="application/workroom-module" data-src="/workroom-review.js"></script>` : ''}
         </section>
-        ${await workroomDriveShortcuts(db, null, url)}
+        ${renderWorkroomDriveShortcuts(driveShortcuts, url)}
       </div>
     </div>`, 200, page);
 }
@@ -1331,8 +1350,8 @@ const privateNotesCookie = '__Secure-workroom-private-notes';
 const privateNotesLifetime = 300;
 const privateNotesEncoder = new TextEncoder();
 
-function privateNotesReply(content, status = 200) {
-  return workroomPage(`<div class="dashboard-content"><a class="private-notes-back" href="${workroomPages.note.path}">${workroomIcon('arrow-left')} Catatan</a><h1>Catatan Rahasia</h1>${content}</div>`, status, 'privateNotes');
+function privateNotesReply(renderPage, content, status = 200) {
+  return renderPage(`<div class="dashboard-content"><a class="private-notes-back" href="${workroomPages.note.path}">${workroomIcon('arrow-left')} Catatan</a><h1>Catatan Rahasia</h1>${content}</div>`, status, 'privateNotes');
 }
 
 function privateNotesHex(bytes) {
@@ -1347,12 +1366,12 @@ async function privateNotesKey(secret, purpose, algorithm, usages) {
   }, key, algorithm, false, usages);
 }
 
-async function workroomPrivateNotes(request, url, env) {
+async function workroomPrivateNotes(request, url, env, renderPage) {
   const { WORKROOM_PRIVATE_NOTES_PASSWORD: password, WORKROOM_PRIVATE_NOTES_KEY: secret, WORKROOM_DB: db } = env;
   const path = workroomPages.privateNotes.path;
   if (typeof password !== 'string' || password.length < 8 ||
       typeof secret !== 'string' || !/^[a-f0-9]{64}$/i.test(secret)) {
-    return privateNotesReply('<p>Catatan Rahasia terkunci sampai sandi dan kunci penyimpanan dikonfigurasi.</p>', 503);
+    return privateNotesReply(renderPage, '<p>Catatan Rahasia terkunci sampai sandi dan kunci penyimpanan dikonfigurasi.</p>', 503);
   }
   const e = escapeWorkroom;
   const now = Math.floor(Date.now() / 1000);
@@ -1368,7 +1387,7 @@ async function workroomPrivateNotes(request, url, env) {
       `${privateNotesCookie}=${token}; Path=${path}; HttpOnly; Secure; SameSite=Strict; Max-Age=${seconds}`);
     return new Response(null, { status: 303, headers });
   };
-  const locked = (message = '', status = 200) => privateNotesReply(`<section class="collection private-notes-panel">
+  const locked = (message = '', status = 200) => privateNotesReply(renderPage, `<section class="collection private-notes-panel">
     ${message ? `<p role="alert">${e(message)}</p>` : ''}
     <form method="post" action="${path}">
       <input type="hidden" name="action" value="unlock">
@@ -1427,7 +1446,7 @@ async function workroomPrivateNotes(request, url, env) {
     const title = form.get('title');
     const body = form.get('body');
     if (action !== 'save' || !validId(id) || typeof title !== 'string' || !title.trim() || title.length > 160 ||
-        typeof body !== 'string' || body.length > 10000) return privateNotesReply('<p>Periksa judul dan panjang isi catatan.</p>', 400);
+        typeof body !== 'string' || body.length > 10000) return privateNotesReply(renderPage, '<p>Periksa judul dan panjang isi catatan.</p>', 400);
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const payload = await crypto.subtle.encrypt(aes(id, iv), cipher, privateNotesEncoder.encode(JSON.stringify({ title: title.trim(), body })));
     await db.prepare(`INSERT INTO workroom_private_notes (id, payload, iv, updated) VALUES (?, ?, ?, ?)
@@ -1441,7 +1460,7 @@ async function workroomPrivateNotes(request, url, env) {
     return { ...JSON.parse(new TextDecoder().decode(plain)), id: row.id };
   }));
   const selected = notes.find(note => note.id === url.searchParams.get('edit'));
-  return privateNotesReply(`<div data-private-notes-expires="${session.expires}">
+  return privateNotesReply(renderPage, `<div data-private-notes-expires="${session.expires}">
     <form method="post" action="${path}"><button name="action" value="lock">Kunci sekarang</button></form>
     <div class="today-workspace-grid">
       <section class="collection"><h2>Daftar catatan</h2><a href="${path}">${workroomIcon('plus')} Catatan baru</a>
@@ -1482,13 +1501,19 @@ async function handleWorkroom(request, env, url) {
   if (request.method !== 'GET' && request.method !== 'POST') return workroomPage('<h1>Metode tidak didukung</h1>', 405);
 
   if (page === 'home' && request.method === 'POST' && url.searchParams.get('drive') === 'save') {
-    return workroomDriveShortcuts(env.WORKROOM_DB, request, url);
+    return saveWorkroomDriveShortcut(env.WORKROOM_DB, request, url);
   }
-  if (page === 'privateNotes') return workroomPrivateNotes(request, url, env);
+  const db = env.WORKROOM_DB;
+  let driveShortcuts;
+  const getDriveShortcuts = () => driveShortcuts ??= readWorkroomDriveShortcuts(db);
+  const renderPage = async (content, status, activePage) =>
+    workroomPage(content, status, activePage, await getDriveShortcuts());
+
+  if (page === 'privateNotes') return workroomPrivateNotes(request, url, env, renderPage);
 
   if (page === 'settings') {
     if (request.method !== 'GET') return workroomPage('<h1>Metode tidak didukung</h1>', 405);
-    return workroomPage(`<div class="dashboard-content">
+    return renderPage(`<div class="dashboard-content">
       <h1>Pengaturan</h1>
       <fieldset class="collection workroom-themes">
         <legend>Tema aplikasi</legend>
@@ -1530,7 +1555,6 @@ async function handleWorkroom(request, env, url) {
     return workroomCalendarData(env, day);
   }
 
-  const db = env.WORKROOM_DB;
   const ensureEntries = () => db.prepare(`CREATE TABLE IF NOT EXISTS workroom_entries (
     id INTEGER PRIMARY KEY,
     kind TEXT NOT NULL,
@@ -1558,15 +1582,15 @@ async function handleWorkroom(request, env, url) {
         return renderWorkroomReview(db, url, env, content => content);
       }
       return renderWorkroom(db, page, url, env, content => content);
-    });
+    }, await getDriveShortcuts());
   }
   await ensureEntries();
   if (page === 'home' && request.method === 'GET' && !url.search) {
     return workroomRedirect(url, workroomPages.today.path);
   }
-  if (page === 'today') return workroomToday(request, url, env);
+  if (page === 'today') return workroomToday(request, url, env, renderPage);
   if (request.method === 'POST' || page === 'review') await ensureWorkroomActivity(db);
-  if (page === 'review' && request.method === 'GET') return renderWorkroomReview(db, url, env);
+  if (page === 'review' && request.method === 'GET') return renderWorkroomReview(db, url, env, renderPage);
   if ((page === 'home' || page === 'note') && url.searchParams.has('notes-data')) {
     return workroomNotesData(request, db);
   }
@@ -1576,9 +1600,9 @@ async function handleWorkroom(request, env, url) {
       return workroomRedirect(url, workroomPages.note.path + url.search);
     }
     if (page === 'note' && !url.searchParams.has('basic')) {
-      return workroomPage(await renderNotes(), 200, page);
+      return renderPage(await renderNotes(), 200, page);
     }
-    return renderWorkroom(db, page, url, env);
+    return renderWorkroom(db, page, url, env, renderPage, page === 'home' ? await getDriveShortcuts() : []);
   }
 
   const data = await request.formData();

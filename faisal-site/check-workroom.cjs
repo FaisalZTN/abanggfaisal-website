@@ -302,7 +302,71 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(await page.getByRole('radio', { name: 'Plus Jakarta Sans' }).isChecked(), true);
     await page.evaluate(() => document.fonts.load('400 16px "Plus Jakarta Sans"'));
     assert.match(await page.locator('main h1').evaluate(element => getComputedStyle(element).fontFamily), /Plus Jakarta Sans/);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const folderUrl = process.env.WORKROOM_DRIVE_TEST_URL || 'https://drive.google.com/drive/folders/test-folder?hl=ID';
+    const editedUrl = 'https://drive.google.com/drive/folders/another-folder?hl=ID';
+    const overview = origin + '/workroom/?view=overview';
+    const unauthenticated = await worker.fetch(new Request(overview), env);
+    assert.equal(unauthenticated.status, 403);
+    assert.doesNotMatch(await unauthenticated.text(), /pintasan-drive|data-drive-shortcut/);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(overview);
+    const card = page.locator('#pintasan-drive');
+    await card.getByText('Tambah pintasan', { exact: true }).click();
+    await card.getByLabel('Nama pintasan').fill('Folder Drive');
+    await card.getByLabel('Tautan Google Drive').fill(folderUrl);
+    await card.getByRole('button', { name: 'Simpan pintasan' }).click();
+    await card.getByRole('status').filter({ hasText: 'Pintasan tersimpan.' }).waitFor();
+
+    const desktopShortcut = page.locator('.workroom-nav > [data-drive-shortcut]');
+    const mobileShortcut = page.locator('.workroom-nav-menu [data-drive-shortcut]');
+    const cardShortcut = card.getByRole('link');
+    const checkShortcut = async (link, title, href) => {
+      await link.waitFor();
+      assert.equal(await link.getAttribute('aria-label'), title + ' (dibuka di tab baru)');
+      assert.equal(await link.getAttribute('href'), href);
+      assert.equal(await link.getAttribute('target'), '_blank');
+      assert.equal(await link.getAttribute('rel'), 'noopener noreferrer');
+    };
+    await checkShortcut(cardShortcut, 'Folder Drive', folderUrl);
+    await checkShortcut(desktopShortcut, 'Folder Drive', folderUrl);
+    assert.match(await desktopShortcut.locator('use').getAttribute('href'), /#folder$/);
+    assert.equal(await mobileShortcut.isVisible(), false);
+
+    await page.context().route(folderUrl, route => route.fulfill({ body: 'Drive fixture' }));
+    const popupReady = page.waitForEvent('popup');
+    await desktopShortcut.click();
+    const popup = await popupReady;
+    await popup.waitForURL(folderUrl);
+    assert.equal(await popup.evaluate(() => window.opener), null);
+    await popup.close();
+
+    await card.getByLabel('Edit pintasan Folder Drive').click();
+    const edit = card.locator('li form');
+    await edit.getByLabel('Nama pintasan').fill('Folder Kerja');
+    await edit.getByLabel('Tautan Google Drive').fill(editedUrl);
+    await edit.getByRole('button', { name: 'Simpan pintasan' }).click();
+    await checkShortcut(cardShortcut, 'Folder Kerja', editedUrl);
+    await checkShortcut(desktopShortcut, 'Folder Kerja', editedUrl);
+    assert.equal(db.prepare('SELECT COUNT(*) AS total FROM workroom_drive_shortcuts').get().total, 1);
+
+    await page.setViewportSize({ width: 360, height: 800 });
+    assert.equal(await desktopShortcut.isVisible(), false);
+    assert.equal(await mobileShortcut.isVisible(), false);
+    await page.getByLabel('Lainnya', { exact: true }).click();
+    await checkShortcut(mobileShortcut, 'Folder Kerja', editedUrl);
+    await checkShortcut(cardShortcut, 'Folder Kerja', editedUrl);
+    await page.getByLabel('Lainnya', { exact: true }).click();
+    await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
+    await page.waitForSelector('#workspace');
+    await page.getByLabel('Lainnya', { exact: true }).click();
+    await checkShortcut(mobileShortcut, 'Folder Kerja', editedUrl);
+    const deniedAfterSave = await worker.fetch(new Request(overview), env);
+    assert.equal(deniedAfterSave.status, 403);
+    assert.doesNotMatch(await deniedAfterSave.text(), /another-folder|pintasan-drive|data-drive-shortcut/);
     assert.deepEqual(errors, []);
+    console.log('Drive shortcuts: desktop and mobile placement, popup, shared edits, and authentication');
     console.log('Authenticated worker and Chromium: all Workroom panels, history, draft protection, mobile menu and persisted themes');
   } finally {
     global.fetch = originalFetch;
