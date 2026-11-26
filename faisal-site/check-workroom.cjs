@@ -3,8 +3,11 @@ const { DatabaseSync } = require('node:sqlite');
 module.exports = async function checkWorkroom(browser, origin) {
   const worker = (await import('./dist/_worker.js')).default;
   const db = new DatabaseSync(':memory:');
+  const folderUrl = process.env.WORKROOM_DRIVE_TEST_URL || 'https://drive.google.com/drive/folders/test-folder?hl=ID';
+  db.exec('CREATE TABLE workroom_drive_shortcuts (id INTEGER PRIMARY KEY, title TEXT NOT NULL, href TEXT NOT NULL)');
+  db.prepare('INSERT INTO workroom_drive_shortcuts (title, href) VALUES (?, ?)').run('Pintasan lama', folderUrl);
   const adapt = (sql, values = []) => ({
-    bind: (...args) => adapt(sql,args),
+    bind: (...args) => adapt(sql, args.map(value => value instanceof ArrayBuffer ? new Uint8Array(value) : value)),
     run: async () => {
       const { changes, lastInsertRowid } = db.prepare(sql).run(...values);
       return { meta: { changes: Number(changes), last_row_id: Number(lastInsertRowid) } };
@@ -25,7 +28,13 @@ module.exports = async function checkWorkroom(browser, origin) {
     .map(item=>Buffer.from(JSON.stringify(item)).toString('base64url')).join('.');
   const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5',pair.privateKey,Buffer.from(tokenData));
   const token = tokenData+'.'+Buffer.from(signature).toString('base64url');
-  const env = {WORKROOM_ACCESS_ISSUER:issuer, WORKROOM_ACCESS_AUD:'test',WORKROOM_OWNER_EMAIL:'test@example.com',
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Makassar' }).format(new Date());
+  const tomorrow = new Date(Date.parse(today + 'T12:00:00Z') + 86400000).toISOString().slice(0, 10);
+  const session = title => ({ title, start: '08:00', end: '09:30', location: 'Ruang 1', block: 'Blok Uji', url: '/ruang-belajar/#jadwal-kuliah' });
+  const env = {ASSETS: { fetch: request => {
+      assert.equal(new URL(request.url).pathname, '/study-schedule.json');
+      return Response.json({ [today]: [session('Kuliah hari ini')], [tomorrow]: [session('Kuliah besok')] });
+    } }, WORKROOM_ACCESS_ISSUER:issuer, WORKROOM_ACCESS_AUD:'test',WORKROOM_OWNER_EMAIL:'test@example.com',
     WORKROOM_PRIVATE_NOTES_PASSWORD: 'local-test-password', WORKROOM_PRIVATE_NOTES_KEY: 'a'.repeat(64),
     WORKROOM_DB:{prepare:adapt,batch:async statements=>Promise.all(statements.map(statement => statement.all()))}};
   const page = await browser.newPage();
@@ -48,7 +57,7 @@ module.exports = async function checkWorkroom(browser, origin) {
       await route.fulfill({
         status: result.status,
         headers: Object.fromEntries(result.headers),
-        body: await result.text(),
+        body: Buffer.from(await result.arrayBuffer()),
       });
     });
     await page.goto(origin+'/workroom/review/');
@@ -58,8 +67,28 @@ module.exports = async function checkWorkroom(browser, origin) {
       .run('Catatan lama', '## Judul lama\n**Tebal**\n- [x] Sudah selesai');
 
     await page.evaluate(()=>{ window.testDocument = true; });
-    await page.locator('.workroom-nav > a[aria-label="Catatan"]').click();
+    const reviewDestination = page.locator('.workroom-nav > a[aria-label="Review"]');
+    const notesDestination = page.locator('.workroom-nav > a[aria-label="Catatan"]');
+    const notesUrl = origin + '/workroom/notes/';
+    let releaseNavigation;
+    const navigationGate = new Promise(resolve => { releaseNavigation = resolve; });
+    await page.route(notesUrl, async route => {
+      await navigationGate;
+      await route.fallback();
+    }, { times: 1 });
+    await notesDestination.click();
+    try {
+      await page.getByText('Memuat halaman…', { exact: true }).waitFor();
+      assert.equal(await reviewDestination.getAttribute('aria-current'), 'page');
+      assert.equal(await notesDestination.getAttribute('aria-current'), null);
+      assert.equal(await notesDestination.getAttribute('data-pending'), '');
+    } finally {
+      releaseNavigation();
+    }
     await page.waitForSelector('#note-query');
+    assert.equal(await notesDestination.getAttribute('aria-current'), 'page');
+    assert.equal(await notesDestination.getAttribute('data-pending'), null);
+    assert.equal(await page.locator('main').evaluate(element => getComputedStyle(element).animationName), 'workroom-page-cover');
     await page.evaluate(() => document.fonts.ready);
     assert.match(await page.locator('.notes-head h1').evaluate(element => getComputedStyle(element).fontFamily), /Inter/);
     const newNote = page.locator('[data-new-note]');
@@ -72,7 +101,74 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.locator('#edit-body h2').filter({ hasText: 'Judul lama' }).waitFor();
     assert.equal(await page.locator('#edit-body strong').textContent(), 'Tebal');
     assert.equal(await page.locator('#edit-body input[type=checkbox]').isChecked(), true);
+    const heading = page.locator('#edit-body h2');
+    const linkControl = page.getByRole('button', { name: 'Sisipkan tautan', exact: true });
+    await heading.click();
+    await heading.evaluate(element => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      getSelection().removeAllRanges();
+      getSelection().addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
+    });
+    await linkControl.click();
+    const linkDialog = page.getByRole('dialog', { name: 'Sisipkan tautan' });
+    const linkInput = linkDialog.getByLabel('Alamat URL');
+    assert.equal(await linkInput.evaluate(input => document.activeElement === input), true);
+    await linkInput.fill('http://example.test');
+    await linkInput.press('Enter');
+    await linkDialog.getByRole('alert').waitFor();
+    assert.equal(await linkInput.getAttribute('aria-invalid'), 'true');
+    await linkInput.fill('https://example.test/catatan');
+    await linkInput.press('Enter');
+    await linkDialog.waitFor({ state: 'hidden' });
+    const insertedLink = heading.getByRole('link', { name: 'Judul lama' });
+    assert.equal(await insertedLink.getAttribute('href'), 'https://example.test/catatan');
+    await page.getByText('Tersimpan otomatis.', { exact: true }).waitFor();
+
+    await insertedLink.evaluate(element => {
+      getSelection().collapse(element.firstChild, 2);
+      document.dispatchEvent(new Event('selectionchange'));
+    });
+    await linkControl.click();
+    const editLink = page.getByRole('dialog', { name: 'Edit tautan' });
+    assert.equal(await editLink.getByLabel('Alamat URL').inputValue(), 'https://example.test/catatan');
+    await editLink.getByLabel('Alamat URL').press('Escape');
+    await editLink.waitFor({ state: 'hidden' });
+    assert.equal(await insertedLink.getAttribute('href'), 'https://example.test/catatan');
+    await linkControl.click();
+    await editLink.getByLabel('Alamat URL').fill('https://example.test/baru');
+    await editLink.getByRole('button', { name: 'Simpan tautan' }).click();
+    assert.equal(await insertedLink.getAttribute('href'), 'https://example.test/baru');
+    await linkControl.click();
+    await editLink.getByRole('button', { name: 'Hapus tautan' }).click();
+    assert.equal(await heading.getByRole('link').count(), 0);
+    assert.equal(await heading.textContent(), 'Judul lama');
+    await page.getByText('Tersimpan otomatis.', { exact: true }).waitFor();
+
     await page.locator('[data-new-note]').click();
+    async function pasteScreenshot(target, layout) {
+      await target.evaluate(async element => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 80;
+        canvas.height = 60;
+        const context = canvas.getContext('2d');
+        context.fillStyle = '#3355aa';
+        context.fillRect(0, 0, 80, 60);
+        const blob = await new Promise(resolve => canvas.toBlob(resolve));
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([blob], 'screenshot.png', { type: 'image/png' }));
+        element.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }));
+      });
+      const crop = page.getByRole('dialog', { name: 'Siapkan gambar' });
+      await crop.getByLabel('Kiri (%)').fill('25');
+      await crop.getByLabel('Posisi gambar').selectOption(layout);
+      const uploaded = page.waitForResponse(response => response.url() === origin + '/workroom/images/' &&
+        response.request().method() === 'POST');
+      await crop.getByRole('button', { name: 'Sisipkan gambar' }).click();
+      const result = await uploaded;
+      assert.equal(result.status(), 201, await result.text());
+    }
     const editor = page.getByRole('textbox', { name: 'Isi catatan', exact: true });
     await editor.click();
     await page.keyboard.type('# Judul blok');
@@ -82,7 +178,35 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.getByRole('option', { name: 'Tabel' }).waitFor();
     await page.keyboard.press('Enter');
     await editor.locator('table').waitFor();
+    await page.setViewportSize({ width: 360, height: 720 });
+    await editor.locator('h1').click();
+    await page.getByRole('button', { name: 'Tambah blok', exact: true }).click();
+    await page.getByRole('option', { name: 'Gambar', exact: true }).click();
+    const imageDialog = page.getByRole('dialog', { name: 'Sisipkan gambar dari URL' });
+    await imageDialog.waitFor();
+    const imageBounds = await imageDialog.boundingBox();
+    assert.ok(imageBounds.x >= 0 && imageBounds.x + imageBounds.width <= 360);
+    await imageDialog.getByRole('button', { name: 'Batal' }).click();
+    await imageDialog.waitFor({ state: 'hidden' });
+    const imageUrl = 'https://example.test/diagram.svg';
+    await page.route(imageUrl, route => route.fulfill({
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"/>',
+    }));
+    await page.getByRole('button', { name: 'Tambah blok', exact: true }).click();
+    await page.getByRole('option', { name: 'Gambar', exact: true }).click();
+    await imageDialog.getByLabel('Alamat URL').fill(imageUrl);
+    await imageDialog.getByRole('button', { name: 'Sisipkan gambar' }).click();
+    await editor.locator('img[src="' + imageUrl + '"]').waitFor({ state: 'attached' });
+    await pasteScreenshot(editor, 'right');
+    const croppedNote = editor.locator('img[data-image-layout="right"]');
+    await croppedNote.waitFor();
+    await page.waitForFunction(() => document.querySelector('#edit-body img[data-image-layout="right"]')?.naturalWidth === 60);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    const draftSaved = page.waitForResponse(response =>
+      response.request().method() === 'POST' && response.request().postData()?.includes('Draf tersimpan otomatis'));
     await page.locator('#edit-title').fill('Draf tersimpan otomatis');
+    assert.equal((await draftSaved).status(), 200);
     await page.getByText('Tersimpan otomatis.', { exact: true }).waitFor();
     assert.equal(db.prepare("SELECT COUNT(*) AS total FROM workroom_entries WHERE title = ?").get('Draf tersimpan otomatis').total, 1);
     await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
@@ -222,6 +346,25 @@ module.exports = async function checkWorkroom(browser, origin) {
       await page.locator(`main[data-workroom-panel="${panel}"]`).waitFor();
       assert.equal(await page.evaluate(() => window.testDocument), true);
     }
+    await page.setViewportSize({ width: 360, height: 800 });
+    db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('task', 'Tugas Ringkasan', '', 'active', ?, 'high')").run(today);
+    await page.getByRole('link', { name: 'Ringkasan', exact: true }).first().click();
+    const dashboard = page.locator('.overview-shell');
+    await dashboard.getByRole('heading', { name: 'Ringkasan', exact: true }).waitFor();
+    await dashboard.getByRole('form', { name: 'Catat cepat' }).waitFor();
+    await dashboard.getByRole('link', { name: 'Kuliah hari ini' }).waitFor();
+    await dashboard.getByRole('link', { name: 'Kuliah besok' }).waitFor();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 360);
+    assert.equal(await page.evaluate(() => window.testDocument), true);
+    const count = dashboard.locator('[data-overview-open-count]');
+    const before = Number(await count.textContent());
+    await dashboard.getByRole('checkbox', { name: 'Tandai selesai: Tugas Ringkasan' }).click();
+    await dashboard.getByText('Tugas selesai.', { exact: true }).waitFor();
+    assert.equal(Number(await count.textContent()), before - 1);
+    await dashboard.getByRole('checkbox', { name: 'Urungkan penyelesaian: Tugas Ringkasan' }).click();
+    await dashboard.getByText('Tugas dibuka kembali.', { exact: true }).waitFor();
+    assert.equal(Number(await count.textContent()), before);
+    await page.setViewportSize({ width: 1280, height: 800 });
     const project = db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('project', 'Tugas Akhir', '', 'active', '', 'normal')").run().lastInsertRowid;
     db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority, project_id) VALUES ('task', 'Baca jurnal', '', 'active', '2027-09-30', 'normal', ?), ('task', 'Buat kerangka', '', 'done', '', 'normal', ?)").run(project, project);
     await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
@@ -232,6 +375,13 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(savedTask.status(), 200, (await savedTask.text()).slice(0, 400));
     assert.equal(await page.locator('.workspace-editor').getByRole('button', { name: 'Simpan perubahan' }).count(), 0);
     await page.locator('.workspace-editor').getByText('Tersimpan otomatis.', { exact: true }).waitFor();
+    const taskBody = page.locator('.workspace-editor textarea[name="body"]');
+    await pasteScreenshot(taskBody, 'behind');
+    await page.locator('.workspace-editor img[data-image-layout="behind"]').waitFor();
+    const taskImageSave = page.waitForResponse(response => response.request().method() === 'POST' &&
+      response.request().postData()?.includes('layout%3Dbehind'));
+    assert.equal((await taskImageSave).status(), 200);
+    assert.match(db.prepare("SELECT body FROM workroom_entries WHERE title = 'Baca jurnal'").get().body, /#layout=behind/);
     assert.equal(db.prepare("SELECT task_area FROM workroom_entries WHERE title = 'Baca jurnal'").get().task_area, 'Akademik');
     await page.getByLabel('Filter area', { exact: true }).selectOption('Akademik');
     await page.getByRole('button', { name: 'Filter area', exact: true }).click();
@@ -261,8 +411,17 @@ module.exports = async function checkWorkroom(browser, origin) {
     await privateLink.click();
     await page.getByLabel('Sandi Catatan Rahasia').waitFor();
     assert.equal(await page.evaluate(() => window.testDocument), true);
-    await page.getByLabel('Lainnya', { exact: true }).click();
-    await page.locator('.workroom-nav-menu').getByRole('link', { name: 'Pengaturan' }).click();
+    const moreControl = page.getByLabel('Lainnya', { exact: true });
+    await moreControl.press('Enter');
+    const mobileMenu = page.locator('.workroom-nav-menu');
+    await mobileMenu.waitFor();
+    assert.equal(await mobileMenu.evaluate(element => getComputedStyle(element).animationName), 'workroom-menu-reveal');
+    await mobileMenu.getByRole('link', { name: 'Pengaturan' }).focus();
+    await page.keyboard.press('Escape');
+    await mobileMenu.waitFor({ state: 'hidden' });
+    assert.equal(await moreControl.evaluate(element => element === document.activeElement), true);
+    await moreControl.click();
+    await mobileMenu.getByRole('link', { name: 'Pengaturan' }).click();
     await page.getByRole('radio', { name: 'Terang' }).waitFor();
     assert.equal(await page.getByRole('radio', { name: 'Terang' }).isChecked(), true);
     assert.equal(await page.evaluate(() => window.testDocument), true);
@@ -277,7 +436,84 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(await page.getByRole('radio', { name: 'Plus Jakarta Sans' }).isChecked(), true);
     await page.evaluate(() => document.fonts.load('400 16px "Plus Jakarta Sans"'));
     assert.match(await page.locator('main h1').evaluate(element => getComputedStyle(element).fontFamily), /Plus Jakarta Sans/);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const editedUrl = 'https://drive.google.com/drive/folders/another-folder?hl=ID';
+    const overview = origin + '/workroom/?view=overview';
+    const drivePageUrl = origin + '/workroom/drive/';
+    const unauthenticated = await worker.fetch(new Request(drivePageUrl), env);
+    assert.equal(unauthenticated.status, 403);
+    assert.doesNotMatch(await unauthenticated.text(), /pintasan-drive/);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const desktopDrive = page.locator('.workroom-nav > a[aria-label="Pintasan Drive"]');
+    assert.match(await desktopDrive.locator('use').getAttribute('href'), /#folder$/);
+    await desktopDrive.click();
+    await page.waitForURL(drivePageUrl);
+    await page.getByRole('heading', { name: 'Pintasan Drive', exact: true }).waitFor();
+    assert.equal(await page.locator('main').evaluate(element => getComputedStyle(element).animationName), 'none');
+    for (const name of ['Proyek', 'Akademik', 'TBM-Cs', 'Tugas Akhir', 'Lainnya']) {
+      await page.getByRole('region', { name, exact: true }).waitFor();
+    }
+    const legacy = page.getByRole('region', { name: 'Lainnya', exact: true });
+    await legacy.getByRole('link', { name: /Pintasan lama/ }).waitFor();
+    const index = page.getByRole('navigation', { name: 'Kategori pintasan' });
+    await index.getByRole('link', { name: /Tugas Akhir/ }).click();
+    await page.waitForURL(drivePageUrl + '#drive-tugas-akhir');
+    await page.getByText('Tambah pintasan', { exact: true }).click();
+    const add = page.locator('.workroom-drive-toolbar');
+    assert.equal(await add.locator('form').evaluate(form => getComputedStyle(form).animationName), 'none');
+    await add.getByLabel('Nama pintasan').fill('Folder Drive');
+    await add.getByLabel('Tautan Google Drive').fill(folderUrl + '&test=1');
+    await add.getByLabel('Kategori').selectOption('proyek');
+    await add.getByRole('button', { name: 'Simpan pintasan' }).click();
+    await add.getByRole('status').filter({ hasText: 'Pintasan tersimpan.' }).waitFor();
+
+    const checkShortcut = async (link, title, href) => {
+      await link.waitFor();
+      assert.equal(await link.getAttribute('aria-label'), title + ' (dibuka di tab baru)');
+      assert.equal(await link.getAttribute('href'), href);
+      assert.equal(await link.getAttribute('target'), '_blank');
+      assert.equal(await link.getAttribute('rel'), 'noopener noreferrer');
+    };
+    const driveProject = page.getByRole('region', { name: 'Proyek', exact: true });
+    const projectLink = driveProject.getByRole('link', { name: /Folder Drive/ });
+    await checkShortcut(projectLink, 'Folder Drive', folderUrl + '&test=1');
+    await page.context().route(folderUrl + '&test=1', route => route.fulfill({ body: 'Drive fixture' }));
+    const popupReady = page.waitForEvent('popup');
+    await projectLink.click();
+    const popup = await popupReady;
+    await popup.waitForURL(folderUrl + '&test=1');
+    assert.equal(await popup.evaluate(() => window.opener), null);
+    await popup.close();
+
+    await page.goto(overview);
+    const card = page.locator('#pintasan-drive');
+    await checkShortcut(card.getByRole('link', { name: /Folder Drive/ }), 'Folder Drive', folderUrl + '&test=1');
+    await card.getByLabel('Edit pintasan Folder Drive').click();
+    const edit = card.locator('details[open] form');
+    await edit.getByLabel('Nama pintasan').fill('Folder Kerja');
+    await edit.getByLabel('Tautan Google Drive').fill(editedUrl);
+    await edit.getByLabel('Kategori').selectOption('akademik');
+    await edit.getByRole('button', { name: 'Simpan pintasan' }).click();
+    await checkShortcut(card.getByRole('link', { name: /Folder Kerja/ }), 'Folder Kerja', editedUrl);
+    assert.equal(db.prepare('SELECT COUNT(*) AS total FROM workroom_drive_shortcuts').get().total, 2);
+
+    await page.setViewportSize({ width: 360, height: 800 });
+    assert.equal(await desktopDrive.isVisible(), false);
+    await page.getByLabel('Lainnya', { exact: true }).click();
+    await page.locator('.workroom-nav-menu').getByRole('link', { name: 'Pintasan Drive' }).click();
+    await page.waitForURL(drivePageUrl);
+    const academic = page.getByRole('region', { name: 'Akademik', exact: true });
+    await checkShortcut(academic.getByRole('link', { name: /Folder Kerja/ }), 'Folder Kerja', editedUrl);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 360);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await academic.getByLabel('Edit pintasan Folder Kerja').click();
+    assert.equal(await academic.locator('form').evaluate(form => getComputedStyle(form).animationName), 'workroom-drive-reveal');
+    const deniedAfterSave = await worker.fetch(new Request(drivePageUrl), env);
+    assert.equal(deniedAfterSave.status, 403);
+    assert.doesNotMatch(await deniedAfterSave.text(), /another-folder|pintasan-drive/);
     assert.deepEqual(errors, []);
+    console.log('Drive shortcuts: desktop and mobile placement, popup, shared edits, and authentication');
     console.log('Authenticated worker and Chromium: all Workroom panels, history, draft protection, mobile menu and persisted themes');
   } finally {
     global.fetch = originalFetch;

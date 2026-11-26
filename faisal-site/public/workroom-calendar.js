@@ -7,6 +7,7 @@ export function mount(panel, signal) {
   const grid = root.querySelector('.days');
   const [previous, next] = root.querySelectorAll('.calendar-heading a');
   const monthHeading = root.querySelector('.calendar-heading h2');
+  const taskDate = root.querySelector('[data-overview-task-date]');
   const dayHeading = root.querySelector('.agenda-heading h2');
   const googleAgenda = root.querySelector('#calendar-google');
   const dueList = root.querySelector('.due-list');
@@ -103,6 +104,7 @@ export function mount(panel, signal) {
     const month = day.slice(0, 7);
     showMonth(day);
     dayHeading.textContent = dateLabel.format(toDate(day));
+    if (taskDate) taskDate.textContent = day === today ? 'Hari ini dan lewat tenggat' : dayHeading.textContent;
     const due = tasks.filter(task => !task.hidden && (day === today ? task.dataset.due <= today : task.dataset.due === day));
     dueList.replaceChildren(...due);
     dueList.hidden = !due.length;

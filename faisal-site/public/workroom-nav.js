@@ -27,6 +27,7 @@
     ['/workroom/projects/', 'project'],
     ['/workroom/goals/', 'goal'],
     ['/workroom/settings/', 'settings'],
+    ['/workroom/drive/', 'drive'],
     ['/workroom/private-notes/', 'privateNotes'],
     ['/workroom/notes/', 'note'],
     ['/workroom/review/', 'review'],
@@ -55,19 +56,21 @@
     }
   }
 
-  function selectRoute(path) {
+  function markRoute(path, attribute) {
     if (routes.get(path) === 'privateNotes') path = '/workroom/notes/';
     if (routes.get(path) === 'project') path = '/workroom/tasks/';
     const more = sidebar.querySelector('.workroom-nav-more');
-    more?.removeAttribute('data-active');
+    const marker = attribute === 'aria-current' ? 'data-active' : 'data-pending';
+    let inMore = false;
     for (const link of sidebar.querySelectorAll('a[aria-label]')) {
-      if (new URL(link.href).pathname === path) {
-        link.setAttribute('aria-current', 'page');
-        if (more && link.closest('.workroom-nav-menu')) more.setAttribute('data-active', '');
+      if (path && new URL(link.href).pathname === path) {
+        link.setAttribute(attribute, attribute === 'aria-current' ? 'page' : '');
+        if (link.closest('.workroom-nav-menu')) inMore = true;
       } else {
-        link.removeAttribute('aria-current');
+        link.removeAttribute(attribute);
       }
     }
+    more.toggleAttribute(marker, inMore);
   }
 
   const status = document.createElement('p');
@@ -82,14 +85,14 @@
     status.hidden = true;
     panel.inert = false;
     panel.removeAttribute('aria-busy');
-    selectRoute(shownUrl.pathname);
+    markRoute(null, 'data-pending');
   }
 
   async function navigate(url, push) {
     clearPending();
     const request = new AbortController();
     pending = request;
-    selectRoute(url.pathname);
+    markRoute(url.pathname, 'data-pending');
     panel.inert = true;
     panel.setAttribute('aria-busy', 'true');
     const timer = setTimeout(() => {
@@ -103,15 +106,18 @@
       }
       const next = new DOMParser().parseFromString(await response.text(), 'text/html');
       const nextPanel = next.querySelector('main[data-workroom-panel]');
-      if (nextPanel?.dataset.workroomPanel !== routes.get(url.pathname) || !next.querySelector('.workroom-nav')) {
+      const nextSidebar = next.querySelector('.workroom-nav');
+      if (nextPanel?.dataset.workroomPanel !== routes.get(url.pathname) || !nextSidebar) {
         throw new Error('Workroom panel unavailable');
       }
       const modules = await loadModules(next, request.signal);
       if (request.signal.aborted) return;
       nextPanel.querySelectorAll('noscript').forEach(element => element.remove());
       const replacement = document.importNode(nextPanel, true);
+      replacement.classList.add('workroom-panel-enter');
       if (push) history.pushState(null, '', url);
       shownUrl = url;
+      markRoute(url.pathname, 'aria-current');
       lifecycle.abort();
       lifecycle = new AbortController();
       panel.replaceWith(replacement);
