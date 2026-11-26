@@ -324,8 +324,12 @@ module.exports = async function checkWorkroom(browser, origin) {
     }
     const legacy = page.getByRole('region', { name: 'Lainnya', exact: true });
     await legacy.getByRole('link', { name: /Pintasan lama/ }).waitFor();
+    const index = page.getByRole('navigation', { name: 'Kategori pintasan' });
+    await index.getByRole('link', { name: /Tugas Akhir/ }).click();
+    await page.waitForURL(drivePageUrl + '#drive-tugas-akhir');
     await page.getByText('Tambah pintasan', { exact: true }).click();
-    const add = page.locator('#pintasan-drive > .collection');
+    const add = page.locator('.workroom-drive-toolbar');
+    assert.equal(await add.locator('form').evaluate(form => getComputedStyle(form).animationName), 'none');
     await add.getByLabel('Nama pintasan').fill('Folder Drive');
     await add.getByLabel('Tautan Google Drive').fill(folderUrl + '&test=1');
     await add.getByLabel('Kategori').selectOption('proyek');
@@ -370,6 +374,9 @@ module.exports = async function checkWorkroom(browser, origin) {
     const academic = page.getByRole('region', { name: 'Akademik', exact: true });
     await checkShortcut(academic.getByRole('link', { name: /Folder Kerja/ }), 'Folder Kerja', editedUrl);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 360);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await academic.getByLabel('Edit pintasan Folder Kerja').click();
+    assert.equal(await academic.locator('form').evaluate(form => getComputedStyle(form).animationName), 'workroom-drive-reveal');
     const deniedAfterSave = await worker.fetch(new Request(drivePageUrl), env);
     assert.equal(deniedAfterSave.status, 403);
     assert.doesNotMatch(await deniedAfterSave.text(), /another-folder|pintasan-drive/);
