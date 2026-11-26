@@ -1161,6 +1161,7 @@ async function renderWorkroom(db, page, url, env, renderPage, driveShortcuts = [
         </form>
       </header>
       <section class="overview-greeting" aria-labelledby="overview-greeting-title">
+        <svg class="today-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.5v19M2.5 12h19M5.3 5.3l13.4 13.4M18.7 5.3 5.3 18.7"/></svg>
         <time datetime="${today}">${e(dateLabel)} · WITA</time>
         <h2 id="overview-greeting-title" data-workroom-greeting data-morning="${greetings.morning}" data-afternoon="${greetings.afternoon}" data-night="${greetings.night}">${greetings[period]}</h2>
       </section>
@@ -1181,6 +1182,14 @@ async function renderWorkroom(db, page, url, env, renderPage, driveShortcuts = [
           <p class="agenda-empty"${due.length ? ' hidden' : ''}>Tidak ada tugas jatuh tempo.</p>
         </section>
         ${studySchedule}
+        <section class="collection overview-exams" id="ujian-terdekat" aria-labelledby="workroom-exams-title"
+          ${exams === null ? 'data-workroom-deferred data-lazy data-url="/workroom/?exams=data" data-retry="/workroom/?view=overview&amp;exams=full#ujian-terdekat"' : ''}>
+          <div class="workroom-study-heading"><h2 id="workroom-exams-title">Ujian terdekat</h2><small>Google Calendar · 30 hari</small></div>
+          <div data-deferred-content>${exams ?? ''}</div>
+          ${exams === null ? `<p data-deferred-status role="status">Memuat jadwal ujian…</p>
+          <noscript><p><a href="${workroomOverviewUrl}&amp;exams=full#ujian-terdekat">Muat jadwal ujian</a></p></noscript>
+          <script type="application/workroom-module" data-src="/workroom-review.js"></script>` : ''}
+        </section>
         <section class="collection overview-calendar" aria-labelledby="overview-calendar-title">
           <h2 id="overview-calendar-title">Kalender</h2>
           ${workroomCalendar(day, tasks, today, google.entries, fullCalendar)}
@@ -1199,14 +1208,6 @@ async function renderWorkroom(db, page, url, env, renderPage, driveShortcuts = [
             return `<li><a href="${workroomEntryLink(note)}"><strong>${e(note.title)}</strong>${preview ? '<small>' + e(preview) + '</small>' : ''}</a></li>`;
           }).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
           <a href="${workroomPages.note.path}">Semua catatan</a>
-        </section>
-        <section class="collection overview-exams" id="ujian-terdekat" aria-labelledby="workroom-exams-title"
-          ${exams === null ? 'data-workroom-deferred data-lazy data-url="/workroom/?exams=data" data-retry="/workroom/?view=overview&amp;exams=full#ujian-terdekat"' : ''}>
-          <div class="workroom-study-heading"><h2 id="workroom-exams-title">Ujian terdekat</h2><small>Google Calendar · 30 hari</small></div>
-          <div data-deferred-content>${exams ?? ''}</div>
-          ${exams === null ? `<p data-deferred-status role="status">Memuat jadwal ujian…</p>
-          <noscript><p><a href="${workroomOverviewUrl}&amp;exams=full#ujian-terdekat">Muat jadwal ujian</a></p></noscript>
-          <script type="application/workroom-module" data-src="/workroom-review.js"></script>` : ''}
         </section>
         ${renderWorkroomDriveShortcuts(driveShortcuts, url)}
       </div>
@@ -1572,9 +1573,9 @@ async function handleWorkroom(request, env, url) {
       <fieldset class="collection workroom-themes">
         <legend>Tema aplikasi</legend>
         <div class="workroom-theme-grid">
-          ${[['midnight', 'Midnight'], ['blue', 'Biru'], ['light', 'Terang']].map(([theme, title]) => `
+          ${[['graphite', 'Grafit'], ['midnight', 'Midnight'], ['blue', 'Biru'], ['light', 'Terang']].map(([theme, title]) => `
             <label class="workroom-theme-option" data-preview="${theme}">
-              <input type="radio" name="workroom-theme" value="${theme}"${theme === 'blue' ? ' checked' : ''}>
+              <input type="radio" name="workroom-theme" value="${theme}"${theme === 'graphite' ? ' checked' : ''}>
               <span class="workroom-theme-swatch" aria-hidden="true"></span>
               <span>${title}</span>
             </label>`).join('')}
