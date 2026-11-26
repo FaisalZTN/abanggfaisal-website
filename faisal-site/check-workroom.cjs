@@ -7,7 +7,7 @@ module.exports = async function checkWorkroom(browser, origin) {
   db.exec('CREATE TABLE workroom_drive_shortcuts (id INTEGER PRIMARY KEY, title TEXT NOT NULL, href TEXT NOT NULL)');
   db.prepare('INSERT INTO workroom_drive_shortcuts (title, href) VALUES (?, ?)').run('Pintasan lama', folderUrl);
   const adapt = (sql, values = []) => ({
-    bind: (...args) => adapt(sql,args),
+    bind: (...args) => adapt(sql, args.map(value => value instanceof ArrayBuffer ? new Uint8Array(value) : value)),
     run: async () => {
       const { changes, lastInsertRowid } = db.prepare(sql).run(...values);
       return { meta: { changes: Number(changes), last_row_id: Number(lastInsertRowid) } };
@@ -163,7 +163,11 @@ module.exports = async function checkWorkroom(browser, origin) {
       const crop = page.getByRole('dialog', { name: 'Siapkan gambar' });
       await crop.getByLabel('Kiri (%)').fill('25');
       await crop.getByLabel('Posisi gambar').selectOption(layout);
+      const uploaded = page.waitForResponse(response => response.url() === origin + '/workroom/images/' &&
+        response.request().method() === 'POST');
       await crop.getByRole('button', { name: 'Sisipkan gambar' }).click();
+      const result = await uploaded;
+      assert.equal(result.status(), 201, await result.text());
     }
     const editor = page.getByRole('textbox', { name: 'Isi catatan', exact: true });
     await editor.click();
