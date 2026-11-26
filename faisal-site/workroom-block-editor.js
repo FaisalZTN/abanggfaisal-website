@@ -65,8 +65,19 @@ const blocks = [
   ['Tabel', 'table', chain => chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true })],
 ];
 
-const allowedImage = src => typeof src === 'string' && /^https:\/\/[^\s]+$/i.test(src);
+const allowedImage = src => typeof src === 'string' && (/^https:\/\/[^\s]+$/i.test(src) || /^\/workroom\/images\/[a-f0-9]{64}$/.test(src));
 const SafeImage = Image.extend({
+  addAttributes() {
+    const layouts = ['left', 'right', 'behind', 'front'];
+    return {
+      ...this.parent?.(),
+      layout: {
+        default: 'inline',
+        parseHTML: element => layouts.includes(element.dataset.imageLayout) ? element.dataset.imageLayout : 'inline',
+        renderHTML: ({ layout }) => layouts.includes(layout) ? { 'data-image-layout': layout } : {},
+      },
+    };
+  },
   parseHTML() {
     return [{ tag: 'img[src]', getAttrs: el => allowedImage(el.getAttribute('src')) ? null : false }];
   },
@@ -140,7 +151,7 @@ export function mountNotePreview(root, content) {
   });
 }
 
-export function mountBlockEditor(root, content, onChange, onSelection, label = 'Isi catatan') {
+export function mountBlockEditor(root, content, onChange, onSelection, label, requestImageUrl) {
   const popup = document.createElement('div');
   popup.className = 'note-block-menu';
   popup.setAttribute('role', 'listbox');
@@ -165,18 +176,23 @@ export function mountBlockEditor(root, content, onChange, onSelection, label = '
 
   function choose(block) {
     const command = match;
-    const url = block[0] === 'Gambar' ? prompt('URL gambar (HTTPS)')?.trim() : undefined;
-    if (block[0] === 'Gambar' && !allowedImage(url)) return close();
+    const { doc, selection } = editor.state;
     close();
-    const chain = editor.chain().focus();
-    if (command) {
-      chain.deleteRange({ from: command.from, to: command.to });
-      if (command.insertAfter) {
-        const pos = command.insertAfter - (command.to - command.from);
-        chain.insertContentAt(pos, { type: 'paragraph' }).setTextSelection(pos + 1);
+    const insert = url => {
+      if (editor.isDestroyed || !editor.isEditable || editor.state.doc !== doc) return;
+      const chain = editor.chain().focus();
+      if (url) chain.setTextSelection({ from: selection.from, to: selection.to });
+      if (command) {
+        chain.deleteRange({ from: command.from, to: command.to });
+        if (command.insertAfter) {
+          const pos = command.insertAfter - (command.to - command.from);
+          chain.insertContentAt(pos, { type: 'paragraph' }).setTextSelection(pos + 1);
+        }
       }
-    }
-    block[2](chain, url).run();
+      block[2](chain, url).run();
+    };
+    if (block[0] === 'Gambar') requestImageUrl(insert);
+    else insert();
   }
 
   function draw(reset = false) {
@@ -265,9 +281,9 @@ export function mountBlockEditor(root, content, onChange, onSelection, label = '
     editor,
     whatsappText() { return clipboardText(editor.getJSON().content ?? [], true); },
     showBlocks() { manual = true; editor.commands.focus(); draw(true); },
-    image(url) {
+    image(url, layout) {
       if (!allowedImage(url)) return false;
-      return editor.chain().focus().setImage({ src: url, alt: 'Gambar' }).run();
+      return editor.chain().focus().setImage({ src: url, alt: 'Gambar', layout }).run();
     },
     destroy() {
       document.removeEventListener('pointerdown', dismiss);

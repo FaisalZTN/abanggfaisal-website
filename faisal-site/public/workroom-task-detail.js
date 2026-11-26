@@ -49,6 +49,16 @@ export function mount(panel, signal) {
   }
 
   function imagePreview(url, label) {
+    const source = new URL(url);
+    if (source.origin === location.origin && /^\/workroom\/images\/[a-f0-9]{64}$/.test(source.pathname) &&
+        /^#layout=(left|right|front|behind)$/.test(source.hash)) {
+      const image = document.createElement('img');
+      image.alt = label || 'Gambar tugas';
+      image.dataset.imageLayout = source.hash.slice('#layout='.length);
+      source.hash = '';
+      image.src = source.href;
+      return image;
+    }
     const item = document.createElement('div');
     item.className = 'task-detail-image';
     const show = document.createElement('button');
@@ -162,13 +172,14 @@ export function mount(panel, signal) {
 
     function render() {
       const text = field.value;
-      const tokens = /!\[([^\]\r\n]*)\]\((https:\/\/[^\s)]+)\)|https?:\/\/[^\s<>"'\u0060]+/gi;
+      const tokens = /!\[([^\]\r\n]*)\]\(((?:https:\/\/[^\s)]+|\/workroom\/images\/[a-f0-9]{64}(?:#layout=(?:left|right|front|behind))?))\)|https?:\/\/[^\s<>"'\u0060]+/gi;
       const nodes = [];
       let offset = 0;
       for (const match of text.matchAll(tokens)) {
         const isImage = match[2] !== undefined;
         const value = isImage ? match[2] : trimLink(match[0]);
-        const url = webUrl(value, isImage);
+        const url = isImage && value.startsWith('/workroom/images/')
+          ? new URL(value, location.origin).href : webUrl(value, isImage);
         if (!url) continue;
         nodes.push(text.slice(offset, match.index));
         nodes.push(isImage ? imagePreview(url, match[1]) : linkPreview(url, value));
@@ -217,7 +228,9 @@ export function mount(panel, signal) {
     tools.querySelector('.task-image-add').onclick = insertImage;
     field.addEventListener('workroom-image', event => {
       const cursor = field.selectionEnd;
-      const insert = '\n![](' + event.detail + ')\n';
+      const { url, layout } = event.detail;
+      const placement = layout === 'inline' ? '' : '#layout=' + layout;
+      const insert = '\n![](' + url + placement + ')\n';
       if (field.value.length + insert.length <= field.maxLength) {
         field.setRangeText(insert, cursor, cursor, 'end');
         field.dispatchEvent(new Event('input', { bubbles: true }));

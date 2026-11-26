@@ -80,7 +80,7 @@ export function mount(panel, signal) {
       el('note-split-title').textContent = target.title || 'Catatan baru';
       splitPreview = mountBlockEditor(el('note-split-body'), readBlockNote(target.body) ?? legacyContent(target.body),
         document => updateNoteBody(target, document, 'right'),
-        attrs => { if (toolbarSide === 'right') syncLayout(attrs); }, 'Isi catatan panel kanan');
+        attrs => { if (toolbarSide === 'right') syncLayout(attrs); }, 'Isi catatan panel kanan', requestImageUrl);
     }
     applyPaneModes();
   }
@@ -140,21 +140,102 @@ export function mount(panel, signal) {
     }
   }
 
+  const urlDialog = document.createElement('dialog');
+  urlDialog.className = 'workroom-url-dialog';
+  urlDialog.setAttribute('aria-labelledby', 'workroom-url-title');
+  urlDialog.innerHTML = `<form novalidate>
+    <div class="workroom-url-heading">${noteActionIcon('link')}<h2 id="workroom-url-title"></h2></div>
+    <label>Alamat URL<input name="url" type="url" inputmode="url" autocomplete="off" autocapitalize="off"
+      spellcheck="false" placeholder="https://…" required autofocus aria-describedby="workroom-url-error"></label>
+    <p id="workroom-url-error" role="alert" hidden>Masukkan URL lengkap yang diawali https://.</p>
+    <div class="workroom-url-actions">
+      <button type="button" data-remove-link hidden>Hapus tautan</button>
+      <button type="button" data-cancel-url>Batal</button>
+      <button type="submit"></button>
+    </div>
+  </form>`;
+  panel.append(urlDialog);
+  const urlInput = urlDialog.querySelector('input');
+  const urlError = urlDialog.querySelector('[role="alert"]');
+  const removeLink = urlDialog.querySelector('[data-remove-link]');
+  let urlAction;
+  let removeAction;
+
+  function clearUrlError() {
+    urlInput.removeAttribute('aria-invalid');
+    urlError.hidden = true;
+  }
+
+  function openUrlDialog({ title, button, value = '', apply, remove }) {
+    if (urlDialog.open) return;
+    urlDialog.querySelector('h2').textContent = title;
+    urlDialog.querySelector('[type="submit"]').textContent = button;
+    urlInput.value = value;
+    clearUrlError();
+    urlAction = apply;
+    removeAction = remove;
+    removeLink.hidden = !remove;
+    urlDialog.showModal();
+    urlInput.select();
+  }
+
+  listen(urlDialog, 'submit', event => {
+    event.preventDefault();
+    const href = urlInput.value.trim();
+    if (!/^https:\/\/[^\s]+$/i.test(href) || !URL.canParse(href) || new URL(href).protocol !== 'https:') {
+      urlInput.setAttribute('aria-invalid', 'true');
+      urlError.hidden = false;
+      urlInput.focus();
+      return;
+    }
+    const apply = urlAction;
+    urlDialog.close();
+    apply(href);
+  });
+  listen(urlInput, 'input', clearUrlError);
+  listen(urlDialog.querySelector('[data-cancel-url]'), 'click', () => urlDialog.close());
+  listen(removeLink, 'click', () => {
+    const remove = removeAction;
+    urlDialog.close();
+    remove();
+  });
+  listen(urlDialog, 'close', () => {
+    if (urlDialog.open) return;
+    urlAction = removeAction = undefined;
+    urlInput.value = '';
+  });
+
+  function requestImageUrl(apply) {
+    openUrlDialog({ title: 'Sisipkan gambar dari URL', button: 'Sisipkan gambar', apply });
+  }
+
   function editFormat(mark) {
-    const blockEditor = formatEditor();
-    if (!blockEditor?.editor.isEditable) return;
-    if (mark === 'blocks') return blockEditor.showBlocks();
-    const chain = blockEditor.editor.chain().focus();
+    const target = formatEditor();
+    if (!target?.editor.isEditable) return;
+    if (mark === 'blocks') return target.showBlocks();
+    const { editor } = target;
     const commands = { bold: 'toggleBold', italic: 'toggleItalic', underline: 'toggleUnderline',
       sup: 'toggleSuperscript', sub: 'toggleSubscript' };
-    if (Object.hasOwn(commands, mark)) return chain[commands[mark]]().run();
-    const href = prompt('URL tautan (HTTPS)')?.trim();
-    if (!href || !/^https:\/\/[^\s]+$/i.test(href)) return;
-    if (blockEditor.editor.state.selection.empty) {
-      chain.insertContent({ type: 'text', text: href, marks: [{ type: 'link', attrs: { href } }] }).run();
-    } else {
-      chain.setLink({ href }).run();
-    }
+    if (Object.hasOwn(commands, mark)) return editor.chain().focus()[commands[mark]]().run();
+    if (mark !== 'link') return;
+
+    const { selection, doc } = editor.state;
+    const currentHref = editor.getAttributes('link').href;
+    const changeLink = href => {
+      if (editor.isDestroyed || !editor.isEditable || editor.state.doc !== doc) return;
+      const chain = editor.chain().focus().setTextSelection({ from: selection.from, to: selection.to });
+      if (currentHref && selection.empty) chain.extendMarkRange('link');
+      if (!href) chain.unsetLink().run();
+      else if (currentHref || !selection.empty) chain.setLink({ href }).run();
+      else chain.insertContent({ type: 'text', text: href, marks: [{ type: 'link', attrs: { href } }] }).run();
+    };
+    openUrlDialog({
+      title: currentHref ? 'Edit tautan' : 'Sisipkan tautan',
+      button: currentHref ? 'Simpan tautan' : 'Sisipkan tautan',
+      value: currentHref,
+      apply: changeLink,
+      remove: currentHref ? () => changeLink() : undefined,
+    });
   }
 
   let noteCategory='all', noteQuery='', noteEditing=false, activeNote;
@@ -253,6 +334,7 @@ export function mount(panel, signal) {
       <span class="note-row-head"><span class="note-row-title">${note.pinned ? noteActionIcon('pin', 'Catatan dipin') : ''}<strong>${escape(note.title)}</strong></span>${noteTime(note) ? `<time title="${noteTime(note)} WITA">${noteTime(note).slice(-5)}</time>` : ''}</span><small>${escape(notePreview(note.body) || 'Catatan kosong')}</small><small class="note-tag">${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
   }
   function renderNotes(notes) {
+    if (urlDialog.open) urlDialog.close();
     const note = notes.find(item => item.id === activeNote) || notes[0];
     activeNote = note?.id;
     const options = Object.entries(noteCategories).filter(([key]) => key !== 'all');
@@ -303,7 +385,7 @@ export function mount(panel, signal) {
           <div class="note-title-row"><div class="note-title-field" data-title="${escape(note.title)}"><textarea id="edit-title" rows="1" placeholder="Catatan baru" aria-label="Judul catatan" maxlength="160">${escape(note.title)}</textarea></div>
           <button type="button" class="note-screen-button" data-note-fullscreen aria-label="Layar penuh" title="Layar penuh"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button></div>
           <div class="note-toolbar" role="group" aria-label="Format catatan">${toolbar.map(([mark, label, icon]) =>
-            `<button data-mark="${mark}" aria-label="${label}" title="${label}">${noteActionIcon(icon)}</button>`).join('')}
+            `<button type="button" data-mark="${mark}"${mark === 'link' ? ' aria-haspopup="dialog"' : ''} aria-label="${label}" title="${label}">${noteActionIcon(icon)}</button>`).join('')}
             <label class="note-icon-field" title="Palet warna">
               <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
                 <path d="M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1.5-3.3 1.4 1.4 0 0 1 1.1-2.3H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3Z"/>
@@ -337,7 +419,7 @@ export function mount(panel, signal) {
     if (note) {
       blockEditor = mountBlockEditor(el('edit-body'), readBlockNote(note.body) ?? legacyContent(note.body),
         document => updateNoteBody(note, document, 'left'),
-        attrs => { if (toolbarSide === 'left') syncLayout(attrs); });
+        attrs => { if (toolbarSide === 'left') syncLayout(attrs); }, 'Isi catatan', requestImageUrl);
       for (const menu of panel.querySelectorAll('.note-layout-popover')) {
         menu.addEventListener('beforetoggle', event => {
           if (event.newState !== 'open') return;
@@ -596,7 +678,9 @@ export function mount(panel, signal) {
     if (event.target.closest('.note-toolbar [data-mark]')) event.preventDefault();
   });
   listen(document, 'workroom-image', event => {
-    if (event.target === el('edit-body') && !busy && formatEditor()?.editor.isEditable && formatEditor().image(event.detail)) event.preventDefault();
+    const target = event.target === el('edit-body') ? blockEditor
+      : event.target === el('note-split-body') ? splitPreview : null;
+    if (!busy && target?.editor.isEditable && target.image(event.detail.url, event.detail.layout)) event.preventDefault();
   });
   listen(window, 'beforeunload',event=>{if(dirty.size){event.preventDefault();event.returnValue='';}});
   const bootstrap = el('workroom-notes-data');
@@ -612,6 +696,6 @@ export function mount(panel, signal) {
     render();
   }).catch(error=>{el('view').textContent=error.message;}).finally(()=>el('view').removeAttribute('aria-busy'));
 
-  signal.addEventListener('abort', () => { clearTimeout(saveTimer); splitPreview?.destroy(); blockEditor?.destroy(); }, { once: true });
+  signal.addEventListener('abort', () => { if (urlDialog.open) urlDialog.close(); clearTimeout(saveTimer); splitPreview?.destroy(); blockEditor?.destroy(); }, { once: true });
   return () => busy || saving ? "busy" : dirty.size > 0;
 }
