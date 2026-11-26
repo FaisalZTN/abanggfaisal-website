@@ -339,14 +339,11 @@ async function workroomUpcomingExams(env, today) {
     partial: 'Sebagian kalender belum bisa dimuat.',
     connected: exams.length ? '' : 'Tidak ada jadwal ujian yang cocok dalam 30 hari ke depan.',
   };
-  return `<section class="collection workroom-study-schedule" aria-labelledby="workroom-exams-title">
-    <div class="workroom-study-heading"><h2 id="workroom-exams-title">Ujian terdekat</h2><small>Google Calendar · 30 hari</small></div>
-    ${messages[calendar.status] ? '<p>' + messages[calendar.status] + '</p>' : ''}
+  return `${messages[calendar.status] ? '<p>' + messages[calendar.status] + '</p>' : ''}
     ${exams.length ? '<ul class="workroom-study-sessions">' + exams.map(exam => `<li>
       <strong>${e(exam.title)}</strong>
       <small><time datetime="${e(exam.day)}">${e(dateLabel.format(new Date(exam.day + 'T12:00:00Z')))}</time> · ${e(exam.time)}</small>
-    </li>`).join('') + '</ul>' : ''}
-  </section>`;
+    </li>`).join('') + '</ul>' : ''}`;
 }
 
 function googleAgenda(calendar, day) {
@@ -383,7 +380,7 @@ function workroomDueTask(entry, today, action = WORKROOM) {
   return `<li data-agenda-task data-status="${escapeWorkroom(entry.status)}" data-due="${escapeWorkroom(entry.due)}"><form method="post" action="${action}">
     <input type="hidden" name="kind" value="task"><input type="hidden" name="id" value="${entry.id}">
     <button name="action" value="complete" class="task-checkbox" role="checkbox" aria-checked="false" aria-label="Tandai selesai: ${title}">${taskCheckboxIcons()}</button><button type="button" class="task-checkbox" role="checkbox" aria-checked="true" aria-label="Urungkan penyelesaian: ${title}" title="Urungkan" data-agenda-undo hidden>${taskCheckboxIcons()}</button>
-    </form><div><a href="${workroomEntryLink(entry)}">${title}</a><small>${entry.due < today ? 'Lewat tenggat · ' : ''}${escapeWorkroom(entry.due)}</small><small data-agenda-feedback role="status"></small></div></li>`;
+    </form><div><a href="${workroomEntryLink(entry)}">${title}</a>${entry.priority === 'high' ? '<span class="overview-priority">Prioritas tinggi</span>' : ''}<small>${entry.due < today ? 'Lewat tenggat · ' : ''}${escapeWorkroom(entry.due)}</small><small data-agenda-feedback role="status"></small></div></li>`;
 }
 
 function workroomCalendar(day, tasks, today, google, fullCalendar) {
@@ -998,7 +995,7 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
   let entries, counts;
   if (page === 'home') {
     const [tasks, notes, totals] = await db.batch([
-      db.prepare("SELECT id, kind, title, status, due FROM workroom_entries WHERE kind = 'task' AND status <> 'done' AND due <> '' ORDER BY id DESC"),
+      db.prepare("SELECT id, kind, title, status, due, priority FROM workroom_entries WHERE kind = 'task' AND status <> 'done' AND due <> '' ORDER BY id DESC"),
       db.prepare("SELECT id, kind, title, body FROM workroom_entries WHERE kind = 'note' AND status <> 'trashed' ORDER BY id DESC LIMIT 3"),
       db.prepare(`SELECT
         COUNT(CASE WHEN kind = 'task' AND status <> 'done' THEN 1 END) AS tasks,
@@ -1065,10 +1062,11 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
   const day = validWorkroomDay(selectedDay) ? selectedDay : today;
   const showGoogle = googleConfigured(env);
   const fullCalendar = params.get('calendar') === 'full';
+  const fullExams = params.get('exams') === 'full';
   const [google, studySchedule, exams] = await Promise.all([
     fullCalendar ? googleMonth(env, day) : { entries: new Map(), status: 'disabled' },
     workroomStudySchedule(env, url, today),
-    workroomUpcomingExams(env, today),
+    fullExams || !showGoogle ? workroomUpcomingExams(env, today) : null,
   ]);
   const tasks = entries.filter(entry => entry.kind === 'task' && entry.status !== 'done' && entry.due)
     .sort((a, b) => a.due.localeCompare(b.due));
@@ -1079,55 +1077,50 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: workroomTimeZone, hour: '2-digit', hourCycle: 'h23' }).format(now));
   const greetings = { morning: 'Good morning, Faisal!', afternoon: 'Good afternoon, Faisal!', night: 'Good night, Faisal!' };
   const period = hour < 6 || hour >= 18 ? 'night' : hour < 12 ? 'morning' : 'afternoon';
-  return workroomPage(`<div class="dashboard-content">
-      <div class="workroom-hero">
-        <img src="/workroom-hero.webp" width="1600" height="870" alt="" fetchpriority="high">
-        <h1>Workroom</h1>
-      </div>
+  return workroomPage(`<div class="dashboard-content overview-shell">
       ${notice}
-      ${studySchedule}
-      ${exams}
-      <div class="overview">
-        <section class="today-panel" id="hari-ini">
-          <div class="today-heading"><div>
-            <p>${e(dateLabel)} · WITA</p>
-            <h2 data-workroom-greeting data-morning="${greetings.morning}" data-afternoon="${greetings.afternoon}" data-night="${greetings.night}">${greetings[period]}</h2>
-            <p class="workroom-greeting-copy">Sudah siap ngopi, nugas, dan belajar?</p>
-          </div></div>
-          <script type="application/workroom-module" data-src="/workroom-greeting.js"></script>
-          <form class="capture" method="post" action="${WORKROOM}">
-            <input type="hidden" name="action" value="save"><input type="hidden" name="priority" value="normal">
-            <select aria-label="Jenis entri" name="kind"><option value="task">Tugas</option><option value="note">Catatan</option></select>
-            <input name="title" aria-label="Judul entri baru" placeholder="Apa yang ingin kamu catat?" required maxlength="160">
-            <button>Simpan</button>
-          </form>
-        </section>
+      <header class="overview-header">
+        <h1>Ringkasan</h1>
+        <form class="capture" method="post" action="${WORKROOM}" aria-label="Catat cepat">
+          <input type="hidden" name="action" value="save"><input type="hidden" name="priority" value="normal">
+          <select aria-label="Jenis entri" name="kind"><option value="task">Tugas</option><option value="note">Catatan</option></select>
+          <input name="title" aria-label="Judul entri baru" placeholder="Apa yang ingin kamu catat?" required maxlength="160">
+          <button type="submit">Catat</button>
+        </form>
+      </header>
+      <section class="overview-greeting" aria-labelledby="overview-greeting-title">
+        <time datetime="${today}">${e(dateLabel)} · WITA</time>
+        <h2 id="overview-greeting-title" data-workroom-greeting data-morning="${greetings.morning}" data-afternoon="${greetings.afternoon}" data-night="${greetings.night}">${greetings[period]}</h2>
+      </section>
+      <script type="application/workroom-module" data-src="/workroom-greeting.js"></script>
+      <div class="overview calendar-agenda" id="agenda" data-day="${day}" data-today="${today}" data-google="${showGoogle}"${fullCalendar ? ' data-calendar-full' : ''}>
         <div class="dashboard-stats">
-          <a href="${workroomPages.task.path}">Tugas terbuka<strong>${counts.tasks}</strong></a>
+          <a href="${workroomPages.task.path}">Tugas terbuka<strong data-overview-open-count>${counts.tasks}</strong></a>
           <a href="${workroomPages.project.path}">Proyek aktif<strong>${counts.projects}</strong></a>
           <a href="${workroomPages.note.path}">Catatan<strong>${counts.notes}</strong></a>
           <a href="${workroomPages.goal.path}">Goals aktif<strong>${counts.goals}</strong></a>
         </div>
-        ${await workroomDriveShortcuts(db, null, url)}
-        <div class="collection calendar-agenda" id="agenda" data-day="${day}" data-today="${today}" data-google="${showGoogle}"${fullCalendar ? ' data-calendar-full' : ''}>
+        <section class="collection overview-tasks agenda-tasks" aria-labelledby="overview-task-heading">
+          <div class="overview-card-heading">
+            <div><h2 id="overview-task-heading">Tugas</h2><p data-overview-task-date>${day === today ? 'Hari ini dan lewat tenggat' : e(reviewDateLabel(day))}</p></div>
+            <a class="overview-icon-link" href="${workroomPages.task.path}?add=task#add-task" aria-label="Tambah tugas" title="Tambah tugas">${workroomIcon('plus')}</a>
+          </div>
+          <ul class="due-list"${due.length ? '' : ' hidden'}>${due.map(entry => workroomDueTask(entry, today)).join('')}</ul>
+          <p class="agenda-empty"${due.length ? ' hidden' : ''}>Tidak ada tugas jatuh tempo.</p>
+        </section>
+        ${studySchedule}
+        <section class="collection overview-calendar" aria-labelledby="overview-calendar-title">
+          <h2 id="overview-calendar-title">Kalender</h2>
           ${workroomCalendar(day, tasks, today, google.entries, fullCalendar)}
           <template id="calendar-tasks">${tasks.filter(entry => !isDue(entry)).map(entry => workroomDueTask(entry, today)).join('')}</template>
           <script type="application/workroom-module" data-src="/workroom-calendar.js"></script>
           <section class="agenda" aria-label="Agenda tanggal terpilih">
-            <div class="agenda-heading">
-              <h2>${new Date(day + 'T12:00:00Z').toLocaleDateString('id-ID', {day:'numeric', month:'long', timeZone:'UTC'})}</h2>
-            </div>
+            <div class="agenda-heading"><h2>${e(reviewDateLabel(day))}</h2></div>
             ${params.get('google') === 'error' ? '<p role="status">Izin Google Calendar belum tersimpan.</p>' : ''}
             <div id="calendar-google" aria-live="polite">${fullCalendar ? googleAgenda(google, day) : ''}</div>
             ${showGoogle && !fullCalendar ? `<noscript><p><a href="${WORKROOM}?day=${day}&amp;calendar=full#agenda">Muat Google Calendar</a></p></noscript>` : ''}
-            <div class="agenda-tasks">
-              <h3>Tugas</h3>
-              <ul class="due-list"${due.length ? '' : ' hidden'}>${due.map(entry => workroomDueTask(entry, today)).join('')}</ul>
-              <p class="agenda-empty"${due.length ? ' hidden' : ''}>Tidak ada tugas jatuh tempo.</p>
-              <a class="quick-add" href="${workroomPages.task.path}?add=task#add-task">${workroomIcon('plus')} Tambah tugas</a>
-            </div>
           </section>
-        </div>
+        </section>
         <section class="collection recent-notes"><h2>Catatan terbaru</h2>
           ${entries.some(entry => entry.kind === 'note') ? '<ul>' + entries.filter(entry => entry.kind === 'note').slice(0,3).map(note => {
             const preview = notePreview(note.body);
@@ -1135,6 +1128,15 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
           }).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
           <a href="${workroomPages.note.path}">Semua catatan</a>
         </section>
+        <section class="collection overview-exams" id="ujian-terdekat" aria-labelledby="workroom-exams-title"
+          ${exams === null ? 'data-workroom-deferred data-lazy data-url="/workroom/?exams=data" data-retry="/workroom/?view=overview&amp;exams=full#ujian-terdekat"' : ''}>
+          <div class="workroom-study-heading"><h2 id="workroom-exams-title">Ujian terdekat</h2><small>Google Calendar · 30 hari</small></div>
+          <div data-deferred-content>${exams ?? ''}</div>
+          ${exams === null ? `<p data-deferred-status role="status">Memuat jadwal ujian…</p>
+          <noscript><p><a href="${workroomOverviewUrl}&amp;exams=full#ujian-terdekat">Muat jadwal ujian</a></p></noscript>
+          <script type="application/workroom-module" data-src="/workroom-review.js"></script>` : ''}
+        </section>
+        ${await workroomDriveShortcuts(db, null, url)}
       </div>
     </div>`, 200, page);
 }
@@ -1510,6 +1512,12 @@ async function handleWorkroom(request, env, url) {
         </div>
       </fieldset>
     </div>`, 200, page);
+  }
+
+  if (page === 'home' && request.method === 'GET' && url.searchParams.get('exams') === 'data') {
+    return Response.json({ html: await workroomUpcomingExams(env, workroomDay.format(new Date())) }, {
+      headers: { ...privateHeaders, 'Content-Type': 'application/json; charset=utf-8' },
+    });
   }
 
   if (page === 'home' && request.method === 'GET' && url.searchParams.has('calendar-data')) {

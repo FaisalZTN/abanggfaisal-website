@@ -31,6 +31,8 @@ export function mount(panel, signal) {
       if (response.status === 409) throw new Error('Status tugas telah berubah. Muat ulang halaman.');
       if (!response.ok || (await response.json()).status !== status) throw new Error();
       feedback.textContent = complete ? 'Tugas selesai.' : 'Tugas dibuka kembali.';
+      const count = main.querySelector('[data-overview-open-count]');
+      if (count) count.textContent = Math.max(0, Number(count.textContent) + (complete ? -1 : 1));
       row.dispatchEvent(new Event('agenda-task-change', { bubbles: true }));
     } catch (error) {
       updateRow(row, !complete);

@@ -143,42 +143,6 @@ h2 { font-size: 1.65rem; }
 
 
 .dashboard-content { min-inline-size: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
-.workroom-hero {
-  position: relative;
-  display: grid;
-  align-items: end;
-  min-height: clamp(10rem, 31vw, 26rem);
-  overflow: hidden;
-  isolation: isolate;
-  border: 1px solid var(--line);
-  border-radius: 1.25rem;
-  background: var(--card);
-}
-.workroom-hero img {
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 56%;
-}
-.workroom-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(0deg, rgb(2 13 47 / .92), transparent 60%);
-}
-.workroom-hero h1 {
-  justify-self: end;
-  padding: clamp(.85rem, 3vw, 2.75rem);
-  font-size: clamp(2.25rem, 7vw, 5.25rem);
-}
-.today-panel { color: var(--ink); background: var(--green); padding: clamp(1rem, 4vw, 2rem); border-radius: 1.25rem; }
-.today-heading { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: .85rem; }
-.today-heading p { margin: 0 0 .45rem; color: var(--muted); font-size: .9rem; }
-.today-heading h2 { font-size: clamp(2.25rem, 6vw, 4rem); letter-spacing: -.045em; }
 .quick-add { display: inline-flex; align-items: center; min-height: 44px; padding: .45rem .9rem; border-radius: 2rem; background: var(--muted); color: var(--paper); font-weight: 650; text-decoration: none; }
 .agenda-empty { margin: 1rem 0 0; color: var(--muted); }
 .due-list { padding: 0; margin: 1rem 0 0; list-style: none; }
@@ -227,26 +191,41 @@ button { justify-self: start; padding: .45rem .95rem; background: var(--green); 
 .fields label { flex: 1 1 9rem; }
 .save-notice { margin: 0; padding: .65rem .85rem; border-radius: .65rem; background: var(--selected); }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
-.today-panel :focus-visible { outline-color: var(--ink); }
-
-.today-panel { background: linear-gradient(115deg, var(--selected), var(--card)); border: 1px solid var(--line); }
-.today-heading h2 { font-size: clamp(2rem, 4vw, 3.25rem); }
-.today-heading .workroom-greeting-copy { margin: .55rem 0 0; }
-.capture { grid-template-columns: auto minmax(0, 1fr) auto; margin-top: 1.25rem; padding: 0; gap: .45rem; }
-.capture button { background: var(--accent); color: var(--paper); font-weight: 650; }
-.dashboard-stats strong { color: var(--accent); }
-.overview {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  grid-template-areas: "capture calendar" "stats calendar" "notes calendar";
-  grid-template-rows: auto auto 1fr;
-  align-items: start;
-  gap: .75rem;
+.overview-header {
+  width: auto; margin: 0; min-height: 0; border: 0; display: grid;
+  grid-template-columns: minmax(0, 1fr); gap: .85rem;
 }
-.overview > .today-panel { grid-area: capture; }
-.overview > .dashboard-stats { grid-area: stats; }
-.overview > .calendar-agenda { grid-area: calendar; }
-.overview > .recent-notes { grid-area: notes; }
+.overview-header h1 { font-size: clamp(1.65rem, 3vw, 2.3rem); font-weight: 720; }
+.overview-header .capture {
+  grid-template-columns: minmax(0, 1fr) auto; margin: 0; padding: 0; gap: .5rem;
+}
+.overview-header .capture input[name="title"] { grid-column: 1 / -1; grid-row: 1; }
+.overview-header .capture button[type="submit"] { background: var(--ink); color: var(--paper); font-weight: 650; }
+.overview-greeting { padding-block: .45rem .8rem; }
+.overview-greeting time { color: var(--muted); font-size: .85rem; }
+.overview-greeting h2 { margin-block-start: .35rem; font-size: clamp(1.65rem, 4vw, 2.85rem); font-weight: 650; letter-spacing: -.035em; }
+.overview {
+  display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: .8rem;
+}
+.overview > .collection { min-width: 0; margin: 0; }
+.overview .collection h2 { font-size: 1.13rem; font-weight: 670; letter-spacing: -.02em; }
+.overview .workroom-study-heading { gap: .3rem .8rem; }
+.overview-card-heading { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+.overview-card-heading h2 { margin: 0; }
+.overview-card-heading p { color: var(--muted); font-size: .83rem; margin: .35rem 0; }
+.overview-icon-link { display: grid; place-items: center; min-width: 44px; min-height: 44px; border-radius: .5rem; }
+.overview-icon-link:is(:hover, :focus-visible) { background: var(--selected); }
+.overview-priority { display: inline-block; margin-inline-start: .4rem; color: var(--accent); font-size: .73rem; font-weight: 650; }
+.overview-calendar > h2 { margin-block-end: .6rem; }
+.overview-calendar .agenda-heading h2 { font-size: .95rem; }
+.overview .recent-notes a { overflow-wrap: anywhere; }
+@media (min-width: 900px) {
+  .overview-header { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: center; }
+  .overview-header .capture { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .overview-header .capture input[name="title"] { grid-column: auto; grid-row: auto; }
+  .overview { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .overview > .dashboard-stats { grid-column: 1 / -1; }
+}
 .calendar-heading { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: .35rem; }
 .calendar-heading h2 {
   justify-self: center;
@@ -289,14 +268,7 @@ button { justify-self: start; padding: .45rem .95rem; background: var(--green); 
 .agenda-tasks { margin-top: 1rem; }
 .agenda-tasks h3 { font-size: .95rem; margin: 0 0 .4rem; }
 @media (max-width: 760px) {
-  .overview {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "capture" "stats" "calendar" "notes";
-    grid-template-rows: auto;
-  }
   .dashboard-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .capture { grid-template-columns: 1fr auto; }
-  .capture input[name="title"] { grid-column: 1 / -1; grid-row: 1; }
 }
 
 .recent-notes ul { list-style: none; padding: 0; }
@@ -484,10 +456,6 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   }
   .workroom-nav-menu a > span { font-size: .875rem; }
 
-  .workroom-hero { min-height: clamp(9rem, 46vw, 15rem); }
-  .workroom-hero img { object-position: 42% 56%; }
-  .today-heading h2 { font-size: clamp(1.65rem, 6.5vw, 2rem); }
-  .capture { margin-top: .85rem; }
   .dashboard-stats { gap: .55rem; }
   .dashboard-stats a { min-height: 4.5rem; font-size: .8rem; }
   .dashboard-stats strong { font-size: 1.4rem; }

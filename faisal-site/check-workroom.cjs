@@ -25,7 +25,13 @@ module.exports = async function checkWorkroom(browser, origin) {
     .map(item=>Buffer.from(JSON.stringify(item)).toString('base64url')).join('.');
   const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5',pair.privateKey,Buffer.from(tokenData));
   const token = tokenData+'.'+Buffer.from(signature).toString('base64url');
-  const env = {WORKROOM_ACCESS_ISSUER:issuer, WORKROOM_ACCESS_AUD:'test',WORKROOM_OWNER_EMAIL:'test@example.com',
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Makassar' }).format(new Date());
+  const tomorrow = new Date(Date.parse(today + 'T12:00:00Z') + 86400000).toISOString().slice(0, 10);
+  const session = title => ({ title, start: '08:00', end: '09:30', location: 'Ruang 1', block: 'Blok Uji', url: '/ruang-belajar/#jadwal-kuliah' });
+  const env = {ASSETS: { fetch: request => {
+      assert.equal(new URL(request.url).pathname, '/study-schedule.json');
+      return Response.json({ [today]: [session('Kuliah hari ini')], [tomorrow]: [session('Kuliah besok')] });
+    } }, WORKROOM_ACCESS_ISSUER:issuer, WORKROOM_ACCESS_AUD:'test',WORKROOM_OWNER_EMAIL:'test@example.com',
     WORKROOM_PRIVATE_NOTES_PASSWORD: 'local-test-password', WORKROOM_PRIVATE_NOTES_KEY: 'a'.repeat(64),
     WORKROOM_DB:{prepare:adapt,batch:async statements=>Promise.all(statements.map(statement => statement.all()))}};
   const page = await browser.newPage();
@@ -222,6 +228,25 @@ module.exports = async function checkWorkroom(browser, origin) {
       await page.locator(`main[data-workroom-panel="${panel}"]`).waitFor();
       assert.equal(await page.evaluate(() => window.testDocument), true);
     }
+    await page.setViewportSize({ width: 360, height: 800 });
+    db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('task', 'Tugas Ringkasan', '', 'active', ?, 'high')").run(today);
+    await page.getByRole('link', { name: 'Ringkasan', exact: true }).first().click();
+    const dashboard = page.locator('.overview-shell');
+    await dashboard.getByRole('heading', { name: 'Ringkasan', exact: true }).waitFor();
+    await dashboard.getByRole('form', { name: 'Catat cepat' }).waitFor();
+    await dashboard.getByRole('link', { name: 'Kuliah hari ini' }).waitFor();
+    await dashboard.getByRole('link', { name: 'Kuliah besok' }).waitFor();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 360);
+    assert.equal(await page.evaluate(() => window.testDocument), true);
+    const count = dashboard.locator('[data-overview-open-count]');
+    const before = Number(await count.textContent());
+    await dashboard.getByRole('checkbox', { name: 'Tandai selesai: Tugas Ringkasan' }).click();
+    await dashboard.getByText('Tugas selesai.', { exact: true }).waitFor();
+    assert.equal(Number(await count.textContent()), before - 1);
+    await dashboard.getByRole('checkbox', { name: 'Urungkan penyelesaian: Tugas Ringkasan' }).click();
+    await dashboard.getByText('Tugas dibuka kembali.', { exact: true }).waitFor();
+    assert.equal(Number(await count.textContent()), before);
+    await page.setViewportSize({ width: 1280, height: 800 });
     const project = db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('project', 'Tugas Akhir', '', 'active', '', 'normal')").run().lastInsertRowid;
     db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority, project_id) VALUES ('task', 'Baca jurnal', '', 'active', '2027-09-30', 'normal', ?), ('task', 'Buat kerangka', '', 'done', '', 'normal', ?)").run(project, project);
     await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
