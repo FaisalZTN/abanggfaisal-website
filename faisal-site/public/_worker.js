@@ -316,6 +316,39 @@ async function googleCalendarRange(env, first, endDate) {
   }
 }
 
+async function workroomUpcomingExams(env, today) {
+  const end = new Date(today + 'T12:00:00Z');
+  end.setUTCDate(end.getUTCDate() + 30);
+  const calendar = await googleCalendarRange(env, today, end.toISOString().slice(0, 10));
+  const e = escapeWorkroom;
+  const unique = new Map();
+  const now = Date.now();
+  for (const [day, events] of calendar.entries) {
+    for (const event of events) {
+      if (event.end <= now || !/\b(?:ujian|cbt|osce|uts|uas|utb|uab|exam|ukmppd|ospe)\b/i.test(event.title)) continue;
+      const key = JSON.stringify([event.title, event.start, event.end]);
+      if (!unique.has(key)) unique.set(key, { ...event, day });
+    }
+  }
+  const exams = [...unique.values()].sort((a, b) => a.start - b.start).slice(0, 5);
+  const dateLabel = new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const messages = {
+    disabled: 'Integrasi Google Calendar belum disiapkan.',
+    disconnected: '<a href="/workroom/?google=connect">Hubungkan Google Calendar</a>',
+    error: 'Jadwal ujian belum bisa dimuat. Coba muat ulang.',
+    partial: 'Sebagian kalender belum bisa dimuat.',
+    connected: exams.length ? '' : 'Tidak ada jadwal ujian yang cocok dalam 30 hari ke depan.',
+  };
+  return `<section class="collection workroom-study-schedule" aria-labelledby="workroom-exams-title">
+    <div class="workroom-study-heading"><h2 id="workroom-exams-title">Ujian terdekat</h2><small>Google Calendar · 30 hari</small></div>
+    ${messages[calendar.status] ? '<p>' + messages[calendar.status] + '</p>' : ''}
+    ${exams.length ? '<ul class="workroom-study-sessions">' + exams.map(exam => `<li>
+      <strong>${e(exam.title)}</strong>
+      <small><time datetime="${e(exam.day)}">${e(dateLabel.format(new Date(exam.day + 'T12:00:00Z')))}</time> · ${e(exam.time)}</small>
+    </li>`).join('') + '</ul>' : ''}
+  </section>`;
+}
+
 function googleAgenda(calendar, day) {
   if (calendar.status === 'disabled') return '';
   const events = calendar.entries.get(day) ?? [];
@@ -1032,9 +1065,10 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
   const day = validWorkroomDay(selectedDay) ? selectedDay : today;
   const showGoogle = googleConfigured(env);
   const fullCalendar = params.get('calendar') === 'full';
-  const [google, studySchedule] = await Promise.all([
+  const [google, studySchedule, exams] = await Promise.all([
     fullCalendar ? googleMonth(env, day) : { entries: new Map(), status: 'disabled' },
     workroomStudySchedule(env, url, today),
+    workroomUpcomingExams(env, today),
   ]);
   const tasks = entries.filter(entry => entry.kind === 'task' && entry.status !== 'done' && entry.due)
     .sort((a, b) => a.due.localeCompare(b.due));
@@ -1052,6 +1086,7 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
       </div>
       ${notice}
       ${studySchedule}
+      ${exams}
       <div class="overview">
         <section class="today-panel" id="hari-ini">
           <div class="today-heading"><div>
