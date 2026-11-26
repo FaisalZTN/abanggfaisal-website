@@ -325,12 +325,12 @@ async function workroomUpcomingExams(env, today) {
   const now = Date.now();
   for (const [day, events] of calendar.entries) {
     for (const event of events) {
-      if (event.end <= now || !/\b(?:ujian|cbt|osce|uts|uas|utb|uab|exam|ukmppd|ospe)\b/i.test(event.title)) continue;
+      if (event.end <= now || !/\b(?:ujian|osce|ub|cbt)\b/i.test(event.title)) continue;
       const key = JSON.stringify([event.title, event.start, event.end]);
       if (!unique.has(key)) unique.set(key, { ...event, day });
     }
   }
-  const exams = [...unique.values()].sort((a, b) => a.start - b.start).slice(0, 5);
+  const exams = [...unique.values()].sort((a, b) => a.start - b.start).slice(0, 3);
   const dateLabel = new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
   const messages = {
     disabled: 'Integrasi Google Calendar belum disiapkan.',
