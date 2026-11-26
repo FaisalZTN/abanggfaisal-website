@@ -27,6 +27,7 @@
     ['/workroom/projects/', 'project'],
     ['/workroom/goals/', 'goal'],
     ['/workroom/settings/', 'settings'],
+    ['/workroom/drive/', 'drive'],
     ['/workroom/private-notes/', 'privateNotes'],
     ['/workroom/notes/', 'note'],
     ['/workroom/review/', 'review'],
@@ -60,7 +61,7 @@
     if (routes.get(path) === 'project') path = '/workroom/tasks/';
     const more = sidebar.querySelector('.workroom-nav-more');
     more?.removeAttribute('data-active');
-    for (const link of sidebar.querySelectorAll('a[aria-label]:not([data-drive-shortcut])')) {
+    for (const link of sidebar.querySelectorAll('a[aria-label]')) {
       if (new URL(link.href).pathname === path) {
         link.setAttribute('aria-current', 'page');
         if (more && link.closest('.workroom-nav-menu')) more.setAttribute('data-active', '');
@@ -115,16 +116,6 @@
       shownUrl = url;
       lifecycle.abort();
       lifecycle = new AbortController();
-      for (const [current, incoming] of [
-        [sidebar, nextSidebar],
-        [sidebar.querySelector('.workroom-nav-menu'), nextSidebar.querySelector('.workroom-nav-menu')],
-      ]) {
-        current.querySelectorAll(':scope > [data-drive-shortcut]').forEach(link => link.remove());
-        const before = current.querySelector(':scope > .workroom-nav-more');
-        for (const link of incoming.querySelectorAll(':scope > [data-drive-shortcut]')) {
-          current.insertBefore(document.importNode(link, true), before);
-        }
-      }
       panel.replaceWith(replacement);
       panel = replacement;
       panel.dispatchEvent(new Event('workroom-panel-change', { bubbles: true }));

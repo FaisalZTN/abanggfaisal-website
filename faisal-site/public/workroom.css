@@ -398,7 +398,13 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-rendered .note-check span { flex:1; min-width:0; }
 
 .workroom-nav-more, .workroom-nav-short { display: none; }
-.workroom-nav [data-drive-shortcut] span { min-width: 0; overflow-wrap: anywhere; }
+.workroom-drive-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  align-items: start;
+  gap: .8rem;
+}
+.workroom-drive-groups > .collection { margin: 0; min-width: 0; }
 
 @media (max-width: 600px) {
   .workroom-layout {

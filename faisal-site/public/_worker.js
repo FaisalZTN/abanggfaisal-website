@@ -17,6 +17,7 @@ const workroomPages = {
   project: { path: WORKROOM + 'projects/', title: 'Proyek', icon: 'folder' },
   goal: { path: WORKROOM + 'goals/', title: 'Goals', icon: 'target' },
   review: { path: WORKROOM + 'review/', title: 'Review', icon: 'book-open' },
+  drive: { path: WORKROOM + 'drive/', title: 'Pintasan Drive', icon: 'folder' },
   settings: { path: WORKROOM + 'settings/', title: 'Pengaturan', icon: 'settings' },
 };
 const privateHeaders = {
@@ -41,15 +42,15 @@ function taskCheckboxIcons() {
   return workroomIcon('square', 'ui-icon check-empty') + workroomIcon('checkbox', 'ui-icon check-marked');
 }
 
-function workroomDriveLink(item, content, attributes = '') {
+function workroomDriveLink(item, content) {
   const title = escapeWorkroom(item.title);
-  return `<a href="${escapeWorkroom(item.href)}" target="_blank" rel="noopener noreferrer" aria-label="${title} (dibuka di tab baru)"${attributes}>${content}</a>`;
+  return `<a href="${escapeWorkroom(item.href)}" target="_blank" rel="noopener noreferrer" aria-label="${title} (dibuka di tab baru)">${content}</a>`;
 }
 
-function workroomDocument(content, page, driveShortcuts = []) {
+function workroomDocument(content, page) {
   const wordmark = '<a class="workroom-wordmark" href="/">Faysaruworks.</a>';
   const currentPage = page === 'privateNotes' ? 'note' : page === 'project' ? 'task' : page;
-  const secondaryPages = ['goal', 'review', 'settings'];
+  const secondaryPages = ['goal', 'review', 'drive', 'settings'];
   const sidebarLink = ([key, { path, title, icon }], extra = false) => {
     const secondary = secondaryPages.includes(key);
     return `<a href="${key === 'home' ? workroomOverviewUrl : path}" aria-label="${title}"${currentPage === key ? ' aria-current="page"' : ''}${secondary && !extra ? ' class="workroom-nav-secondary"' : ''}>
@@ -57,13 +58,9 @@ function workroomDocument(content, page, driveShortcuts = []) {
       <span aria-hidden="true">${!extra && key === 'home' ? '<span class="workroom-nav-full">Ringkasan</span><span class="workroom-nav-short">Ringkas</span>' : title}</span>
     </a>`;
   };
-  const driveLinks = (desktop = false) => driveShortcuts.map(item =>
-    workroomDriveLink(item, workroomIcon('folder') + `<span>${escapeWorkroom(item.title)}</span>`,
-      desktop ? ' data-drive-shortcut class="workroom-nav-secondary"' : ' data-drive-shortcut')).join('');
   const sidebar = page ? `<nav class="workroom-nav" aria-label="Navigasi Workroom">
     ${wordmark}
     ${Object.entries(workroomPages).filter(([key]) => !['privateNotes', 'project'].includes(key)).map(entry => sidebarLink(entry)).join('')}
-    ${driveLinks(true)}
     <details class="workroom-nav-more"${secondaryPages.includes(currentPage) ? ' data-active' : ''}>
       <summary aria-label="Lainnya">
         ${workroomIcon('more-horizontal')}
@@ -71,7 +68,6 @@ function workroomDocument(content, page, driveShortcuts = []) {
       </summary>
       <div class="workroom-nav-menu">
         ${secondaryPages.map(key => sidebarLink([key, workroomPages[key]], true)).join('')}
-        ${driveLinks()}
       </div>
     </details>
   </nav><script src="/workroom-nav.js" defer></script>` : '';
@@ -94,13 +90,13 @@ function workroomDocument(content, page, driveShortcuts = []) {
     </footer>` : ''}</body></html>`;
 }
 
-function workroomPage(content, status = 200, page = null, driveShortcuts = []) {
-  return new Response(workroomDocument(content, page, driveShortcuts), { status, headers: privateHeaders });
+function workroomPage(content, status = 200, page = null) {
+  return new Response(workroomDocument(content, page), { status, headers: privateHeaders });
 }
 
-function streamWorkroomPage(page, render, driveShortcuts) {
+function streamWorkroomPage(page, render) {
   const marker = '<!--workroom-content-->';
-  const [before, after] = workroomDocument(marker, page, driveShortcuts).split(marker);
+  const [before, after] = workroomDocument(marker, page).split(marker);
   const encoder = new TextEncoder();
   const body = new ReadableStream({
     async start(controller) {
@@ -945,58 +941,94 @@ function workroomProjectCard(project, tasks, edit) {
   </article>`;
 }
 
+const workroomDriveCategories = {
+  proyek: 'Proyek', akademik: 'Akademik', 'tbm-cs': 'TBM-Cs', 'tugas-akhir': 'Tugas Akhir', lainnya: 'Lainnya',
+};
+
 async function ensureWorkroomDriveShortcuts(db) {
   await db.prepare(`CREATE TABLE IF NOT EXISTS workroom_drive_shortcuts (
-    id INTEGER PRIMARY KEY, title TEXT NOT NULL, href TEXT NOT NULL
+    id INTEGER PRIMARY KEY, title TEXT NOT NULL, href TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'lainnya'
   )`).run();
+  const hasCategory = async () => (await db.prepare('PRAGMA table_info(workroom_drive_shortcuts)').all())
+    .results.some(column => column.name === 'category');
+  if (!await hasCategory()) {
+    try {
+      await db.prepare("ALTER TABLE workroom_drive_shortcuts ADD COLUMN category TEXT NOT NULL DEFAULT 'lainnya'").run();
+    } catch (error) {
+      if (!await hasCategory()) throw error;
+    }
+  }
 }
 
 async function readWorkroomDriveShortcuts(db) {
   await ensureWorkroomDriveShortcuts(db);
-  const { results } = await db.prepare('SELECT id, title, href FROM workroom_drive_shortcuts ORDER BY id').all();
+  const { results } = await db.prepare('SELECT id, title, href, category FROM workroom_drive_shortcuts ORDER BY id').all();
   return results;
 }
 
-async function saveWorkroomDriveShortcut(db, request, url) {
+async function saveWorkroomDriveShortcut(db, request, url, page) {
   await ensureWorkroomDriveShortcuts(db);
   const data = await request.formData();
   const title = String(data.get('title') ?? '').trim();
   const href = String(data.get('href') ?? '').trim();
   const id = String(data.get('id') ?? '');
+  const category = String(data.get('category') ?? 'lainnya');
+  const destination = page === 'drive' ? workroomPages.drive.path + '?' : workroomOverviewUrl + '&';
   const link = URL.canParse(href) ? new URL(href) : null;
-  if (!title || title.length > 100 || href.length > 2048 || link?.protocol !== 'https:' ||
+  if (!Object.hasOwn(workroomDriveCategories, category) || !title || title.length > 100 ||
+      href.length > 2048 || link?.protocol !== 'https:' ||
       !['drive.google.com', 'docs.google.com'].includes(link.hostname) ||
       link.username || link.password || link.port || (id && !/^[1-9][0-9]{0,14}$/.test(id))) {
-    return workroomRedirect(url, workroomOverviewUrl + '&drive=invalid#pintasan-drive', 303);
+    return workroomRedirect(url, destination + 'drive=invalid#pintasan-drive', 303);
   }
   if (id) {
-    await db.prepare('UPDATE workroom_drive_shortcuts SET title = ?, href = ? WHERE id = ?')
-      .bind(title, link.href, Number(id)).run();
+    await db.prepare('UPDATE workroom_drive_shortcuts SET title = ?, href = ?, category = ? WHERE id = ?')
+      .bind(title, link.href, category, Number(id)).run();
   } else {
-    await db.prepare('INSERT INTO workroom_drive_shortcuts (title, href) VALUES (?, ?)')
-      .bind(title, link.href).run();
+    await db.prepare('INSERT INTO workroom_drive_shortcuts (title, href, category) VALUES (?, ?, ?)')
+      .bind(title, link.href, category).run();
   }
-  return workroomRedirect(url, workroomOverviewUrl + '&drive=saved#pintasan-drive', 303);
+  return workroomRedirect(url, destination + 'drive=saved#pintasan-drive', 303);
 }
 
-function renderWorkroomDriveShortcuts(results, url) {
+function renderWorkroomDriveShortcuts(results, url, fullPage = false) {
   const e = escapeWorkroom;
-  const form = (item = {}) => `<form method="post" action="${WORKROOM}?drive=save">
+  const path = fullPage ? workroomPages.drive.path : WORKROOM;
+  const form = (item = {}) => `<form method="post" action="${path}?drive=save">
     <input type="hidden" name="id" value="${e(item.id)}">
     <label>Nama pintasan<input name="title" required maxlength="100" value="${e(item.title)}"></label>
     <label>Tautan Google Drive<input name="href" type="url" required maxlength="2048" value="${e(item.href)}"></label>
+    <label>Kategori<select name="category">${Object.entries(workroomDriveCategories).map(([key, label]) =>
+      `<option value="${key}"${key === (item.category ?? 'lainnya') ? ' selected' : ''}>${label}</option>`).join('')}</select></label>
     <button>Simpan pintasan</button>
   </form>`;
+  const list = items => items.length ? '<ul>' + items.map(item => `<li>
+    ${workroomDriveLink(item, `<strong>${e(item.title)}</strong>`)}
+    <details><summary aria-label="Edit pintasan ${e(item.title)}">Edit</summary>${form(item)}</details>
+  </li>`).join('') + '</ul>' : '<p>Belum ada pintasan.</p>';
   const status = url.searchParams.get('drive');
+  const feedback = `${status === 'saved' ? '<p role="status">Pintasan tersimpan.</p>' : ''}
+    ${status === 'invalid' ? '<p role="alert">Periksa nama, kategori, dan tautan HTTPS Google Drive atau Google Docs.</p>' : ''}`;
+  const add = `<details><summary>Tambah pintasan</summary>${form()}</details>`;
+  if (fullPage) {
+    return `<div class="dashboard-content" id="pintasan-drive">
+      <h1>Pintasan Drive</h1>
+      <div class="collection">${feedback}${add}</div>
+      <div class="workroom-drive-groups">
+        ${Object.entries(workroomDriveCategories).map(([key, label]) =>
+          `<section class="collection recent-notes" aria-labelledby="drive-${key}">
+            <h2 id="drive-${key}">${label}</h2>
+            ${list(results.filter(item => item.category === key))}
+          </section>`).join('')}
+      </div>
+    </div>`;
+  }
   return `<section class="collection recent-notes" id="pintasan-drive">
     <h2>Pintasan Drive</h2>
-    ${status === 'saved' ? '<p role="status">Pintasan tersimpan.</p>' : ''}
-    ${status === 'invalid' ? '<p role="alert">Isi nama dan gunakan tautan HTTPS dari Google Drive atau Google Docs.</p>' : ''}
-    ${results.length ? '<ul>' + results.map(item => `<li>
-      ${workroomDriveLink(item, `<strong>${e(item.title)}</strong>`)}
-      <details><summary aria-label="Edit pintasan ${e(item.title)}">Edit</summary>${form(item)}</details>
-    </li>`).join('') + '</ul>' : '<p>Belum ada pintasan.</p>'}
-    <details><summary>Tambah pintasan</summary>${form()}</details>
+    ${feedback}
+    ${list(results)}
+    ${add}
+    <a href="${workroomPages.drive.path}">Lihat kategori pintasan</a>
   </section>`;
 }
 
@@ -1500,14 +1532,15 @@ async function handleWorkroom(request, env, url) {
   }
   if (request.method !== 'GET' && request.method !== 'POST') return workroomPage('<h1>Metode tidak didukung</h1>', 405);
 
-  if (page === 'home' && request.method === 'POST' && url.searchParams.get('drive') === 'save') {
-    return saveWorkroomDriveShortcut(env.WORKROOM_DB, request, url);
-  }
   const db = env.WORKROOM_DB;
-  let driveShortcuts;
-  const getDriveShortcuts = () => driveShortcuts ??= readWorkroomDriveShortcuts(db);
-  const renderPage = async (content, status, activePage) =>
-    workroomPage(content, status, activePage, await getDriveShortcuts());
+  const renderPage = workroomPage;
+  if ((page === 'home' || page === 'drive') && request.method === 'POST' && url.searchParams.get('drive') === 'save') {
+    return saveWorkroomDriveShortcut(db, request, url, page);
+  }
+  if (page === 'drive') {
+    if (request.method !== 'GET') return workroomPage('<h1>Metode tidak didukung</h1>', 405);
+    return workroomPage(renderWorkroomDriveShortcuts(await readWorkroomDriveShortcuts(db), url, true), 200, page);
+  }
 
   if (page === 'privateNotes') return workroomPrivateNotes(request, url, env, renderPage);
 
@@ -1582,7 +1615,7 @@ async function handleWorkroom(request, env, url) {
         return renderWorkroomReview(db, url, env, content => content);
       }
       return renderWorkroom(db, page, url, env, content => content);
-    }, await getDriveShortcuts());
+    });
   }
   await ensureEntries();
   if (page === 'home' && request.method === 'GET' && !url.search) {
@@ -1602,7 +1635,7 @@ async function handleWorkroom(request, env, url) {
     if (page === 'note' && !url.searchParams.has('basic')) {
       return renderPage(await renderNotes(), 200, page);
     }
-    return renderWorkroom(db, page, url, env, renderPage, page === 'home' ? await getDriveShortcuts() : []);
+    return renderWorkroom(db, page, url, env, renderPage, page === 'home' ? await readWorkroomDriveShortcuts(db) : []);
   }
 
   const data = await request.formData();
