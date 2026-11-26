@@ -398,6 +398,7 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-rendered .note-check span { flex:1; min-width:0; }
 
 .workroom-nav-more, .workroom-nav-short { display: none; }
+.workroom-nav [data-drive-shortcut] span { min-width: 0; overflow-wrap: anywhere; }
 
 @media (max-width: 600px) {
   .workroom-layout {
@@ -448,6 +449,8 @@ main:has(.notes-desk) { padding-top:1.5rem; }
     position: absolute;
     inset: auto 0 calc(100% + .6rem) auto;
     width: min(13rem, calc(100vw - 1rem));
+    max-height: calc(100dvh - 5rem - env(safe-area-inset-bottom));
+    overflow-y: auto;
     padding: .3rem;
     border: 1px solid var(--line);
     border-radius: .75rem;

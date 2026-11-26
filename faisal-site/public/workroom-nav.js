@@ -60,7 +60,7 @@
     if (routes.get(path) === 'project') path = '/workroom/tasks/';
     const more = sidebar.querySelector('.workroom-nav-more');
     more?.removeAttribute('data-active');
-    for (const link of sidebar.querySelectorAll('a[aria-label]')) {
+    for (const link of sidebar.querySelectorAll('a[aria-label]:not([data-drive-shortcut])')) {
       if (new URL(link.href).pathname === path) {
         link.setAttribute('aria-current', 'page');
         if (more && link.closest('.workroom-nav-menu')) more.setAttribute('data-active', '');
@@ -103,7 +103,8 @@
       }
       const next = new DOMParser().parseFromString(await response.text(), 'text/html');
       const nextPanel = next.querySelector('main[data-workroom-panel]');
-      if (nextPanel?.dataset.workroomPanel !== routes.get(url.pathname) || !next.querySelector('.workroom-nav')) {
+      const nextSidebar = next.querySelector('.workroom-nav');
+      if (nextPanel?.dataset.workroomPanel !== routes.get(url.pathname) || !nextSidebar) {
         throw new Error('Workroom panel unavailable');
       }
       const modules = await loadModules(next, request.signal);
@@ -114,6 +115,16 @@
       shownUrl = url;
       lifecycle.abort();
       lifecycle = new AbortController();
+      for (const [current, incoming] of [
+        [sidebar, nextSidebar],
+        [sidebar.querySelector('.workroom-nav-menu'), nextSidebar.querySelector('.workroom-nav-menu')],
+      ]) {
+        current.querySelectorAll(':scope > [data-drive-shortcut]').forEach(link => link.remove());
+        const before = current.querySelector(':scope > .workroom-nav-more');
+        for (const link of incoming.querySelectorAll(':scope > [data-drive-shortcut]')) {
+          current.insertBefore(document.importNode(link, true), before);
+        }
+      }
       panel.replaceWith(replacement);
       panel = replacement;
       panel.dispatchEvent(new Event('workroom-panel-change', { bubbles: true }));
