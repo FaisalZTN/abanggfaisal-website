@@ -67,8 +67,28 @@ module.exports = async function checkWorkroom(browser, origin) {
       .run('Catatan lama', '## Judul lama\n**Tebal**\n- [x] Sudah selesai');
 
     await page.evaluate(()=>{ window.testDocument = true; });
-    await page.locator('.workroom-nav > a[aria-label="Catatan"]').click();
+    const reviewDestination = page.locator('.workroom-nav > a[aria-label="Review"]');
+    const notesDestination = page.locator('.workroom-nav > a[aria-label="Catatan"]');
+    const notesUrl = origin + '/workroom/notes/';
+    let releaseNavigation;
+    const navigationGate = new Promise(resolve => { releaseNavigation = resolve; });
+    await page.route(notesUrl, async route => {
+      await navigationGate;
+      await route.fallback();
+    }, { times: 1 });
+    await notesDestination.click();
+    try {
+      await page.getByText('Memuat halaman…', { exact: true }).waitFor();
+      assert.equal(await reviewDestination.getAttribute('aria-current'), 'page');
+      assert.equal(await notesDestination.getAttribute('aria-current'), null);
+      assert.equal(await notesDestination.getAttribute('data-pending'), '');
+    } finally {
+      releaseNavigation();
+    }
     await page.waitForSelector('#note-query');
+    assert.equal(await notesDestination.getAttribute('aria-current'), 'page');
+    assert.equal(await notesDestination.getAttribute('data-pending'), null);
+    assert.equal(await page.locator('main').evaluate(element => getComputedStyle(element).animationName), 'workroom-page-cover');
     await page.evaluate(() => document.fonts.ready);
     assert.match(await page.locator('.notes-head h1').evaluate(element => getComputedStyle(element).fontFamily), /Inter/);
     const newNote = page.locator('[data-new-note]');
@@ -289,8 +309,17 @@ module.exports = async function checkWorkroom(browser, origin) {
     await privateLink.click();
     await page.getByLabel('Sandi Catatan Rahasia').waitFor();
     assert.equal(await page.evaluate(() => window.testDocument), true);
-    await page.getByLabel('Lainnya', { exact: true }).click();
-    await page.locator('.workroom-nav-menu').getByRole('link', { name: 'Pengaturan' }).click();
+    const moreControl = page.getByLabel('Lainnya', { exact: true });
+    await moreControl.press('Enter');
+    const mobileMenu = page.locator('.workroom-nav-menu');
+    await mobileMenu.waitFor();
+    assert.equal(await mobileMenu.evaluate(element => getComputedStyle(element).animationName), 'workroom-menu-reveal');
+    await mobileMenu.getByRole('link', { name: 'Pengaturan' }).focus();
+    await page.keyboard.press('Escape');
+    await mobileMenu.waitFor({ state: 'hidden' });
+    assert.equal(await moreControl.evaluate(element => element === document.activeElement), true);
+    await moreControl.click();
+    await mobileMenu.getByRole('link', { name: 'Pengaturan' }).click();
     await page.getByRole('radio', { name: 'Terang' }).waitFor();
     assert.equal(await page.getByRole('radio', { name: 'Terang' }).isChecked(), true);
     assert.equal(await page.evaluate(() => window.testDocument), true);
@@ -319,6 +348,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     await desktopDrive.click();
     await page.waitForURL(drivePageUrl);
     await page.getByRole('heading', { name: 'Pintasan Drive', exact: true }).waitFor();
+    assert.equal(await page.locator('main').evaluate(element => getComputedStyle(element).animationName), 'none');
     for (const name of ['Proyek', 'Akademik', 'TBM-Cs', 'Tugas Akhir', 'Lainnya']) {
       await page.getByRole('region', { name, exact: true }).waitFor();
     }
