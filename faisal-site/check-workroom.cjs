@@ -339,8 +339,8 @@ module.exports = async function checkWorkroom(browser, origin) {
       assert.equal(await link.getAttribute('target'), '_blank');
       assert.equal(await link.getAttribute('rel'), 'noopener noreferrer');
     };
-    const project = page.getByRole('region', { name: 'Proyek', exact: true });
-    const projectLink = project.getByRole('link', { name: /Folder Drive/ });
+    const driveProject = page.getByRole('region', { name: 'Proyek', exact: true });
+    const projectLink = driveProject.getByRole('link', { name: /Folder Drive/ });
     await checkShortcut(projectLink, 'Folder Drive', folderUrl + '&test=1');
     await page.context().route(folderUrl + '&test=1', route => route.fulfill({ body: 'Drive fixture' }));
     const popupReady = page.waitForEvent('popup');
