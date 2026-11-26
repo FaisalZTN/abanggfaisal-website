@@ -1011,15 +1011,36 @@ function renderWorkroomDriveShortcuts(results, url, fullPage = false) {
     ${status === 'invalid' ? '<p role="alert">Periksa nama, kategori, dan tautan HTTPS Google Drive atau Google Docs.</p>' : ''}`;
   const add = `<details><summary>Tambah pintasan</summary>${form()}</details>`;
   if (fullPage) {
-    return `<div class="dashboard-content" id="pintasan-drive">
-      <h1>Pintasan Drive</h1>
-      <div class="collection">${feedback}${add}</div>
-      <div class="workroom-drive-groups">
-        ${Object.entries(workroomDriveCategories).map(([key, label]) =>
-          `<section class="collection recent-notes" aria-labelledby="drive-${key}">
-            <h2 id="drive-${key}">${label}</h2>
-            ${list(results.filter(item => item.category === key))}
-          </section>`).join('')}
+    const categories = Object.entries(workroomDriveCategories).map(([key, label]) =>
+      ({ key, label, items: results.filter(item => item.category === key) }));
+    return `<div class="dashboard-content workroom-drive" id="pintasan-drive">
+      <div class="workroom-drive-toolbar">
+        <div class="workroom-drive-title">
+          <span>${workroomIcon('folder')}</span>
+          <h1>Pintasan Drive</h1>
+        </div>
+        <details class="workroom-drive-add">
+          <summary>${workroomIcon('plus')} Tambah pintasan</summary>
+          ${form()}
+        </details>
+        ${feedback}
+      </div>
+      <div class="workroom-drive-browser">
+        <nav class="workroom-drive-index" aria-label="Kategori pintasan">
+          ${categories.map(({ key, label, items }) => `<a href="#drive-${key}">
+            <span>${label}</span><small aria-label="${items.length} pintasan">${items.length}</small>
+          </a>`).join('')}
+        </nav>
+        <div class="workroom-drive-groups">
+          ${categories.map(({ key, label, items }) =>
+            `<section class="workroom-drive-group" id="drive-${key}" aria-labelledby="drive-label-${key}">
+              <h2 id="drive-label-${key}">${label}</h2>
+              ${items.length ? `<ul>${items.map(item => `<li>
+                ${workroomDriveLink(item, `${workroomIcon('folder')}<strong>${e(item.title)}</strong>${workroomIcon('external-link')}`)}
+                <details><summary aria-label="Edit pintasan ${e(item.title)}">${workroomIcon('pencil')}<span>Edit</span></summary>${form(item)}</details>
+              </li>`).join('')}</ul>` : '<p>Belum ada pintasan.</p>'}
+            </section>`).join('')}
+        </div>
       </div>
     </div>`;
   }
