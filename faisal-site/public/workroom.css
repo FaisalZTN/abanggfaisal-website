@@ -31,6 +31,10 @@
   --green: #0841c9;
   --selected: #032c7d;
   --accent: #1d97f1;
+  --workroom-motion-quick: 120ms;
+  --workroom-motion-reveal: 180ms;
+  --workroom-motion-ease: cubic-bezier(.22, 1, .36, 1);
+  --workroom-press: color-mix(in srgb, var(--selected) 79%, var(--ink));
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 1rem/1.55 var(--font-ui); }
@@ -86,8 +90,26 @@ h2 { font-size: 1.65rem; }
   text-decoration: none;
 }
 .workroom-nav svg { width: 24px; height: 24px; }
-.workroom-nav a:is(:hover, :focus-visible, [aria-current="page"]) { background: var(--green); color: var(--ink); }
-.workroom-nav a[aria-current="page"] { box-shadow: inset 3px 0 var(--accent); }
+.workroom-nav a:focus-visible { background: var(--selected); color: var(--ink); }
+@media (hover: hover) {
+  .workroom-nav a:hover { background: var(--selected); color: var(--ink); }
+}
+.workroom-nav a[aria-current="page"] { background: var(--green); color: var(--ink); font-weight: 650; }
+.workroom-nav a[aria-current="page"]::before {
+  content: '';
+  position: absolute;
+  inset: 25% auto 25% .2rem;
+  inline-size: 3px;
+  border-radius: 1rem;
+  background: var(--accent);
+}
+.workroom-nav a[data-pending]:not([aria-current]),
+.workroom-nav-more[data-pending]:not([data-active]) > summary { background: var(--selected); }
+.workroom-nav :is(a, summary):focus-visible { outline-offset: -2px; }
+@media (forced-colors: active) {
+  .workroom-nav a[aria-current="page"],
+  .workroom-nav-more[data-active] > summary { outline: 2px solid Highlight; outline-offset: -2px; }
+}
 .workroom-nav a > span {
   display: none;
   position: absolute;
@@ -112,8 +134,10 @@ h2 { font-size: 1.65rem; }
     align-items: stretch;
     padding: .9rem .65rem;
     border: 1px solid var(--line);
-    border-radius: 1rem;
+    border-radius: 1.15rem;
+    background: linear-gradient(155deg, color-mix(in srgb, var(--selected) 24%, var(--card)), var(--card) 64%);
     overflow-y: auto;
+    scrollbar-width: thin;
   }
   .workroom-nav a {
     flex: none;
@@ -124,6 +148,7 @@ h2 { font-size: 1.65rem; }
     padding-inline: .75rem;
     font-size: .88rem;
   }
+  .workroom-nav > a:not(.workroom-nav-secondary) + .workroom-nav-secondary { margin-block-start: .6rem; }
   .workroom-nav .workroom-wordmark {
     display: flex;
     align-items: center;
@@ -489,9 +514,9 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .workroom-drive :is(a, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .workroom-drive-group:target h2 { text-decoration: underline; text-underline-offset: .25em; }
 @media (prefers-reduced-motion: no-preference) {
-  .workroom-drive :is(a, summary) { transition: background-color 160ms ease-out, transform 180ms cubic-bezier(.2, .8, .2, 1); }
+  .workroom-drive :is(a, summary) { transition: background-color var(--workroom-motion-quick) ease-out, transform var(--workroom-motion-reveal) var(--workroom-motion-ease); }
   .workroom-drive :is(a, summary):active { transform: scale(.98); }
-  .workroom-drive details[open] > form { animation: workroom-drive-reveal 200ms cubic-bezier(.2, .85, .25, 1) both; }
+  .workroom-drive details[open] > form { animation: workroom-drive-reveal var(--workroom-motion-reveal) var(--workroom-motion-ease); }
   @keyframes workroom-drive-reveal {
     from { opacity: 0; transform: translateY(-.3rem); }
     to { opacity: 1; transform: translateY(0); }
@@ -547,8 +572,8 @@ main:has(.notes-desk) { padding-top:1.5rem; }
     font-weight: 400;
   }
   .workroom-nav-more summary::-webkit-details-marker { display: none; }
-  .workroom-nav-more:is([open], [data-active]) summary { background: var(--green); color: var(--ink); }
-  .workroom-nav-more[data-active] summary { box-shadow: inset 0 2px var(--accent); }
+  .workroom-nav-more:is([open], [data-active]) > summary { background: var(--green); color: var(--ink); }
+  .workroom-nav-more[data-active] > summary { box-shadow: inset 0 2px var(--accent); font-weight: 650; }
   .workroom-nav-menu {
     position: absolute;
     inset: auto 0 calc(100% + .6rem) auto;
@@ -567,7 +592,11 @@ main:has(.notes-desk) { padding-top:1.5rem; }
     gap: .65rem;
     padding-inline: .65rem;
   }
-  .workroom-nav a[aria-current="page"] { box-shadow: inset 0 2px var(--accent); }
+  .workroom-nav > a[aria-current="page"]::before {
+    inset: .15rem 35% auto;
+    inline-size: auto;
+    block-size: 2px;
+  }
   .workroom-nav a > span {
     display: block;
     position: static;
@@ -610,36 +639,36 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 
 @media (prefers-reduced-motion: no-preference) {
   .workroom-layout > main { view-transition-name: workroom-content; }
-  .workroom-nav a[aria-current="page"] { view-transition-name: workroom-active-destination; }
 
-  ::view-transition-old(root) { display: none; }
+  ::view-transition { pointer-events: none; }
+  ::view-transition-old(root),
+  ::view-transition-old(workroom-content) { display: none; }
   ::view-transition-new(root) { animation: none; }
 
-  ::view-transition-group(workroom-content) {
-    animation-duration: .16s;
-    animation-timing-function: cubic-bezier(.22, 1, .36, 1);
-  }
-  ::view-transition-old(workroom-content) {
-    mix-blend-mode: normal;
-    animation: workroom-page-cover .1s ease both reverse;
-  }
-  ::view-transition-new(workroom-content) {
-    mix-blend-mode: normal;
-    animation: workroom-page-cover .16s cubic-bezier(.22, 1, .36, 1) both;
+  ::view-transition-group(workroom-content) { animation-duration: var(--workroom-motion-reveal); }
+  ::view-transition-new(workroom-content),
+  .workroom-panel-enter { animation: workroom-page-cover var(--workroom-motion-reveal) var(--workroom-motion-ease); }
+
+  .workroom-nav :is(a, summary),
+  :is(.dashboard-stats, .review-controls, .workspace-tools, .days) a,
+  :is(.note-categories, .note-index, .note-toolbar, .task-status) button,
+  .workroom-theme-option {
+    transition: background-color var(--workroom-motion-quick) ease-out,
+      border-color var(--workroom-motion-quick) ease-out;
   }
 
-  ::view-transition-group(workroom-active-destination) {
-    z-index: 1;
-    overflow: hidden;
-    border-radius: .65rem;
-    animation-duration: .16s;
-    animation-timing-function: cubic-bezier(.22, 1, .36, 1);
+  .workroom-nav-more[open] .workroom-nav-menu,
+  .note-layout-popover:popover-open {
+    animation: workroom-menu-reveal var(--workroom-motion-reveal) var(--workroom-motion-ease);
   }
-  ::view-transition-old(workroom-active-destination),
-  ::view-transition-new(workroom-active-destination) { animation-duration: .12s; }
+
+  @keyframes workroom-menu-reveal {
+    from { opacity: 0; transform: translateY(.25rem); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 
   @keyframes workroom-page-cover {
-    from { opacity: 0; }
+    from { opacity: .82; }
     to { opacity: 1; }
   }
 }
@@ -964,7 +993,8 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   margin: 0;
   padding: .45rem .75rem;
   border-radius: .5rem;
-  background: var(--green);
+  border: 1px solid var(--line);
+  background: var(--card);
   color: var(--ink);
 }
 
@@ -1115,8 +1145,8 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   /* Component hover and selected colors resume as soon as the press ends. */
   :where(a[href], button, summary, [role="button"], [role="checkbox"],
          input:is([type="button"], [type="submit"], [type="reset"]), .workroom-theme-option):active:not(:disabled, [aria-disabled="true"]) {
-    background: #393b40 !important;
-    color: #fff !important;
+    background: var(--workroom-press) !important;
+    color: var(--ink) !important;
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
   }
