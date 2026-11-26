@@ -1080,27 +1080,25 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
   const greetings = { morning: 'Good morning, Faisal!', afternoon: 'Good afternoon, Faisal!', night: 'Good night, Faisal!' };
   const period = hour < 6 || hour >= 18 ? 'night' : hour < 12 ? 'morning' : 'afternoon';
   return workroomPage(`<div class="dashboard-content">
-      <div class="workroom-hero">
-        <img src="/workroom-hero.webp" width="1600" height="870" alt="" fetchpriority="high">
-        <h1>Workroom</h1>
-      </div>
       ${notice}
-      ${studySchedule}
-      ${exams}
       <div class="overview">
-        <section class="today-panel" id="hari-ini">
-          <div class="today-heading"><div>
-            <p>${e(dateLabel)} · WITA</p>
-            <h2 data-workroom-greeting data-morning="${greetings.morning}" data-afternoon="${greetings.afternoon}" data-night="${greetings.night}">${greetings[period]}</h2>
-            <p class="workroom-greeting-copy">Sudah siap ngopi, nugas, dan belajar?</p>
-          </div></div>
-          <script type="application/workroom-module" data-src="/workroom-greeting.js"></script>
+        <div class="overview-top">
+          <h1>Ringkasan</h1>
           <form class="capture" method="post" action="${WORKROOM}">
             <input type="hidden" name="action" value="save"><input type="hidden" name="priority" value="normal">
             <select aria-label="Jenis entri" name="kind"><option value="task">Tugas</option><option value="note">Catatan</option></select>
             <input name="title" aria-label="Judul entri baru" placeholder="Apa yang ingin kamu catat?" required maxlength="160">
-            <button>Simpan</button>
+            <button>Catat</button>
           </form>
+        </div>
+        <section class="today-panel" id="hari-ini">
+          <svg class="today-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.5v19M2.5 12h19M5.3 5.3l13.4 13.4M18.7 5.3 5.3 18.7"/></svg>
+          <div class="today-heading"><div>
+            <h2 data-workroom-greeting data-morning="${greetings.morning}" data-afternoon="${greetings.afternoon}" data-night="${greetings.night}">${greetings[period]}</h2>
+            <p>${e(dateLabel)} · WITA</p>
+            <p class="workroom-greeting-copy">Sudah siap ngopi, nugas, dan belajar?</p>
+          </div></div>
+          <script type="application/workroom-module" data-src="/workroom-greeting.js"></script>
         </section>
         <div class="dashboard-stats">
           <a href="${workroomPages.task.path}">Tugas terbuka<strong>${counts.tasks}</strong></a>
@@ -1108,7 +1106,7 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
           <a href="${workroomPages.note.path}">Catatan<strong>${counts.notes}</strong></a>
           <a href="${workroomPages.goal.path}">Goals aktif<strong>${counts.goals}</strong></a>
         </div>
-        ${await workroomDriveShortcuts(db, null, url)}
+        <div class="overview-glance">${studySchedule}${exams}</div>
         <div class="collection calendar-agenda" id="agenda" data-day="${day}" data-today="${today}" data-google="${showGoogle}"${fullCalendar ? ' data-calendar-full' : ''}>
           ${workroomCalendar(day, tasks, today, google.entries, fullCalendar)}
           <template id="calendar-tasks">${tasks.filter(entry => !isDue(entry)).map(entry => workroomDueTask(entry, today)).join('')}</template>
@@ -1135,6 +1133,7 @@ async function renderWorkroom(db, page, url, env, renderPage = workroomPage) {
           }).join('') + '</ul>' : '<p>Catatan pertama bisa kamu tulis lewat kolom di atas.</p>'}
           <a href="${workroomPages.note.path}">Semua catatan</a>
         </section>
+        ${await workroomDriveShortcuts(db, null, url)}
       </div>
     </div>`, 200, page);
 }
@@ -1491,9 +1490,9 @@ async function handleWorkroom(request, env, url) {
       <fieldset class="collection workroom-themes">
         <legend>Tema aplikasi</legend>
         <div class="workroom-theme-grid">
-          ${[['midnight', 'Midnight'], ['blue', 'Biru'], ['light', 'Terang']].map(([theme, title]) => `
+          ${[['graphite', 'Grafit'], ['midnight', 'Midnight'], ['blue', 'Biru'], ['light', 'Terang']].map(([theme, title]) => `
             <label class="workroom-theme-option" data-preview="${theme}">
-              <input type="radio" name="workroom-theme" value="${theme}"${theme === 'blue' ? ' checked' : ''}>
+              <input type="radio" name="workroom-theme" value="${theme}"${theme === 'graphite' ? ' checked' : ''}>
               <span class="workroom-theme-swatch" aria-hidden="true"></span>
               <span>${title}</span>
             </label>`).join('')}

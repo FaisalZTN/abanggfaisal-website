@@ -245,8 +245,8 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.locator('.project-card').getByText('1 dari 2 tugas selesai', { exact: true }).waitFor();
     await page.getByRole('link', { name: 'Baca jurnal' }).waitFor();
     await page.locator('.workroom-nav > a[aria-label="Pengaturan"]').click();
-    await page.getByRole('radio', { name: 'Biru' }).waitFor();
-    assert.equal(await page.getByRole('radio', { name: 'Biru' }).isChecked(), true);
+    await page.getByRole('radio', { name: 'Grafit' }).waitFor();
+    assert.equal(await page.getByRole('radio', { name: 'Grafit' }).isChecked(), true);
     await page.getByRole('radio', { name: 'Midnight' }).check();
     assert.equal(await page.locator('html').getAttribute('data-workroom-theme'), 'midnight');
     await page.getByRole('radio', { name: 'Terang' }).check();

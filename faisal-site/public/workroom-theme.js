@@ -1,6 +1,6 @@
 (() => {
   for (const [setting, values, attribute] of [
-    ['workroom-theme', ['blue', 'midnight', 'light'], 'workroomTheme'],
+    ['workroom-theme', ['graphite', 'blue', 'midnight', 'light'], 'workroomTheme'],
     ['workroom-font', ['inter', 'mona', 'jakarta'], 'workroomFont'],
   ]) {
     let current = values[0];
