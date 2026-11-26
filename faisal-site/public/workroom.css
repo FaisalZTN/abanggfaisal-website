@@ -191,6 +191,22 @@ button { justify-self: start; padding: .45rem .95rem; background: var(--green); 
 .fields label { flex: 1 1 9rem; }
 .save-notice { margin: 0; padding: .65rem .85rem; border-radius: .65rem; background: var(--selected); }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.overview-shell {
+  --overview-card-radius: clamp(1.25rem, 2.6vw, 1.85rem);
+  --overview-control-radius: .9rem;
+}
+.overview-shell :is(.overview > .collection, .dashboard-stats > a) {
+  border-radius: var(--overview-card-radius);
+  border-color: color-mix(in srgb, var(--line) 85%, var(--ink));
+  background: linear-gradient(150deg, color-mix(in srgb, var(--card) 95%, var(--ink)), var(--card) 45%);
+  corner-shape: squircle;
+}
+.overview-shell .capture :is(input, select),
+.overview-shell :is(.overview-icon-link, .calendar-heading a, .days a) {
+  border-radius: var(--overview-control-radius);
+  corner-shape: squircle;
+}
+.overview-shell .capture button[type="submit"] { border-radius: 999px; }
 .overview-header {
   width: auto; margin: 0; min-height: 0; border: 0; display: grid;
   grid-template-columns: minmax(0, 1fr); gap: .85rem;
@@ -213,7 +229,7 @@ button { justify-self: start; padding: .45rem .95rem; background: var(--green); 
 .overview-card-heading { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
 .overview-card-heading h2 { margin: 0; }
 .overview-card-heading p { color: var(--muted); font-size: .83rem; margin: .35rem 0; }
-.overview-icon-link { display: grid; place-items: center; min-width: 44px; min-height: 44px; border-radius: .5rem; }
+.overview-icon-link { display: grid; place-items: center; min-width: 44px; min-height: 44px; }
 .overview-icon-link:is(:hover, :focus-visible) { background: var(--selected); }
 .overview-priority { display: inline-block; margin-inline-start: .4rem; color: var(--accent); font-size: .73rem; font-weight: 650; }
 .overview-calendar > h2 { margin-block-end: .6rem; }
