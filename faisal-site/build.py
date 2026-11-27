@@ -36,6 +36,7 @@ if not editor_bundler.exists() or not editor_stamp.exists() or editor_stamp.read
 editor_bundle = subprocess.check_output([str(editor_bundler), 'workroom-block-editor.js', '--bundle', '--format=esm', '--minify'], cwd=P)
 editor_url = asset('workroom-block-editor.js', editor_bundle)
 workroom_note_format = asset('workroom-note-format.js')
+workroom_image_upload = asset('workroom-image-upload.js')
 workroom_source = workroom_source.replace(
     "import { notePreview, readBlockNote, noteBodyText } from './workroom-note-format.js';",
     (P / 'public/workroom-note-format.js').read_text(encoding='utf-8').replace('export function ', 'function '),
@@ -44,13 +45,16 @@ workroom_notes = D / 'workroom-notes.js'
 workroom_notes_source = workroom_asset_data('workroom-notes.js').decode('utf-8').replace(
     "'./workroom-note-format.js'", f"'.{workroom_note_format}'"
 )
-workroom_notes_source = workroom_notes_source.replace('/workroom-block-editor.js', editor_url)
+workroom_notes_source = workroom_notes_source.replace('/workroom-block-editor.js', editor_url).replace('/workroom-image-upload.js', workroom_image_upload)
 workroom_notes.write_text(workroom_notes_source, encoding='utf-8')
 workroom_notes_url = asset('workroom-notes.js', workroom_notes_source.encode('utf-8'))
 workroom_source = workroom_source.replace('"/workroom-notes.js"', f'"{workroom_notes_url}"')
 for workroom_asset in ('workroom.css', 'workroom-theme.js', 'workroom-nav.js', 'workroom-greeting.js', 'workroom-calendar.js', 'workroom-agenda-check.js', 'workroom-review.js', 'workroom-private-notes.js', 'workroom-task-detail.js', 'workroom-quick-check.js', 'workroom-link-options.js', 'workroom-image-upload.js', 'workroom-hero.webp', 'workroom-favicon.svg'):
+    source = workroom_asset_data(workroom_asset)
+    if workroom_asset == 'workroom-task-detail.js':
+        source = source.replace(b'/workroom-image-upload.js', workroom_image_upload.encode())
     workroom_source = workroom_source.replace(
-        f'"/{workroom_asset}"', f'"{asset(workroom_asset, workroom_asset_data(workroom_asset))}"'
+        f'"/{workroom_asset}"', f'"{asset(workroom_asset, source)}"'
     )
 workroom_worker.write_text(workroom_source, encoding='utf-8')
 style_url=asset('style.css')

@@ -1,3 +1,5 @@
+import { bindImageEditing } from '/workroom-image-upload.js';
+
 export function mount(panel, signal) {
   function webUrl(value, httpsOnly = false) {
     try {
@@ -166,9 +168,6 @@ export function mount(panel, signal) {
     const field = tools.closest('form').elements.body;
     const preview = tools.querySelector('.task-detail-preview');
     const status = tools.querySelector('.task-detail-status');
-    const imageControls = document.createElement('div');
-    imageControls.className = 'workroom-image-controls';
-    preview.before(imageControls);
     const toggle = tools.querySelector('.task-image-toggle');
     const imageFields = tools.querySelector('.task-image-fields');
     const imageUrl = tools.querySelector('.task-image-url');
@@ -177,7 +176,6 @@ export function mount(panel, signal) {
       const text = field.value;
       const tokens = /!\[([^\]\r\n]*)\]\(((?:https:\/\/[^\s)]+|\/workroom\/images\/[a-f0-9]{64}(?:#[a-z0-9=&-]+)?))\)|https?:\/\/[^\s<>"'\u0060]+/gi;
       const nodes = [];
-      const buttons = [];
       let offset = 0;
       for (const match of text.matchAll(tokens)) {
         const isImage = match[2] !== undefined;
@@ -188,32 +186,21 @@ export function mount(panel, signal) {
         nodes.push(text.slice(offset, match.index));
         const node = isImage ? imagePreview(url, match[1]) : linkPreview(url, value);
         nodes.push(node);
-        if (node.classList.contains('task-uploaded-image')) {
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.textContent = 'Edit gambar ' + (buttons.length + 1);
-          button.onclick = () => field.dispatchEvent(new CustomEvent('workroom-image-edit', { bubbles: true, detail: {
-            url, layout: node.dataset.imageLayout,
-            apply({ url }) {
-              const start = match.index;
-              const end = start + match[0].length;
-              const next = '![' + match[1] + '](' + url + ')';
-              if (field.value !== text || field.value.length - (end - start) + next.length > field.maxLength) return false;
-              field.setRangeText(next, start, end, 'end');
-              field.dispatchEvent(new Event('input', { bubbles: true }));
-              field.focus();
-              return true;
-            },
-          } }));
-          buttons.push(button);
-        }
+        if (node.classList.contains('task-uploaded-image')) bindImageEditing(node, url, node.dataset.imageLayout, ({ url }) => {
+          const start = match.index;
+          const end = start + match[0].length;
+          const next = '![' + match[1] + '](' + url + ')';
+          if (field.value !== text || field.value.length - (end - start) + next.length > field.maxLength) return false;
+          field.setRangeText(next, start, end, 'end');
+          field.dispatchEvent(new Event('input', { bubbles: true }));
+          field.focus();
+          return true;
+        });
         offset = match.index + (isImage ? match[0].length : value.length);
       }
       preview.hidden = !nodes.length;
       if (nodes.length) nodes.push(text.slice(offset));
       preview.replaceChildren(...nodes);
-      imageControls.replaceChildren(...buttons);
-      imageControls.hidden = !buttons.length;
     }
 
     toggle.onclick = () => {
