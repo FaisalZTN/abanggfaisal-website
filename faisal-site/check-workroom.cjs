@@ -667,6 +667,21 @@ module.exports = async function checkWorkroom(browser, origin) {
       });
       assert.equal(width === 1280 ? beside : below, true, 'Task cards at ' + width + 'px');
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
+      const fileCard = pdfSection.getByRole('listitem').filter({ hasText: 'Bukti.pdf' });
+      const previewButton = fileCard.getByRole('button', { name: 'Lihat PDF: Bukti.pdf' });
+      assert.equal(await previewButton.locator('svg').count(), 1);
+      await previewButton.click();
+      await pdfDialog.getByRole('button', { name: 'Tutup' }).click();
+      const remove = pdfSection.getByLabel('Hapus Lampiran lama.txt', { exact: true });
+      await remove.click();
+      const confirm = pdfSection.getByRole('button', { name: 'Konfirmasi hapus lampiran' });
+      await confirm.waitFor();
+      if (width === 1280) await remove.click();
+      else {
+        await confirm.click();
+        await pdfSection.getByText('Lampiran dihapus.', { exact: true }).waitFor();
+        assert.ok(await previewButton.isVisible());
+      }
     }
     await page.setViewportSize(taskViewport);
     await detailSummary.click();
