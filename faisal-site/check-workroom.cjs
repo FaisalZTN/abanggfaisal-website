@@ -542,6 +542,19 @@ module.exports = async function checkWorkroom(browser, origin) {
     const taskBody = page.locator('.workspace-editor').getByRole('textbox', { name: 'Detail tugas' });
     const detailSummary = page.locator('.task-detail-disclosure > summary');
     await taskBody.waitFor();
+    const taskViewport = page.viewportSize();
+    const taskPanel = page.locator('.workspace-editor');
+    const taskForm = taskPanel.locator('#task-editor-form');
+    const format = taskPanel.getByRole('group', { name: 'Format detail tugas' });
+    assert.equal(await format.locator('.note-icon-field').count(), 6);
+    for (const width of [1280, 360]) {
+      await page.setViewportSize({ width, height: 800 });
+      const [fields, proof] = await Promise.all([taskForm.boundingBox(), pdfSection.boundingBox()]);
+      if (width === 1280) assert.ok(proof.x >= fields.x + fields.width && Math.abs(proof.y - fields.y) < 1);
+      else assert.ok(proof.y >= fields.y + fields.height && proof.y - fields.y < 20);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
+    }
+    await page.setViewportSize(taskViewport);
     await detailSummary.click();
     await taskBody.waitFor({ state: 'hidden' });
     await detailSummary.click();
