@@ -402,6 +402,14 @@ module.exports = async function checkWorkroom(browser, origin) {
     await dashboard.getByRole('form', { name: 'Catat cepat' }).waitFor();
     await dashboard.getByRole('link', { name: 'Kuliah hari ini' }).waitFor();
     await dashboard.getByRole('link', { name: 'Kuliah besok' }).waitFor();
+    const agendaLink = dashboard.getByRole('link', { name: 'Lihat agenda', exact: true });
+    const agendaBox = await agendaLink.boundingBox();
+    assert.ok(agendaBox.height >= 44 && agendaBox.y + agendaBox.height <= 800);
+    assert.equal(await agendaLink.getAttribute('href'), '#agenda');
+    assert.ok(await dashboard.locator('#agenda > section').first().getByRole('heading', { name: 'Tugas' }).isVisible());
+    assert.ok((await dashboard.locator('.workroom-study-heading a').boundingBox()).height >= 44);
+    const emptyTasksLink = dashboard.getByRole('link', { name: 'Lihat semua tugas', exact: true });
+    assert.ok(await emptyTasksLink.isHidden());
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 360);
     assert.equal(await page.evaluate(() => window.testDocument), true);
     const count = dashboard.locator('[data-overview-open-count]');
@@ -584,6 +592,9 @@ module.exports = async function checkWorkroom(browser, origin) {
     const deniedAfterSave = await worker.fetch(new Request(drivePageUrl), env);
     assert.equal(deniedAfterSave.status, 403);
     assert.doesNotMatch(await deniedAfterSave.text(), /another-folder|pintasan-drive/);
+    await page.goto(overview + '&day=' + tomorrow);
+    await emptyTasksLink.waitFor();
+    assert.ok((await emptyTasksLink.boundingBox()).height >= 44);
     assert.deepEqual(errors, []);
     console.log('Drive shortcuts: desktop and mobile placement, popup, shared edits, and authentication');
     console.log('Authenticated worker and Chromium: all Workroom panels, history, draft protection, mobile menu and persisted themes');
