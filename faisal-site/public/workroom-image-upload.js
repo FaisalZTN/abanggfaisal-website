@@ -27,12 +27,28 @@ export function bindImageEditing(image, url, layout, apply) {
   };
 }
 
+export function bindBlockImages(editor) {
+  editor?.state.doc.descendants((node, pos) => {
+    if (node.type.name !== 'image' || !URL.canParse(node.attrs.src, location.origin)) return;
+    const src = new URL(node.attrs.src, location.origin);
+    if (src.origin !== location.origin || !privateImagePath.test(src.pathname)) return;
+    const image = editor.view.nodeDOM(pos);
+    if (!(image instanceof HTMLImageElement)) return;
+    const doc = editor.state.doc;
+    bindImageEditing(image, node.attrs.src, node.attrs.layout, editor.isEditable ? ({ url, layout }) => {
+      if (editor.isDestroyed || !editor.isEditable || editor.state.doc !== doc) return false;
+      editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, src: url, layout }));
+      editor.commands.focus();
+      return true;
+    } : null);
+  });
+}
+
 export function mount(panel, signal) {
   const listen = (target, type, handler, options) => target.addEventListener(type, handler, { ...options, signal });
   const pending = new WeakSet();
   function targetEditor(target) {
-    return target.closest?.('#edit-body, #note-split-body, textarea[data-task-detail-input], .workspace-editor textarea[name="body"], #add-task textarea[name="body"]')
-      ?? target.closest?.('.task-detail-preview')?.closest('form')?.querySelector('[data-task-detail-input]');
+    return target.closest?.('#edit-body, #note-split-body, [data-task-detail-input]');
   }
   function status(editor, text) {
     const message = editor.matches('#edit-body, #note-split-body') ? panel.querySelector('#' + 'note-status')

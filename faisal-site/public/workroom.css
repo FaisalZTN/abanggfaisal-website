@@ -1602,3 +1602,12 @@ img[data-image-selected] { opacity: 0; }
 }
 .task-uploaded-image { max-width: 100%; height: auto; }
 .task-uploaded-image:not([data-image-layout]) { display: block; }
+
+.task-block-editor { border: 1px solid var(--line); }
+.task-block-editor .note-rendered { min-height: 9rem; }
+.task-block-editor .tiptap { min-height: 8rem; }
+.task-block-editor .note-toolbar label { font-size: .8rem; padding-inline: .25rem; }
+.task-block-editor .note-toolbar :is(input, select) { min-height: 44px; font-size: .875rem; }
+
+[data-task-detail-source][hidden] { display: none; }
+.task-format-options[open] { flex-basis: 100%; }

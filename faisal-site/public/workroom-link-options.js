@@ -22,23 +22,20 @@ export function mount(panel, signal) {
 
   signal.addEventListener('abort', () => { hide(); menu.remove(); }, { once: true });
 
-  const allowed = '#edit-body a[href], .task-detail-preview a[href]';
+  const allowed = '#edit-body a[href], [data-task-detail-input] a[href]';
   const eligible = link => link?.matches(allowed) && /^https?:$/.test(link.protocol);
-  let active, trigger, timer, hoverTimer;
+  let active, timer, hoverTimer;
   function hide() {
     clearTimeout(timer);
     clearTimeout(hoverTimer);
-    trigger?.setAttribute('aria-expanded', 'false');
     menu.hidden = true;
-    active = trigger = null;
+    active = null;
   }
-  function show(link, button = null) {
+  function show(link) {
     if (!eligible(link)) return;
     if (active !== link) hide();
     clearTimeout(timer);
     active = link;
-    trigger = button || trigger;
-    trigger?.setAttribute('aria-expanded', 'true');
     open.href = link.href;
     status.textContent = '';
     menu.hidden = false;
@@ -79,17 +76,8 @@ export function mount(panel, signal) {
   });
   listen(document, 'click', event => {
     if (menu.contains(event.target)) return;
-    const button = event.target.closest?.('.task-detail-preview [data-link-options]');
-    if (button) {
-      if (trigger === button) hide();
-      else {
-        show(button.parentElement.querySelector('a[href]'), button);
-        copy.focus();
-      }
-      return;
-    }
     const link = hrefAt(event.target);
-    if (eligible(link) && link.closest('#edit-body')) {
+    if (eligible(link)) {
       event.preventDefault();
       show(link);
       return;
@@ -104,7 +92,7 @@ export function mount(panel, signal) {
       copy.focus();
     }
     if (event.key === 'Escape' && active) {
-      if (menu.contains(document.activeElement)) (trigger || active).focus();
+      if (menu.contains(document.activeElement)) active.focus();
       hide();
     }
   });

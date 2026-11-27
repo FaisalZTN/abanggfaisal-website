@@ -1,5 +1,5 @@
-import { bindImageEditing } from '/workroom-image-upload.js';
-import { noteInline, noteLines, notePreview, readBlockNote, blockNoteBody } from './workroom-note-format.js';
+import { bindBlockImages } from '/workroom-image-upload.js';
+import { legacyContent, notePreview, readBlockNote, blockNoteBody } from './workroom-note-format.js';
 
 export function mount(panel, signal) {
   const el = id => panel.querySelector('#' + id);
@@ -71,22 +71,7 @@ export function mount(panel, signal) {
   }
 
   function bindNoteImages(side) {
-    const target = side === 'right' ? splitPreview : blockEditor;
-    const editor = target?.editor;
-    editor?.state.doc.descendants((node, pos) => {
-      if (node.type.name !== 'image') return;
-      const src = URL.canParse(node.attrs.src, location.origin) && new URL(node.attrs.src, location.origin);
-      if (src?.origin !== location.origin || !/^\/workroom\/images\/[a-f0-9]{64}$/.test(src.pathname)) return;
-      const image = editor.view.nodeDOM(pos);
-      if (!(image instanceof HTMLImageElement)) return;
-      const doc = editor.state.doc;
-      bindImageEditing(image, node.attrs.src, node.attrs.layout, editor.isEditable ? ({ url, layout }) => {
-        if (editor.isDestroyed || !editor.isEditable || editor.state.doc !== doc) return false;
-        editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, src: url, layout }));
-        editor.commands.focus();
-        return true;
-      } : null);
-    });
+    bindBlockImages((side === 'right' ? splitPreview : blockEditor)?.editor);
   }
 
   function updateNoteBody(note, document, side) {
@@ -127,21 +112,6 @@ export function mount(panel, signal) {
       }
     }
     applyPaneModes();
-  }
-
-  function legacyContent(body) {
-    const html = noteLines(body).map(line => {
-      const task = /^- \[([ xX])\] (.*)$/.exec(line);
-      if (task) return `<ul data-type="taskList"><li data-type="taskItem" data-checked="${task[1] !== ' '}"><p>${noteInline(task[2])}</p></li></ul>`;
-      const heading = /^(#{1,6}) (.*)$/.exec(line);
-      if (heading) return `<h${heading[1].length}>${noteInline(heading[2])}</h${heading[1].length}>`;
-      if (line.startsWith('- ')) return `<ul><li><p>${noteInline(line.slice(2))}</p></li></ul>`;
-      return `<p>${noteInline(line)}</p>`;
-    }).join('');
-    return html.replace(/<font (color|size)="([^"]+)">/g, (_, type, value) => {
-      const px = [0, 10, 13, 16, 18, 24, 32, 48];
-      return `<span style="${type === 'color' ? 'color:' + value : 'font-size:' + px[Number(value)] + 'px'}">`;
-    }).replaceAll('</font>', '</span>');
   }
 
   const toolbar = [

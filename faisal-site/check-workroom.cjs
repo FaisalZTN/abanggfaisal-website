@@ -261,7 +261,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.waitForSelector('#workspace');
     assert.equal(await page.evaluate(()=>window.testDocument), true);
     assert.equal(await page.locator('.workroom-link-options').count(),1);
-    assert.equal(await page.locator('.tiptap').count(),0);
+    assert.equal(await page.locator('#edit-body .tiptap').count(),0);
     await page.goBack();
     await page.waitForSelector('#note-query');
     assert.equal(await page.locator('.note-block-menu').count(),1);
@@ -416,6 +416,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     const project = db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('project', 'Tugas Akhir', '', 'active', '', 'normal')").run().lastInsertRowid;
     db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority, project_id) VALUES ('task', 'Baca jurnal', '', 'active', '2027-09-30', 'normal', ?), ('task', 'Buat kerangka', '', 'done', '', 'normal', ?)").run(project, project);
     await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
+    db.prepare("UPDATE workroom_entries SET body = ? WHERE title = 'Baca jurnal'").run('# Referensi lama');
     await page.getByRole('link', { name: 'Baca jurnal' }).click();
     const autosave = page.waitForResponse(response => response.request().method() === 'POST' && response.request().postData()?.includes('autosave=1'));
     await page.locator('.workspace-editor').getByLabel('Area', { exact: true }).fill('Akademik');
@@ -423,17 +424,24 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(savedTask.status(), 200, (await savedTask.text()).slice(0, 400));
     assert.equal(await page.locator('.workspace-editor').getByRole('button', { name: 'Simpan perubahan' }).count(), 0);
     await page.locator('.workspace-editor').getByText('Tersimpan otomatis.', { exact: true }).waitFor();
-    const taskBody = page.locator('.workspace-editor [data-task-detail-input]');
+    const taskBody = page.locator('.workspace-editor').getByRole('textbox', { name: 'Detail tugas' });
+    await taskBody.getByRole('heading', { name: 'Referensi lama' }).waitFor();
+    await taskBody.getByRole('heading', { name: 'Referensi lama' }).click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('.workspace-editor textarea[name="body"]').isVisible(), false);
+    await page.locator('.workspace-editor').getByRole('button', { name: 'Tebal' }).click();
+    await page.keyboard.type('Detail berformat');
+    await taskBody.locator('strong').filter({ hasText: 'Detail berformat' }).waitFor();
     await pasteScreenshot(taskBody);
-    await page.locator('.workspace-editor .task-uploaded-image').waitFor();
+    await page.locator('.workspace-editor [data-task-detail-input] img').waitFor();
     assert.equal(await page.getByRole('dialog', { name: 'Siapkan gambar' }).count(), 0);
-    assert.match(await taskBody.inputValue(), /〔Gambar 1〕/);
-    assert.doesNotMatch(await taskBody.inputValue(), /workroom\/images/);
+    assert.doesNotMatch(await taskBody.textContent(), /〔Gambar 1〕|workroom\/images/);
     const taskImageSave = page.waitForResponse(response => response.request().method() === 'POST' &&
       response.request().postData()?.includes('layout%3Dinline'));
     assert.equal((await taskImageSave).status(), 200);
     assert.match(db.prepare("SELECT body FROM workroom_entries WHERE title = 'Baca jurnal'").get().body, /#layout=inline/);
-    const uploadedTaskImage = page.locator('.workspace-editor .task-uploaded-image');
+    const uploadedTaskImage = page.locator('.workspace-editor [data-task-detail-input] img');
     await uploadedTaskImage.click();
     await imageFrame.waitFor();
     const editedTaskImageSave = page.waitForResponse(response => response.request().method() === 'POST' &&
@@ -442,7 +450,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal((await editedTaskImageSave).status(), 200);
     const updatedTaskBody = db.prepare("SELECT body FROM workroom_entries WHERE title = 'Baca jurnal'").get().body;
     assert.match(updatedTaskBody, /#layout=inline.*&x=30/);
-    assert.equal(updatedTaskBody.match(/!\[\]/g).length, 1);
+    assert.equal(updatedTaskBody.match(/"type":"image"/g).length, 1);
     assert.equal(db.prepare("SELECT task_area FROM workroom_entries WHERE title = 'Baca jurnal'").get().task_area, 'Akademik');
     await page.getByLabel('Filter area', { exact: true }).selectOption('Akademik');
     await page.getByRole('button', { name: 'Filter area', exact: true }).click();

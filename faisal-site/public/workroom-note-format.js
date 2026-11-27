@@ -84,3 +84,24 @@ export function notePreview(body, limit = 120) {
   const characters = Array.from(text);
   return characters.length > limit ? characters.slice(0, limit).join('').trimEnd() + '…' : text;
 }
+
+export function legacyContent(body) {
+  const html = noteLines(body).map(line => {
+    const task = /^- \[([ xX])\] (.*)$/.exec(line);
+    if (task) return `<ul data-type="taskList"><li data-type="taskItem" data-checked="${task[1] !== ' '}"><p>${noteInline(task[2])}</p></li></ul>`;
+    const heading = /^(#{1,6}) (.*)$/.exec(line);
+    if (heading) return `<h${heading[1].length}>${noteInline(heading[2])}</h${heading[1].length}>`;
+    if (line.startsWith('- ')) return `<ul><li><p>${noteInline(line.slice(2))}</p></li></ul>`;
+    const image = /^!\[([^\]\r\n]*)\]\((\/workroom\/images\/[a-f0-9]{64}(?:#[a-z0-9=&-]+)?)\)$/.exec(line.trim());
+    if (image) {
+      const layout = new URLSearchParams(image[2].split('#')[1]).get('layout');
+      const placement = ['left', 'right', 'behind', 'front'].includes(layout) ? ` data-image-layout="${layout}"` : '';
+      return `<img src="${escapeNoteHtml(image[2])}" alt="${escapeNoteHtml(image[1] || 'Gambar')}"${placement}>`;
+    }
+    return `<p>${noteInline(line)}</p>`;
+  }).join('');
+  return html.replace(/<font (color|size)="([^"]+)">/g, (_, type, value) => {
+    const px = [0, 10, 13, 16, 18, 24, 32, 48];
+    return `<span style="${type === 'color' ? 'color:' + value : 'font-size:' + px[Number(value)] + 'px'}">`;
+  }).replaceAll('</font>', '</span>');
+}
