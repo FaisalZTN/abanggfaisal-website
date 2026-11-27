@@ -1447,8 +1447,9 @@ main { padding-block: clamp(.5rem, 2vw, 1.25rem) 3rem; }
 }
 .overview-greeting .today-mark {
   grid-row: span 2;
-  inline-size: 1.6rem;
-  block-size: 1.6rem;
+  inline-size: clamp(2.5rem, 5vw, 3.75rem);
+  block-size: auto;
+  aspect-ratio: 1;
   fill: none;
   stroke: var(--accent);
   stroke-width: 2.2;
