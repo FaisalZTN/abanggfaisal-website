@@ -1072,9 +1072,10 @@ async function renderWorkroom(db, page, url, env, renderPage, driveShortcuts = [
   }
   let entries, counts;
   if (page === 'home') {
+    await ensureWorkroomNotes(db);
     const [tasks, notes, totals] = await db.batch([
       db.prepare("SELECT id, kind, title, status, due, priority FROM workroom_entries WHERE kind = 'task' AND status <> 'done' AND due <> '' ORDER BY id DESC"),
-      db.prepare("SELECT id, kind, title, body FROM workroom_entries WHERE kind = 'note' AND status <> 'trashed' ORDER BY id DESC LIMIT 3"),
+      db.prepare("SELECT id, kind, title, body FROM workroom_entries WHERE kind = 'note' AND status <> 'trashed' ORDER BY note_updated DESC, id DESC LIMIT 3"),
       db.prepare(`SELECT
         COUNT(CASE WHEN kind = 'task' AND status <> 'done' THEN 1 END) AS tasks,
         COUNT(CASE WHEN kind = 'project' AND status = 'active' THEN 1 END) AS projects,
@@ -1344,8 +1345,9 @@ async function workroomNotesData(request, db, url) {
     const result = await db.prepare('INSERT OR IGNORE INTO workroom_note_categories (id, name) VALUES (?, ?)').bind(id, name).run();
     return result.meta.changes ? reply({id, name}, 201) : reply({error:'Kategori sudah ada. Jika dihapus, pulihkan dari Sampah.'}, 409);
   }
-  const {id, title, body, category} = data;
+  const {id, title, body, category, baseUpdated} = data;
   if (data.action !== 'save' || (id !== null && (!Number.isSafeInteger(id) || id < 1)) ||
+      (id !== null && baseUpdated !== null && (!Number.isSafeInteger(baseUpdated) || baseUpdated < 0)) ||
       typeof title !== 'string' || !title.trim() || title.length > 160 || typeof body !== 'string' || body.length > (readBlockNote(body) ? 100000 : 10000) ||
       typeof category !== 'string' || category.length > 50) return reply({error:'Periksa judul, isi, dan kategori.'}, 400);
   const custom = category !== 'none' && !Object.hasOwn(builtInNoteCategories, category);
@@ -1367,14 +1369,21 @@ async function workroomNotesData(request, db, url) {
     if (!saved) return reply({error:'Catatan atau kategori sudah berubah. Muat ulang halaman.'}, 409);
     return reply({id:saved.id, kind:'note', title:title.trim(), body, category, updated});
   }
-  const result = id === null
-    ? await db.prepare(`INSERT INTO workroom_entries (title, body, note_category, note_updated, kind, status, due, priority) SELECT ?, ?, ?, ?, 'note', 'active', '', 'normal' WHERE ${categoryCheck}`).bind(...values, Number(custom), category, category).run()
-    : await db.prepare(`UPDATE workroom_entries SET title = ?, body = ?, note_category = CASE
+  if (id === null) {
+    const result = await db.prepare(`INSERT INTO workroom_entries (title, body, note_category, note_updated, kind, status, due, priority)
+      SELECT ?, ?, ?, ?, 'note', 'active', '', 'normal' WHERE ${categoryCheck}`).bind(...values, Number(custom), category, category).run();
+    if (!result.meta.changes) return reply({error:'Kategori sudah berubah. Muat ulang halaman.'}, 409);
+    return reply({id:result.meta.last_row_id, kind:'note', title:title.trim(), body, category, updated});
+  }
+
+  const saved = await db.prepare(`UPDATE workroom_entries SET title = ?, body = ?, note_category = CASE
         WHEN ? = 'none' AND note_category IN (SELECT id FROM workroom_archived_categories) THEN note_category ELSE ? END,
-        note_updated = ? WHERE id = ? AND kind = 'note' AND status <> 'trashed' AND (${categoryCheck})`)
-      .bind(title.trim(), body, category, category, updated, id, Number(custom), category, category).run();
-  if (!result.meta.changes) return reply({error: category !== 'none' ? 'Catatan atau kategori sudah berubah. Muat ulang halaman.' : 'Catatan tidak ditemukan.'}, category !== 'none' ? 409 : 404);
-  return reply({id: id ?? result.meta.last_row_id, kind:'note', title:title.trim(), body, category, updated});
+        note_updated = max(?, COALESCE(note_updated, 0) + 1)
+      WHERE id = ? AND kind = 'note' AND status <> 'trashed' AND note_updated IS ? AND (${categoryCheck})
+      RETURNING note_updated AS updated`)
+    .bind(title.trim(), body, category, category, updated, id, baseUpdated, Number(custom), category, category).first();
+  if (!saved) return reply({error:'Catatan atau kategori sudah berubah di sesi lain. Salin draf sebelum memuat ulang.'}, 409);
+  return reply({id, kind:'note', title:title.trim(), body, category, updated:saved.updated});
 }
 
 function workroomRedirect(url, target, status = 302) {
@@ -1751,9 +1760,11 @@ async function handleWorkroom(request, env, url) {
     const area = kind === 'task' && data.has('task_area') ? get('task_area').replace(/\s+/g, ' ') : null;
     if (area && area.length > 60) return invalid();
     await ensureTaskArea(db);
-    const values = [title, body, status, due, priority, project, area];
+    await ensureWorkroomNotes(db);
+    const noteUpdated = kind === 'note' ? Date.now() : null;
+    const values = [title, body, status, due, priority, project, area, noteUpdated];
     if (id) {
-      const result = await db.prepare("UPDATE workroom_entries SET title = ?, body = ?, status = ?, due = ?, priority = ?, project_id = ?, task_area = COALESCE(?, task_area) WHERE id = ? AND kind = ? AND status <> 'trashed'")
+      const result = await db.prepare("UPDATE workroom_entries SET title = ?, body = ?, status = ?, due = ?, priority = ?, project_id = ?, task_area = COALESCE(?, task_area), note_updated = CASE WHEN kind = 'note' THEN max(?, COALESCE(note_updated, 0) + 1) ELSE note_updated END WHERE id = ? AND kind = ? AND status <> 'trashed'")
         .bind(...values, id, kind).run();
       if (kind === 'task' && get('autosave') === '1') {
         return Response.json({ saved: Boolean(result.meta.changes) }, {
@@ -1762,7 +1773,7 @@ async function handleWorkroom(request, env, url) {
         });
       }
     } else {
-      await db.prepare("INSERT INTO workroom_entries (title, body, status, due, priority, project_id, task_area, kind) VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, ''), ?)")
+      await db.prepare("INSERT INTO workroom_entries (title, body, status, due, priority, project_id, task_area, note_updated, kind) VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, ''), ?, ?)")
         .bind(...values, kind).run();
     }
   } else return invalid();
