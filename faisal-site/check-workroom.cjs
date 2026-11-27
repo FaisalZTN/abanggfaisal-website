@@ -506,7 +506,7 @@ module.exports = async function checkWorkroom(browser, origin) {
       '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
       '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] >>',
     ];
-    let pdfDocument = '%PDF-1.4\n';
+    let pdfDocument = '%PDF-1.4\n' + '% padding for the upload test\n'.repeat(75000);
     const offsets = objects.map((object, index) => {
       const offset = pdfDocument.length;
       pdfDocument += (index + 1) + ' 0 obj\n' + object + '\nendobj\n';
@@ -523,7 +523,8 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(await pdfDialog.locator('iframe').getAttribute('src'), previewUrl);
     const preview = await worker.fetch(new Request(previewUrl, { headers: { 'Cf-Access-Jwt-Assertion': token } }), env);
     assert.equal(preview.headers.get('Content-Type'), 'application/pdf');
-    assert.match(await preview.text(), /^%PDF-/);
+    assert.equal(await preview.text(), pdfDocument);
+    assert.match(await pdfSection.locator('[data-pdf-uploaded]').textContent(), /Diunggah .*\d{2}[.:]\d{2} WITA/);
     assert.equal((await worker.fetch(new Request(previewUrl), env)).status, 403);
     await pdfDialog.getByRole('button', { name: 'Tutup' }).click();
     await page.reload();
@@ -539,6 +540,15 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(await page.locator('.workspace-editor').getByRole('button', { name: 'Simpan perubahan' }).count(), 0);
     await page.locator('.workspace-editor').getByText('Tersimpan otomatis.', { exact: true }).waitFor();
     const taskBody = page.locator('.workspace-editor').getByRole('textbox', { name: 'Detail tugas' });
+    const detailSummary = page.locator('.task-detail-disclosure > summary');
+    await taskBody.waitFor();
+    await detailSummary.click();
+    await taskBody.waitFor({ state: 'hidden' });
+    await detailSummary.click();
+    await taskBody.waitFor();
+    const deleteControl = page.locator('.workspace-editor > .task-delete');
+    assert.equal(await deleteControl.locator('summary').getAttribute('aria-label'), 'Hapus tugas');
+    assert.equal(await deleteControl.locator('button').evaluate(button => button.form.getAttribute('id')), 'task-editor-form');
     await taskBody.getByRole('heading', { name: 'Referensi lama' }).waitFor();
     await taskBody.getByRole('heading', { name: 'Referensi lama' }).click();
     await page.keyboard.press('End');

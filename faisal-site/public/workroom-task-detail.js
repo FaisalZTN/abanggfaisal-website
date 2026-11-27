@@ -133,7 +133,14 @@ function mountTaskPdf(section, signal) {
   dialog.querySelector('a').href = preview.href;
   section.hidden = false;
 
-  function display(name) {
+  const uploaded = section.querySelector('[data-pdf-uploaded]');
+  const formatUpload = new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'long', timeStyle: 'short', timeZone: 'Asia/Makassar',
+  });
+  function display({ name, uploaded_at }) {
+    uploaded.hidden = !name;
+    uploaded.textContent = uploaded_at ? 'Diunggah ' + formatUpload.format(new Date(uploaded_at)) + ' WITA'
+      : 'Waktu unggah tidak tercatat.';
     open.hidden = !name;
     open.textContent = name ? 'Lihat PDF: ' + name : '';
     dialog.querySelector('h2').textContent = name ?? '';
@@ -157,8 +164,8 @@ function mountTaskPdf(section, signal) {
     const file = input.files[0];
     input.value = '';
     if (!file) return;
-    if (file.size > 1900000) {
-      status.textContent = 'Ukuran PDF maksimal 1,9 MB.';
+    if (file.size > Number(section.dataset.maxBytes)) {
+      status.textContent = 'Ukuran PDF maksimal 10 MB.';
       return;
     }
     input.disabled = true;
@@ -166,11 +173,11 @@ function mountTaskPdf(section, signal) {
     const upload = new URL(endpoint);
     upload.searchParams.set('name', file.name);
     try {
-      const { name } = await requestPdf(upload, {
+      const attachment = await requestPdf(upload, {
         method: 'POST', headers: { 'Content-Type': 'application/pdf' }, body: file,
       });
       if (signal.aborted) return;
-      display(name);
+      display(attachment);
       status.textContent = 'PDF tersimpan.';
       if (!dialog.open) showPreview();
     } catch {
@@ -179,7 +186,7 @@ function mountTaskPdf(section, signal) {
       input.disabled = false;
     }
   }, { signal });
-  void requestPdf(endpoint).then(({ name }) => display(name)).catch(() => {
+  void requestPdf(endpoint).then(display).catch(() => {
     if (!signal.aborted) status.textContent = 'Lampiran PDF belum bisa dimuat.';
   }).finally(() => { input.disabled = false; });
 }

@@ -158,22 +158,25 @@ function workroomForm(kind, entry, projects, standalone = false, defaultDue = ''
   const projectOptions = projects.map(project =>
     `<option value="${project.id}"${entry?.project_id === project.id ? ' selected' : ''}>${e(project.title)}</option>`).join('');
   const blockBody = kind === 'note' && readBlockNote(entry?.body);
+  const taskEditor = kind === 'task' && standalone && entry;
   const richTask = kind === 'task' && readBlockNote(entry?.body);
-  return `<form method="post" action="${workroomPages[kind].path}">
+  return `<form method="post" action="${workroomPages[kind].path}"${taskEditor ? ' id="task-editor-form"' : ''}>
     <input type="hidden" name="kind" value="${kind}">
     <input type="hidden" name="id" value="${entry?.id ?? ''}">
     <label>Judul<input name="title" required maxlength="160" value="${e(entry?.title)}"></label>
+    ${taskEditor ? '<details class="task-detail-disclosure" open><summary>Detail</summary>' : ''}
     <label${kind === 'task' ? ' data-task-detail-source' : ''}${richTask ? ' hidden' : ''}>${kind === 'note' ? 'Isi catatan (Markdown)' : 'Detail'}<textarea name="body" rows="${standalone ? 12 : 3}" maxlength="${richTask ? 100000 : 10000}"${blockBody ? ' disabled' : ''}>${e(blockBody ? noteBodyText(entry.body) : entry?.body)}</textarea></label>
     ${blockBody ? `<p><a href="${workroomPages.note.path}?edit=${entry.id}">Edit isi di editor blok</a></p>` : ''}
     ${richTask ? `<noscript><p>Detail</p><p>${e(noteBodyText(entry.body))}</p></noscript>` : ''}
     ${kind === 'task' ? `<div class="task-detail-tools" hidden>
-      <span>Detail</span>
+      ${taskEditor ? '' : '<span>Detail</span>'}
       <div class="note-sheet task-block-editor">
         <div class="note-toolbar" role="group" aria-label="Format detail tugas"></div>
         <div class="note-rendered" data-task-detail-input></div>
       </div>
       <p class="task-detail-status" role="status"></p>
     </div>` : ''}
+    ${taskEditor ? '</details>' : ''}
     <div class="fields">
     ${kind !== 'note' ? `<label>Status<select name="status">${statuses}</select></label>
       <label>Tenggat<input type="date" name="due" value="${e(entry?.due ?? defaultDue)}"></label>` : ''}
@@ -184,7 +187,7 @@ function workroomForm(kind, entry, projects, standalone = false, defaultDue = ''
     </div>
     ${kind === 'task' && entry ? '<p data-task-save-status role="status"></p>' : ''}
     <button name="action" value="save">${entry ? 'Simpan perubahan' : 'Tambah'}</button>
-    ${entry ? '<details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>' : ''}
+    ${entry && !taskEditor ? '<details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>' : ''}
   </form>`;
 }
 
@@ -527,10 +530,11 @@ function workroomWorkspace(entries, params, areas) {
   }).join('');
   const editor = selected ? `<section class="collection workspace-editor"><h2>${e(selected.title)}</h2>
     ${workroomForm(selected.kind, selected, entries.filter(entry => entry.kind === 'project'), true)}
-    <section class="task-pdf" data-task-pdf="${e(selected.id)}" aria-labelledby="task-pdf-heading" hidden>
+    <section class="task-pdf" data-task-pdf="${e(selected.id)}" data-max-bytes="${taskPdfLimit}" aria-labelledby="task-pdf-heading" hidden>
       <h3 id="task-pdf-heading">Bukti tugas</h3>
-      <label>Pilih PDF <small>(maks. 1,9 MB)</small><input type="file" accept="application/pdf,.pdf" disabled></label>
+      <label>Pilih PDF <small>(maks. 10 MB)</small><input type="file" accept="application/pdf,.pdf" disabled></label>
       <button type="button" data-pdf-open hidden></button>
+      <small data-pdf-uploaded hidden></small>
       <p role="status"></p>
       <dialog class="workroom-url-dialog task-pdf-preview" aria-labelledby="task-pdf-title">
         <div class="task-pdf-actions">
@@ -540,7 +544,12 @@ function workroomWorkspace(entries, params, areas) {
         </div>
         <iframe title="Pratinjau PDF bukti tugas"></iframe>
       </dialog>
-    </section></section>` : '';
+    </section>
+    <details class="task-delete">
+      <summary aria-label="Hapus tugas" title="Hapus tugas">${workroomIcon('trash')}</summary>
+      <button form="task-editor-form" name="action" value="delete" formnovalidate>Konfirmasi hapus tugas</button>
+    </details>
+  </section>` : '';
   return `<div class="workspace" id="workspace">${editor}<section class="collection">
     <h2>Daftar tugas</h2><div class="workspace-tools">${views}
     <form method="get" action="${path}#workspace" data-task-filter><input type="hidden" name="area" value="${e(area)}"><input type="hidden" name="view" value="${view}">
@@ -1503,7 +1512,8 @@ async function workroomImage(request, url, db) {
   return reply({ url: WORKROOM + 'images/' + key }, 201);
 }
 
-const taskPdfLimit = 1900000;
+const taskPdfLimit = 10000000;
+const taskPdfChunkSize = 1000000;
 
 async function workroomTaskPdf(request, url, db) {
   const match = /^\d+$/.exec(url.searchParams.get('pdf'));
@@ -1520,14 +1530,25 @@ async function workroomTaskPdf(request, url, db) {
     task_id INTEGER PRIMARY KEY REFERENCES workroom_entries(id) ON DELETE CASCADE,
     name TEXT NOT NULL, bytes BLOB NOT NULL
   )`).run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS workroom_task_pdf_chunks (
+    task_id INTEGER NOT NULL REFERENCES workroom_task_pdfs(task_id) ON DELETE CASCADE,
+    part INTEGER NOT NULL, bytes BLOB NOT NULL, uploaded_at TEXT NOT NULL,
+    PRIMARY KEY (task_id, part)
+  )`).run();
   if (!upload) {
-    const preview = url.searchParams.has('preview');
-    const pdf = await db.prepare(`SELECT p.name${preview ? ', p.bytes' : ''}
-      FROM workroom_entries t LEFT JOIN workroom_task_pdfs p ON p.task_id = t.id
-      WHERE t.id = ? AND t.kind = 'task'`).bind(id).first();
-    if (!pdf || (preview && !pdf.bytes)) return reply({ error: 'PDF tidak ditemukan.' }, 404);
-    if (!preview) return reply({ name: pdf.name });
-    return new Response(new Uint8Array(pdf.bytes), { headers: {
+    if (!url.searchParams.has('preview')) {
+      const pdf = await db.prepare(`SELECT p.name, c.uploaded_at FROM workroom_entries t
+        LEFT JOIN workroom_task_pdfs p ON p.task_id = t.id
+        LEFT JOIN workroom_task_pdf_chunks c ON c.task_id = p.task_id AND c.part = 0
+        WHERE t.id = ? AND t.kind = 'task'`).bind(id).first();
+      return pdf ? reply(pdf) : reply({ error: 'PDF tidak ditemukan.' }, 404);
+    }
+    const { results } = await db.prepare(`SELECT COALESCE(c.bytes, p.bytes) AS bytes
+      FROM workroom_task_pdfs p JOIN workroom_entries t ON t.id = p.task_id
+      LEFT JOIN workroom_task_pdf_chunks c ON c.task_id = p.task_id
+      WHERE p.task_id = ? AND t.kind = 'task' ORDER BY c.part`).bind(id).all();
+    if (!results.length) return reply({ error: 'PDF tidak ditemukan.' }, 404);
+    return new Response(new Blob(results.map(row => new Uint8Array(row.bytes))), { headers: {
       ...privateHeaders,
       'Content-Type': 'application/pdf',
       'Content-Disposition': 'inline',
@@ -1546,7 +1567,7 @@ async function workroomTaskPdf(request, url, db) {
     if (done) break;
     if (size + value.length > buffer.length) {
       await reader.cancel();
-      return reply({ error: 'Ukuran PDF maksimal 1,9 MB.' }, 413);
+      return reply({ error: 'Ukuran PDF maksimal 10 MB.' }, 413);
     }
     buffer.set(value, size);
     size += value.length;
@@ -1556,11 +1577,20 @@ async function workroomTaskPdf(request, url, db) {
     return reply({ error: 'File ini bukan PDF yang valid.' }, 415);
   }
   const name = (url.searchParams.get('name') || 'Bukti tugas.pdf').slice(0, 160);
-  const stored = await db.prepare(`INSERT INTO workroom_task_pdfs (task_id, name, bytes)
-    SELECT id, ?, ? FROM workroom_entries WHERE id = ? AND kind = 'task'
-    ON CONFLICT(task_id) DO UPDATE SET name = excluded.name, bytes = excluded.bytes
-    RETURNING name`).bind(name, bytes.buffer, id).first();
-  return stored ? reply(stored, 201) : reply({ error: 'Tugas tidak ditemukan.' }, 404);
+  const uploadedAt = new Date().toISOString();
+  const statements = [
+    db.prepare(`INSERT INTO workroom_task_pdfs (task_id, name, bytes)
+      SELECT id, ?, X'' FROM workroom_entries WHERE id = ? AND kind = 'task'
+      ON CONFLICT(task_id) DO UPDATE SET name = excluded.name, bytes = excluded.bytes RETURNING name`).bind(name, id),
+    db.prepare('DELETE FROM workroom_task_pdf_chunks WHERE task_id = ?').bind(id),
+  ];
+  for (let offset = 0; offset < size; offset += taskPdfChunkSize) {
+    statements.push(db.prepare(`INSERT INTO workroom_task_pdf_chunks (task_id, part, bytes, uploaded_at)
+      SELECT task_id, ?, ?, ? FROM workroom_task_pdfs WHERE task_id = ?`)
+      .bind(offset / taskPdfChunkSize, bytes.slice(offset, offset + taskPdfChunkSize).buffer, uploadedAt, id));
+  }
+  const [stored] = await db.batch(statements);
+  return stored.results[0] ? reply({ name, uploaded_at: uploadedAt }, 201) : reply({ error: 'Tugas tidak ditemukan.' }, 404);
 }
 
 const privateNotesCookie = '__Secure-workroom-private-notes';
