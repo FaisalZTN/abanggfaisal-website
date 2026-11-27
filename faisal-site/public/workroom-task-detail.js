@@ -120,8 +120,74 @@ function mountDetail(tools, mountBlockEditor, signal) {
   }, { once: true });
 }
 
+function mountTaskPdf(section, signal) {
+  const endpoint = new URL('/workroom/tasks/', location.origin);
+  endpoint.searchParams.set('pdf', section.dataset.taskPdf);
+  const preview = new URL(endpoint);
+  preview.searchParams.set('preview', '');
+  const input = section.querySelector('input');
+  const open = section.querySelector('[data-pdf-open]');
+  const status = section.querySelector('[role="status"]');
+  const dialog = section.querySelector('dialog');
+  const frame = dialog.querySelector('iframe');
+  dialog.querySelector('a').href = preview.href;
+  section.hidden = false;
+
+  function display(name) {
+    open.hidden = !name;
+    open.textContent = name ? 'Lihat PDF: ' + name : '';
+    dialog.querySelector('h2').textContent = name ?? '';
+  }
+
+  function showPreview() {
+    frame.src = preview.href;
+    dialog.showModal();
+  }
+
+  async function requestPdf(url, options) {
+    const response = await fetch(url, { ...options, signal });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'PDF belum bisa diproses.');
+    return data;
+  }
+
+  open.addEventListener('click', showPreview, { signal });
+  dialog.addEventListener('close', () => frame.removeAttribute('src'), { signal });
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    input.value = '';
+    if (!file) return;
+    if (file.size > 1900000) {
+      status.textContent = 'Ukuran PDF maksimal 1,9 MB.';
+      return;
+    }
+    input.disabled = true;
+    status.textContent = 'Mengunggah PDF…';
+    const upload = new URL(endpoint);
+    upload.searchParams.set('name', file.name);
+    try {
+      const { name } = await requestPdf(upload, {
+        method: 'POST', headers: { 'Content-Type': 'application/pdf' }, body: file,
+      });
+      if (signal.aborted) return;
+      display(name);
+      status.textContent = 'PDF tersimpan.';
+      if (!dialog.open) showPreview();
+    } catch {
+      if (!signal.aborted) status.textContent = 'PDF gagal diunggah. Cek format file dan coba lagi.';
+    } finally {
+      input.disabled = false;
+    }
+  }, { signal });
+  void requestPdf(endpoint).then(({ name }) => display(name)).catch(() => {
+    if (!signal.aborted) status.textContent = 'Lampiran PDF belum bisa dimuat.';
+  }).finally(() => { input.disabled = false; });
+}
+
 export function mount(panel, signal) {
   const editor = panel.querySelector('.workspace-editor form');
+  const pdf = panel.querySelector('[data-task-pdf]');
+  if (pdf) mountTaskPdf(pdf, signal);
   let guard;
   if (editor) {
     const status = editor.querySelector('[data-task-save-status]');
