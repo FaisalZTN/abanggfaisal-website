@@ -1526,8 +1526,11 @@ async function workroomAttachment(request, url, db, kind) {
   const id = Number(match[0]);
   if (!Number.isSafeInteger(id)) return reply({ error: 'Entri tidak ditemukan.' }, 404);
   const upload = request.method === 'POST';
-  if (upload && request.headers.get('Origin') !== url.origin) return reply({ error: 'Permintaan ditolak.' }, 403);
-  if (!upload && request.method !== 'GET') return reply({ error: 'Metode tidak didukung.' }, 405);
+  const removing = request.method === 'DELETE';
+  if (!upload && !removing && request.method !== 'GET') return reply({ error: 'Metode tidak didukung.' }, 405);
+  if ((upload || removing) && request.headers.get('Origin') !== url.origin) return reply({ error: 'Permintaan ditolak.' }, 403);
+  const fileId = url.searchParams.get('file');
+  if (fileId !== null && !/^(legacy|[a-f0-9-]{36})$/.test(fileId)) return reply({ error: 'Lampiran tidak ditemukan.' }, 404);
   await db.prepare(`CREATE TABLE IF NOT EXISTS workroom_task_pdfs (
     task_id INTEGER PRIMARY KEY REFERENCES workroom_entries(id) ON DELETE CASCADE,
     name TEXT NOT NULL, bytes BLOB NOT NULL
@@ -1546,18 +1549,49 @@ async function workroomAttachment(request, url, db, kind) {
     part INTEGER NOT NULL, bytes BLOB NOT NULL, uploaded_at TEXT NOT NULL,
     PRIMARY KEY (task_id, part)
   )`).run();
+  await db.batch([
+    db.prepare(`CREATE TABLE IF NOT EXISTS workroom_attachments (
+      id TEXT PRIMARY KEY, entry_id INTEGER NOT NULL REFERENCES workroom_entries(id) ON DELETE CASCADE,
+      name TEXT NOT NULL, media_type TEXT NOT NULL, uploaded_at TEXT NOT NULL
+    )`),
+    db.prepare('CREATE INDEX IF NOT EXISTS workroom_attachments_entry ON workroom_attachments (entry_id)'),
+    db.prepare(`CREATE TABLE IF NOT EXISTS workroom_attachment_chunks (
+      file_id TEXT NOT NULL REFERENCES workroom_attachments(id) ON DELETE CASCADE,
+      part INTEGER NOT NULL, bytes BLOB NOT NULL, PRIMARY KEY (file_id, part)
+    )`),
+  ]);
+  const visibleEntry = await db.prepare("SELECT id FROM workroom_entries WHERE id = ? AND kind = ? AND status <> 'trashed'").bind(id, kind).first();
+  if (!visibleEntry) return reply({ error: 'Entri tidak ditemukan.' }, 404);
+  if (removing) {
+    if (!fileId) return reply({ error: 'Lampiran tidak ditemukan.' }, 404);
+    const deletion = fileId === 'legacy'
+      ? db.prepare(`DELETE FROM workroom_task_pdfs WHERE task_id = ? AND EXISTS (
+          SELECT 1 FROM workroom_entries WHERE id = ? AND kind = ? AND status <> 'trashed')`).bind(id, id, kind)
+      : db.prepare(`DELETE FROM workroom_attachments WHERE id = ? AND entry_id = ? AND EXISTS (
+          SELECT 1 FROM workroom_entries WHERE id = ? AND kind = ? AND status <> 'trashed')`).bind(fileId, id, id, kind);
+    const result = await deletion.run();
+    return result.meta.changes ? reply({ removed: true }) : reply({ error: 'Lampiran tidak ditemukan.' }, 404);
+  }
   if (!upload) {
     if (!url.searchParams.has('preview') && !url.searchParams.has('download')) {
-      const pdf = await db.prepare(`SELECT p.name, p.media_type, c.uploaded_at FROM workroom_entries t
-        LEFT JOIN workroom_task_pdfs p ON p.task_id = t.id
-        LEFT JOIN workroom_task_pdf_chunks c ON c.task_id = p.task_id AND c.part = 0
-        WHERE t.id = ? AND t.kind = ? AND t.status <> 'trashed'`).bind(id, kind).first();
-      return pdf ? reply(pdf) : reply({ error: 'Lampiran tidak ditemukan.' }, 404);
+      const { results: files } = await db.prepare(`SELECT 'legacy' AS id, p.name, p.media_type, c.uploaded_at
+        FROM workroom_task_pdfs p LEFT JOIN workroom_task_pdf_chunks c ON c.task_id = p.task_id AND c.part = 0
+        JOIN workroom_entries t ON t.id = p.task_id WHERE t.id = ? AND t.kind = ? AND t.status <> 'trashed'
+        UNION ALL
+        SELECT a.id, a.name, a.media_type, a.uploaded_at FROM workroom_attachments a
+        JOIN workroom_entries t ON t.id = a.entry_id WHERE t.id = ? AND t.kind = ? AND t.status <> 'trashed'
+        ORDER BY uploaded_at, id`).bind(id, kind, id, kind).all();
+      return reply({ files });
     }
-    const { results } = await db.prepare(`SELECT p.name, p.media_type, COALESCE(c.bytes, p.bytes) AS bytes
-      FROM workroom_task_pdfs p JOIN workroom_entries t ON t.id = p.task_id
-      LEFT JOIN workroom_task_pdf_chunks c ON c.task_id = p.task_id
-      WHERE p.task_id = ? AND t.kind = ? AND t.status <> 'trashed' ORDER BY c.part`).bind(id, kind).all();
+    const query = !fileId || fileId === 'legacy'
+      ? db.prepare(`SELECT p.name, p.media_type, COALESCE(c.bytes, p.bytes) AS bytes
+          FROM workroom_task_pdfs p JOIN workroom_entries t ON t.id = p.task_id
+          LEFT JOIN workroom_task_pdf_chunks c ON c.task_id = p.task_id
+          WHERE p.task_id = ? AND t.kind = ? AND t.status <> 'trashed' ORDER BY c.part`).bind(id, kind)
+      : db.prepare(`SELECT a.name, a.media_type, c.bytes FROM workroom_attachments a
+          JOIN workroom_entries t ON t.id = a.entry_id JOIN workroom_attachment_chunks c ON c.file_id = a.id
+          WHERE a.id = ? AND t.id = ? AND t.kind = ? AND t.status <> 'trashed' ORDER BY c.part`).bind(fileId, id, kind);
+    const { results } = await query.all();
     if (!results.length) return reply({ error: 'Lampiran tidak ditemukan.' }, 404);
     const { name, media_type: mediaType } = results[0];
     const inline = !url.searchParams.has('download') && Object.values(attachmentPreviewTypes).includes(mediaType);
@@ -1597,21 +1631,23 @@ async function workroomAttachment(request, url, db, kind) {
     return reply({ error: 'Isi file tidak cocok dengan formatnya.' }, 415);
   }
   const uploadedAt = new Date().toISOString();
+  const newId = crypto.randomUUID();
+  const storedType = mediaType ?? 'application/octet-stream';
   const statements = [
-    db.prepare(`INSERT INTO workroom_task_pdfs (task_id, name, bytes, media_type)
-      SELECT id, ?, X'', ? FROM workroom_entries WHERE id = ? AND kind = ? AND status <> 'trashed'
-      ON CONFLICT(task_id) DO UPDATE SET name = excluded.name, bytes = excluded.bytes, media_type = excluded.media_type
-      RETURNING name`).bind(name, mediaType ?? 'application/octet-stream', id, kind),
-    db.prepare(`DELETE FROM workroom_task_pdf_chunks WHERE task_id = ? AND EXISTS (
-      SELECT 1 FROM workroom_entries WHERE id = ? AND kind = ? AND status <> 'trashed')`).bind(id, id, kind),
+    db.prepare(`INSERT INTO workroom_attachments (id, entry_id, name, media_type, uploaded_at)
+      SELECT ?, id, ?, ?, ? FROM workroom_entries WHERE id = ? AND kind = ? AND status <> 'trashed'
+      AND (SELECT COUNT(*) FROM workroom_attachments WHERE entry_id = workroom_entries.id)
+        + (SELECT COUNT(*) FROM workroom_task_pdfs WHERE task_id = workroom_entries.id) < 3
+      RETURNING id`).bind(newId, name, storedType, uploadedAt, id, kind),
   ];
   for (let offset = 0; offset < size; offset += attachmentChunkSize) {
-    statements.push(db.prepare(`INSERT INTO workroom_task_pdf_chunks (task_id, part, bytes, uploaded_at)
-      SELECT id, ?, ?, ? FROM workroom_entries WHERE id = ? AND kind = ? AND status <> 'trashed'`)
-      .bind(offset / attachmentChunkSize, bytes.slice(offset, offset + attachmentChunkSize).buffer, uploadedAt, id, kind));
+    statements.push(db.prepare(`INSERT INTO workroom_attachment_chunks (file_id, part, bytes)
+      SELECT id, ?, ? FROM workroom_attachments WHERE id = ?`)
+      .bind(offset / attachmentChunkSize, bytes.slice(offset, offset + attachmentChunkSize).buffer, newId));
   }
   const [stored] = await db.batch(statements);
-  return stored.results[0] ? reply({ name, media_type: mediaType ?? 'application/octet-stream', uploaded_at: uploadedAt }, 201) : reply({ error: 'Entri tidak ditemukan.' }, 404);
+  return stored.results[0] ? reply({ id: newId, name, media_type: storedType, uploaded_at: uploadedAt }, 201)
+    : reply({ error: 'Lampiran penuh atau entri sudah tidak tersedia. Maksimal 3 file.' }, 409);
 }
 
 const privateNotesCookie = '__Secure-workroom-private-notes';
@@ -1766,7 +1802,11 @@ async function handleWorkroom(request, env, url) {
   if (request.method === 'POST' && request.headers.get('Origin') !== url.origin) {
     return workroomPage('<h1>Permintaan ditolak</h1>', 403);
   }
-  if (request.method !== 'GET' && request.method !== 'POST') return workroomPage('<h1>Metode tidak didukung</h1>', 405);
+  const attachmentRoute = (['task', 'note'].includes(page) && url.searchParams.has('attachment')) ||
+    (page === 'task' && url.searchParams.has('pdf'));
+  if (request.method !== 'GET' && request.method !== 'POST' && !(attachmentRoute && request.method === 'DELETE')) {
+    return workroomPage('<h1>Metode tidak didukung</h1>', 405);
+  }
 
   const db = env.WORKROOM_DB;
   const renderPage = workroomPage;
@@ -1843,8 +1883,7 @@ async function handleWorkroom(request, env, url) {
       await ensureTaskCompletion(db);
     }
   };
-  if ((['task', 'note'].includes(page) && url.searchParams.has('attachment')) ||
-      (page === 'task' && url.searchParams.has('pdf'))) {
+  if (attachmentRoute) {
     await ensureEntries();
     return workroomAttachment(request, url, db, page);
   }

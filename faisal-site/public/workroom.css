@@ -1715,3 +1715,26 @@ img[data-image-selected] { opacity: 0; }
   margin: .8rem auto 0;
   object-fit: contain;
 }
+
+.workroom-attachment-list { list-style: none; margin: 0; padding: 0; }
+.workroom-attachment-list > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .25rem .5rem;
+  padding-block: .35rem;
+}
+.workroom-attachment-list > li > :is(a, button) { justify-self: start; max-inline-size: 100%; overflow-wrap: anywhere; }
+.workroom-attachment-list > li > small { grid-column: 1 / -1; color: var(--muted); }
+.workroom-attachment-list summary {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  margin-inline-start: auto;
+  border-radius: .6rem;
+  cursor: pointer;
+}
+.workroom-attachment-list summary:is(:hover, :focus-visible) { background: var(--selected); }
+.workroom-attachment-list summary::-webkit-details-marker { display: none; }
+.workroom-attachment-list details[open] { grid-column: 1 / -1; grid-row: auto; }

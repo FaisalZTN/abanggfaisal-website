@@ -177,6 +177,24 @@ module.exports = async function checkWorkroom(browser, origin) {
     const wrongKind = new URL(downloadUrl);
     wrongKind.pathname = '/workroom/tasks/';
     assert.equal((await worker.fetch(new Request(wrongKind, { headers: attachmentHeaders }), env)).status, 404);
+    assert.equal(await noteAttachment.getByRole('listitem').count(), 3);
+    assert.ok(await noteFile.isDisabled());
+    const extra = new URL(downloadUrl);
+    extra.searchParams.delete('file');
+    extra.searchParams.delete('download');
+    extra.searchParams.set('name', 'Keempat.txt');
+    const overLimit = await worker.fetch(new Request(extra, {
+      method: 'POST', headers: { ...attachmentHeaders, Origin: origin }, body: 'keempat',
+    }), env);
+    assert.equal(overLimit.status, 409);
+    const firstFile = noteAttachment.getByRole('listitem').filter({ hasText: 'Gambar.png' });
+    await firstFile.getByLabel('Hapus Gambar.png', { exact: true }).click();
+    await firstFile.getByRole('button', { name: 'Konfirmasi hapus lampiran' }).click();
+    await noteAttachment.getByText('Lampiran dihapus.', { exact: true }).waitFor();
+    assert.equal(await noteAttachment.getByRole('listitem').count(), 2);
+    assert.equal((await worker.fetch(new Request(attachmentImageUrl, { headers: attachmentHeaders }), env)).status, 404);
+    assert.ok(await downloadFile.isVisible());
+    assert.ok(await noteAttachment.getByRole('button', { name: 'Lihat gambar: Foto besar.webp' }).isVisible());
     assert.ok(await notePreview.isHidden());
     await page.locator('#edit-body h2').filter({ hasText: 'Judul lama' }).waitFor();
     assert.equal(await page.locator('#edit-body strong').textContent(), 'Tebal');
@@ -545,6 +563,11 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.setViewportSize({ width: 1280, height: 800 });
     const project = db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('project', 'Tugas Akhir', '', 'active', '', 'normal')").run().lastInsertRowid;
     db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority, project_id) VALUES ('task', 'Baca jurnal', '', 'active', '2027-09-30', 'high', ?), ('task', 'Buat kerangka', '', 'done', '', 'normal', ?)").run(project, project);
+    const legacyTask = db.prepare("SELECT id FROM workroom_entries WHERE title = 'Baca jurnal'").get().id;
+    db.prepare('INSERT INTO workroom_task_pdfs (task_id, name, bytes, media_type) VALUES (?, ?, ?, ?)')
+      .run(legacyTask, 'Lampiran lama.txt', Buffer.from('Isi lama'), 'application/octet-stream');
+    const legacyResponse = await worker.fetch(new Request(origin + '/workroom/tasks/?pdf=' + legacyTask + '&download', { headers: attachmentHeaders }), env);
+    assert.equal(await legacyResponse.text(), 'Isi lama');
     await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
     db.prepare("UPDATE workroom_entries SET body = ? WHERE title = 'Baca jurnal'").run('# Referensi lama');
     await page.getByRole('link', { name: 'Baca jurnal' }).click();
@@ -567,6 +590,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     });
     for (const pair of priorityColors) assert.deepEqual(pair, Array(2).fill(['rgb(167, 29, 50)', 'rgb(255, 255, 255)']));
     const pdfSection = page.getByRole('region', { name: 'Bukti tugas' });
+    await pdfSection.getByRole('link', { name: 'Unduh: Lampiran lama.txt' }).waitFor();
     const pdfInput = pdfSection.getByLabel(/Pilih file/);
     await pdfInput.setInputFiles({ name: 'rusak.pdf', mimeType: 'application/pdf', buffer: Buffer.from('bukan PDF') });
     await pdfSection.getByText(/File gagal diunggah/).waitFor();
@@ -593,7 +617,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     const preview = await worker.fetch(new Request(previewUrl, { headers: { 'Cf-Access-Jwt-Assertion': token } }), env);
     assert.equal(preview.headers.get('Content-Type'), 'application/pdf');
     assert.equal(await preview.text(), pdfDocument);
-    assert.match(await pdfSection.locator('[data-attachment-uploaded]').textContent(), /Diunggah .*\d{2}[.:]\d{2} WITA/);
+    assert.match(await pdfSection.getByRole('listitem').filter({ hasText: 'Bukti.pdf' }).locator('[data-attachment-uploaded]').textContent(), /Diunggah .*\d{2}[.:]\d{2} WITA/);
     assert.equal((await worker.fetch(new Request(previewUrl), env)).status, 403);
     const closePdf = pdfDialog.getByRole('button', { name: 'Tutup' });
     assert.equal((await closePdf.textContent()).trim(), '');
