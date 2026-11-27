@@ -171,10 +171,55 @@ export function mount(panel, signal) {
     const toggle = tools.querySelector('.task-image-toggle');
     const imageFields = tools.querySelector('.task-image-fields');
     const imageUrl = tools.querySelector('.task-image-url');
+    tools.prepend(preview);
+
+    const input = field.cloneNode(false);
+    input.removeAttribute('name');
+    input.dataset.taskDetailInput = '';
+    input.rows = 5;
+    field.replaceWith(input);
+    input.closest('label').after(field);
+    field.hidden = true;
+
+    const tokens = /!\[([^\]\r\n]*)\]\(((?:https:\/\/[^\s)]+|\/workroom\/images\/[a-f0-9]{64}(?:#[a-z0-9=&-]+)?))\)|https?:\/\/[^\s<>"'`]+/gi;
+    const markerPattern = /〔Gambar (\d+)〕/g;
+    let images = [];
+    function expand(text) {
+      return text.replace(markerPattern, (marker, index) => images[Number(index) - 1] ?? marker);
+    }
+    function sourceCursor() {
+      let cursor = input.selectionEnd;
+      for (const marker of input.value.matchAll(markerPattern)) {
+        if (cursor > marker.index && cursor < marker.index + marker[0].length) {
+          cursor = marker.index + marker[0].length;
+          break;
+        }
+      }
+      return expand(input.value.slice(0, cursor)).length;
+    }
+    function renderInput() {
+      images = [];
+      input.value = field.value.replace(tokens, (token, label, url) => {
+        if (url === undefined) return token;
+        return '〔Gambar ' + images.push(token) + '〕';
+      });
+    }
+    function publishBody() {
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    input.addEventListener('input', () => {
+      const text = expand(input.value);
+      if (text.length > field.maxLength) {
+        status.textContent = 'Detail tugas terlalu panjang.';
+        renderInput();
+        return;
+      }
+      field.value = text;
+      publishBody();
+    });
 
     function render() {
       const text = field.value;
-      const tokens = /!\[([^\]\r\n]*)\]\(((?:https:\/\/[^\s)]+|\/workroom\/images\/[a-f0-9]{64}(?:#[a-z0-9=&-]+)?))\)|https?:\/\/[^\s<>"'\u0060]+/gi;
       const nodes = [];
       let offset = 0;
       for (const match of text.matchAll(tokens)) {
@@ -192,8 +237,9 @@ export function mount(panel, signal) {
           const next = '![' + match[1] + '](' + url + ')';
           if (field.value !== text || field.value.length - (end - start) + next.length > field.maxLength) return false;
           field.setRangeText(next, start, end, 'end');
-          field.dispatchEvent(new Event('input', { bubbles: true }));
-          field.focus();
+          renderInput();
+          publishBody();
+          input.focus();
           return true;
         });
         offset = match.index + (isImage ? match[0].length : value.length);
@@ -209,28 +255,33 @@ export function mount(panel, signal) {
       if (!imageFields.hidden) imageUrl.focus();
     };
 
+    function attachImage(url) {
+      const cursor = sourceCursor();
+      const insert = (cursor && field.value[cursor - 1] !== '\n' ? '\n' : '') +
+        '![](' + url.replaceAll(')', '%29') + ')' +
+        (cursor < field.value.length && field.value[cursor] !== '\n' ? '\n' : '');
+      if (field.value.length + insert.length > field.maxLength) {
+        status.textContent = 'Detail tugas terlalu panjang untuk menambah gambar.';
+        return false;
+      }
+      field.setRangeText(insert, cursor, cursor, 'end');
+      renderInput();
+      publishBody();
+      input.focus();
+      return true;
+    }
+
     function insertImage() {
       const url = webUrl(imageUrl.value.trim(), true);
       if (!url) {
         status.textContent = 'Masukkan URL gambar HTTPS yang valid.';
         return;
       }
-      const cursor = field.selectionEnd;
-      const insert = (cursor && field.value[cursor - 1] !== '\n' ? '\n' : '') +
-        '![](' + url.replaceAll(')', '%29') + ')' +
-        (cursor < field.value.length && field.value[cursor] !== '\n' ? '\n' : '');
-      if (field.value.length + insert.length > field.maxLength) {
-        status.textContent = 'Detail tugas terlalu panjang untuk menambah gambar.';
-        return;
-      }
-      field.setRangeText(insert, cursor, cursor, 'end');
+      if (!attachImage(url)) return;
       imageUrl.value = '';
       imageFields.hidden = true;
       toggle.setAttribute('aria-expanded', 'false');
       status.textContent = editor?.contains(field) ? 'Gambar ditambahkan.' : 'Gambar ditambahkan. Simpan tugas untuk menyimpan perubahan.';
-      field.dispatchEvent(new Event('input', { bubbles: true }));
-      render();
-      field.focus();
     }
 
     imageUrl.addEventListener('keydown', event => {
@@ -239,18 +290,12 @@ export function mount(panel, signal) {
       insertImage();
     });
     tools.querySelector('.task-image-add').onclick = insertImage;
-    field.addEventListener('workroom-image', event => {
-      const cursor = field.selectionEnd;
-      const insert = '\n![](' + event.detail.url + ')\n';
-      if (field.value.length + insert.length <= field.maxLength) {
-        field.setRangeText(insert, cursor, cursor, 'end');
-        field.dispatchEvent(new Event('input', { bubbles: true }));
-        field.focus();
-        event.preventDefault();
-      }
+    input.addEventListener('workroom-image', event => {
+      if (attachImage(event.detail.url)) event.preventDefault();
     });
     field.addEventListener('input', render);
     tools.hidden = false;
+    renderInput();
     render();
   }
   return guard;

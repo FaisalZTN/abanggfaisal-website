@@ -176,6 +176,8 @@ module.exports = async function checkWorkroom(browser, origin) {
 
     await page.locator('[data-new-note]').click();
     async function pasteScreenshot(target, layout) {
+      const uploaded = page.waitForResponse(response => response.url() === origin + '/workroom/images/' &&
+        response.request().method() === 'POST');
       await target.evaluate(async element => {
         const canvas = document.createElement('canvas');
         canvas.width = 80;
@@ -188,12 +190,12 @@ module.exports = async function checkWorkroom(browser, origin) {
         transfer.items.add(new File([blob], 'screenshot.png', { type: 'image/png' }));
         element.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }));
       });
-      const crop = page.getByRole('dialog', { name: 'Siapkan gambar' });
-      await crop.getByLabel('Kiri (%)').fill('25');
-      await crop.getByLabel('Posisi gambar').selectOption(layout);
-      const uploaded = page.waitForResponse(response => response.url() === origin + '/workroom/images/' &&
-        response.request().method() === 'POST');
-      await crop.getByRole('button', { name: 'Sisipkan gambar' }).click();
+      if (layout) {
+        const crop = page.getByRole('dialog', { name: 'Siapkan gambar' });
+        await crop.getByLabel('Kiri (%)').fill('25');
+        await crop.getByLabel('Posisi gambar').selectOption(layout);
+        await crop.getByRole('button', { name: 'Sisipkan gambar' }).click();
+      }
       const result = await uploaded;
       assert.equal(result.status(), 201, await result.text());
     }
@@ -421,14 +423,17 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(savedTask.status(), 200, (await savedTask.text()).slice(0, 400));
     assert.equal(await page.locator('.workspace-editor').getByRole('button', { name: 'Simpan perubahan' }).count(), 0);
     await page.locator('.workspace-editor').getByText('Tersimpan otomatis.', { exact: true }).waitFor();
-    const taskBody = page.locator('.workspace-editor textarea[name="body"]');
-    await pasteScreenshot(taskBody, 'behind');
-    await page.locator('.workspace-editor img[data-image-layout="behind"]').waitFor();
+    const taskBody = page.locator('.workspace-editor [data-task-detail-input]');
+    await pasteScreenshot(taskBody);
+    await page.locator('.workspace-editor .task-uploaded-image').waitFor();
+    assert.equal(await page.getByRole('dialog', { name: 'Siapkan gambar' }).count(), 0);
+    assert.match(await taskBody.inputValue(), /〔Gambar 1〕/);
+    assert.doesNotMatch(await taskBody.inputValue(), /workroom\/images/);
     const taskImageSave = page.waitForResponse(response => response.request().method() === 'POST' &&
-      response.request().postData()?.includes('layout%3Dbehind'));
+      response.request().postData()?.includes('layout%3Dinline'));
     assert.equal((await taskImageSave).status(), 200);
-    assert.match(db.prepare("SELECT body FROM workroom_entries WHERE title = 'Baca jurnal'").get().body, /#layout=behind/);
-    const uploadedTaskImage = page.locator('.workspace-editor img[data-image-layout="behind"]');
+    assert.match(db.prepare("SELECT body FROM workroom_entries WHERE title = 'Baca jurnal'").get().body, /#layout=inline/);
+    const uploadedTaskImage = page.locator('.workspace-editor .task-uploaded-image');
     await uploadedTaskImage.click();
     await imageFrame.waitFor();
     const editedTaskImageSave = page.waitForResponse(response => response.request().method() === 'POST' &&
@@ -436,7 +441,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     await dragImageControl(imageFrame, 30, 0);
     assert.equal((await editedTaskImageSave).status(), 200);
     const updatedTaskBody = db.prepare("SELECT body FROM workroom_entries WHERE title = 'Baca jurnal'").get().body;
-    assert.match(updatedTaskBody, /#layout=behind.*&x=30/);
+    assert.match(updatedTaskBody, /#layout=inline.*&x=30/);
     assert.equal(updatedTaskBody.match(/!\[\]/g).length, 1);
     assert.equal(db.prepare("SELECT task_area FROM workroom_entries WHERE title = 'Baca jurnal'").get().task_area, 'Akademik');
     await page.getByLabel('Filter area', { exact: true }).selectOption('Akademik');
