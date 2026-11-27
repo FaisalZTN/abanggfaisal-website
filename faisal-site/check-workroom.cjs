@@ -230,14 +230,24 @@ module.exports = async function checkWorkroom(browser, origin) {
     const croppedNote = editor.locator('img[data-image-layout="right"]');
     await croppedNote.waitFor();
     await page.waitForFunction(() => document.querySelector('#edit-body img[data-image-layout="right"]')?.naturalWidth === 60);
-    await page.locator('#note-image-controls-left').getByRole('button', { name: 'Edit gambar 1' }).click();
-    const editImage = page.getByRole('dialog', { name: 'Edit gambar', exact: true });
-    assert.equal(await editImage.getByLabel('Kiri (%)').inputValue(), '25');
-    assert.equal(await editImage.getByLabel('Posisi gambar').inputValue(), 'right');
-    await editImage.getByRole('button', { name: 'Reset crop' }).click();
-    await editImage.getByLabel('Posisi gambar').selectOption('left');
-    await editImage.getByRole('button', { name: 'Simpan gambar' }).click();
-    await page.waitForFunction(() => document.querySelector('#edit-body img[data-image-layout="left"]')?.naturalWidth === 80);
+    async function dragImageControl(control, dx, dy, position) {
+      const box = await control.boundingBox();
+      const x = box.x + box.width * (position ?? .5);
+      const y = box.y + box.height / 2;
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x + dx, y + dy, { steps: 5 });
+      await page.mouse.up();
+    }
+    const imageFrame = page.getByRole('group', { name: 'Pindah dan potong gambar' });
+    await croppedNote.click();
+    await imageFrame.waitFor();
+    const leftHandle = imageFrame.getByRole('button', { name: 'Potong dari kiri', exact: true });
+    assert.equal(await leftHandle.evaluate(element => getComputedStyle(element).cursor), 'ew-resize');
+    assert.equal(await imageFrame.getByRole('button', { name: 'Potong dari atas', exact: true }).evaluate(element => getComputedStyle(element).cursor), 'ns-resize');
+    assert.equal(await imageFrame.getByRole('button', { name: 'Potong dari kanan bawah' }).evaluate(element => getComputedStyle(element).cursor), 'nwse-resize');
+    await dragImageControl(leftHandle, -Math.ceil((await imageFrame.boundingBox()).width / 3), 0);
+    await page.waitForFunction(() => document.querySelector('#edit-body img[data-image-layout="right"]')?.naturalWidth === 80);
     await page.setViewportSize({ width: 1280, height: 720 });
     const draftSaved = page.waitForResponse(response =>
       response.request().method() === 'POST' && response.request().postData()?.includes('Draf tersimpan otomatis'));
@@ -418,17 +428,15 @@ module.exports = async function checkWorkroom(browser, origin) {
       response.request().postData()?.includes('layout%3Dbehind'));
     assert.equal((await taskImageSave).status(), 200);
     assert.match(db.prepare("SELECT body FROM workroom_entries WHERE title = 'Baca jurnal'").get().body, /#layout=behind/);
-    await page.locator('.workspace-editor').getByRole('button', { name: 'Edit gambar 1' }).click();
-    assert.equal(await editImage.getByLabel('Kiri (%)').inputValue(), '25');
-    assert.equal(await editImage.getByLabel('Posisi gambar').inputValue(), 'behind');
-    await editImage.getByLabel('Posisi gambar').selectOption('front');
+    const uploadedTaskImage = page.locator('.workspace-editor img[data-image-layout="behind"]');
+    await uploadedTaskImage.click();
+    await imageFrame.waitFor();
     const editedTaskImageSave = page.waitForResponse(response => response.request().method() === 'POST' &&
-      response.request().postData()?.includes('layout%3Dfront'));
-    await editImage.getByRole('button', { name: 'Simpan gambar' }).click();
-    await page.locator('.workspace-editor img[data-image-layout="front"]').waitFor();
+      response.request().postData()?.includes('%26x%3D30'));
+    await dragImageControl(imageFrame, 30, 0);
     assert.equal((await editedTaskImageSave).status(), 200);
     const updatedTaskBody = db.prepare("SELECT body FROM workroom_entries WHERE title = 'Baca jurnal'").get().body;
-    assert.match(updatedTaskBody, /#layout=front/);
+    assert.match(updatedTaskBody, /#layout=behind.*&x=30/);
     assert.equal(updatedTaskBody.match(/!\[\]/g).length, 1);
     assert.equal(db.prepare("SELECT task_area FROM workroom_entries WHERE title = 'Baca jurnal'").get().task_area, 'Akademik');
     await page.getByLabel('Filter area', { exact: true }).selectOption('Akademik');

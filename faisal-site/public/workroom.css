@@ -1555,18 +1555,50 @@ img[data-image-layout="front"] { z-index: 1; }
 .workroom-url-dialog form > p { margin: 0; color: var(--muted); }
 .workroom-url-dialog [hidden] { display: none; }
 
-.workroom-image-controls:not([hidden]) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .35rem;
-  padding: .4rem;
+img[data-editable-image] { cursor: grab; pointer-events: auto; }
+img[data-image-selected] { opacity: 0; }
+.workroom-image-frame {
+  position: fixed;
+  z-index: 20;
+  outline: 2px solid var(--accent);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
-.workroom-image-controls button {
-  min-height: 44px;
-  border-radius: .65rem;
-  background: var(--selected);
-  color: var(--ink);
-  font-size: .875rem;
+.workroom-image-frame[hidden] { display: none; }
+.workroom-image-frame:active { cursor: grabbing; }
+.workroom-image-frame > div { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.workroom-image-frame img { position: absolute; max-width: none; max-height: none; }
+.workroom-image-frame [data-crop-edge] {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  translate: -50% -50%;
+  border-radius: 0;
+  background: transparent;
+  touch-action: none;
+}
+.workroom-image-frame [data-crop-edge]::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  background: var(--accent);
+  border: 1px solid var(--paper);
+}
+.workroom-image-frame [data-crop-edge^="n"] { top: 0; }
+.workroom-image-frame [data-crop-edge^="s"] { top: 100%; }
+.workroom-image-frame [data-crop-edge$="w"] { left: 0; }
+.workroom-image-frame [data-crop-edge$="e"] { left: 100%; }
+.workroom-image-frame [data-crop-edge="w"], .workroom-image-frame [data-crop-edge="e"] { top: 50%; cursor: ew-resize; }
+.workroom-image-frame [data-crop-edge="n"], .workroom-image-frame [data-crop-edge="s"] { left: 50%; cursor: ns-resize; }
+.workroom-image-frame [data-crop-edge="nw"], .workroom-image-frame [data-crop-edge="se"] { cursor: nwse-resize; }
+.workroom-image-frame [data-crop-edge="ne"], .workroom-image-frame [data-crop-edge="sw"] { cursor: nesw-resize; }
+@media (pointer: coarse) {
+  .workroom-image-frame [data-crop-edge] { width: 36px; height: 36px; }
+  .workroom-image-frame [data-crop-edge]::after { inset: 13px; }
 }
 .task-uploaded-image { max-width: 100%; height: auto; }
 .task-uploaded-image:not([data-image-layout]) { display: block; }
