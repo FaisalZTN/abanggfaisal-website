@@ -528,11 +528,11 @@ function workroomWorkspace(entries, params, areas) {
     if (area) query.set('area', area);
     return `<a href="${path}?${e(query)}#workspace"${view === key ? ' aria-current="true"' : ''}>${label}</a>`;
   }).join('');
-  const editor = selected ? `<section class="collection workspace-editor"><h2>${e(selected.title)}</h2>
+  const editor = selected ? `<section class="collection workspace-editor"><h2 class="note-sr-only">${e(selected.title)}</h2>
     ${workroomForm(selected.kind, selected, entries.filter(entry => entry.kind === 'project'), true)}
     <section class="task-pdf" data-task-pdf="${e(selected.id)}" data-max-bytes="${taskPdfLimit}" aria-labelledby="task-pdf-heading" hidden>
       <h3 id="task-pdf-heading">Bukti tugas</h3>
-      <label>Pilih PDF <small>(maks. 10 MB)</small><input type="file" accept="application/pdf,.pdf" disabled></label>
+      <label class="task-pdf-picker"><input class="note-sr-only" type="file" accept="application/pdf,.pdf" disabled><span>Pilih PDF <small>· maks. 10 MB</small></span></label>
       <button type="button" data-pdf-open hidden></button>
       <small data-pdf-uploaded hidden></small>
       <p role="status"></p>

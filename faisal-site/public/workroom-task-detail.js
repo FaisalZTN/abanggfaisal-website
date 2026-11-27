@@ -12,6 +12,12 @@ const paragraphOptions = {
   spacing: ['Jarak antarparagraf', { none: 'Tanpa jarak', normal: 'Normal', wide: 'Lebar' }],
 };
 
+const paragraphIcons = {
+  alignment: 'M3 5h18M3 10h13M3 15h18M3 20h13',
+  leading: 'M5 4v16M2 7l3-3 3 3m-6 10 3 3 3-3M11 5h10m-10 7h10m-10 7h10',
+  spacing: 'M3 4h18M3 7h18M12 10v4m-2-2 2-2 2 2m-4 0 2 2 2-2M3 17h18M3 20h18',
+};
+
 function mountDetail(tools, mountBlockEditor, signal) {
   const field = tools.closest('form').elements.body;
   const host = tools.querySelector('[data-task-detail-input]');
@@ -57,11 +63,31 @@ function mountDetail(tools, mountBlockEditor, signal) {
 
   toolbar.innerHTML = formatButtons.map(([command, label, icon]) =>
     `<button type="button" data-task-format="${command}" aria-label="${label}" title="${label}"><svg class="ui-icon" aria-hidden="true"><use href="/gentleface-icons.svg#${icon}"/></svg></button>`).join('') +
-    `<details class="task-format-options"><summary>Format paragraf</summary><div class="fields"><label>Warna teks<input type="color" data-task-color value="#1d97f1"></label>
-    <label>Ukuran teks<select data-task-size><option value="">Bawaan</option>${[10, 13, 16, 18, 24, 32, 48].map(size => `<option value="${size}px">${size} px</option>`).join('')}</select></label>
-    ${Object.entries(paragraphOptions).map(([key, [label, options]]) => `<label>${label}<select data-task-paragraph="${key}">
-      ${Object.entries(options).map(([value, name]) => `<option value="${value}">${name}</option>`).join('')}</select></label>`).join('')}
-    <label>Sisipkan tanggal<input type="date" data-task-date></label></div></details>`;
+    `<label class="note-icon-field" title="Palet warna">
+              <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <path d="M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1.5-3.3 1.4 1.4 0 0 1 1.1-2.3H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3Z"/>
+                <path stroke-linecap="round" stroke-width="2.8" d="M7.5 11h.01M10 7.5h.01M14 7.5h.01M17.5 10.5h.01"/>
+              </svg>
+              <input type="color" data-task-color aria-label="Palet warna" value="#1d97f1">
+            </label>
+            <label class="note-icon-field" title="Ukuran teks">
+              <span class="note-text-size-icon" aria-hidden="true">A↕</span>
+              <select data-task-size aria-label="Ukuran teks">
+                <option value="">Ukuran teks</option>
+                ${[10, 13, 16, 18, 24, 32, 48].map(px => `<option value="${px}px">${px} px</option>`).join('')}
+              </select>
+            </label>
+            ${Object.entries(paragraphOptions).map(([key, [label, options]]) => `
+              <label class="note-icon-field" title="${label}">
+                <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="${paragraphIcons[key]}"/></svg>
+                <select data-task-paragraph="${key}" aria-label="${label}">
+                  ${Object.entries(options).map(([value, name]) => `<option value="${value}">${name}</option>`).join('')}
+                </select>
+              </label>`).join('')}
+            <label class="note-icon-field" title="Sisipkan tanggal">
+              <svg class="ui-icon" aria-hidden="true"><use href="/gentleface-icons.svg#calendar-day"/></svg>
+              <input type="date" data-task-date aria-label="Sisipkan tanggal">
+            </label>`;
   const legacy = field.value.replace(/!\[([^\]\r\n]*)\]\((https?:\/\/[^\s)]+)\)/g, (token, label, value) => {
     if (!URL.canParse(value)) return token;
     const url = new URL(value);
