@@ -1,3 +1,4 @@
+import { mountAttachment } from '/workroom-attachment.js';
 import { bindBlockImages } from '/workroom-image-upload.js';
 import { legacyContent, notePreview, readBlockNote, blockNoteBody } from './workroom-note-format.js';
 
@@ -312,6 +313,15 @@ export function mount(panel, signal) {
     });
   }
 
+  let attachmentController;
+  function updateNoteAttachment(note) {
+    attachmentController?.abort();
+    const section = el('note-attachment');
+    if (!section || note?.id == null) return;
+    attachmentController = new AbortController();
+    mountAttachment(section, 'note', note.id, AbortSignal.any([signal, attachmentController.signal]));
+  }
+
   let noteCategory='all', noteQuery='', noteEditing=false, activeNote;
   let entries=[];
   const dirty = new Set();
@@ -353,6 +363,7 @@ export function mount(panel, signal) {
           el('delete-note')?.setAttribute('aria-label', 'Hapus catatan');
           if (el('delete-note')) el('delete-note').title = 'Hapus catatan';
           if (el('pin-note')) el('pin-note').hidden = false;
+          updateNoteAttachment(note);
         }
       }
       const tab = el('view').querySelector('.note-tabs [data-open="' + result.id + '"]');
@@ -542,6 +553,7 @@ export function mount(panel, signal) {
             </label>
           </div>
           <div id="edit-body" class="note-rendered"></div>
+          <section id="note-attachment" class="task-pdf" hidden></section>
           <div class="note-footer"><button type="button" id="copy-note-whatsapp">Salin untuk WhatsApp</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label>
             <button type="button" id="pin-note"${note.id === null ? ' hidden' : ''} aria-pressed="${Boolean(note.pinned)}" aria-label="${pinNoteLabel(note.pinned)}" title="${pinNoteLabel(note.pinned)}">${noteActionIcon('pin')}</button>
             <button type="button" id="delete-note" aria-label="${note.id === null ? 'Buang draf' : 'Hapus catatan'}" title="${note.id === null ? 'Buang draf' : 'Hapus catatan'}">${noteActionIcon('trash')}</button>
@@ -551,6 +563,7 @@ export function mount(panel, signal) {
           <div id="note-split-body" class="note-rendered"></div>
         </section>
       </div>`;
+    updateNoteAttachment(note);
     if (note && (retainedEditor || !compactNotes.matches || noteEditing || fullscreenNotes)) {
       if (retainedEditor) el('edit-body').replaceWith(retainedEditor);
       else {

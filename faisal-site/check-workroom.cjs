@@ -126,6 +126,30 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.getByRole('status').filter({ hasText: 'Kategori dihapus. Catatan tersedia di Tanpa kategori.' }).waitFor();
     await categoryPane.getByRole('button', { name: /^Semua/ }).click();
     await page.getByRole('button', { name: /Catatan lama/ }).click();
+    const noteAttachment = page.getByRole('region', { name: 'Lampiran catatan' });
+    const noteFile = noteAttachment.getByLabel(/Pilih file/);
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jq14AAAAASUVORK5CYII=', 'base64');
+    await noteFile.setInputFiles({ name: 'Gambar.png', mimeType: 'image/png', buffer: png });
+    const notePreview = noteAttachment.getByRole('dialog', { name: 'Gambar.png' });
+    await notePreview.waitFor();
+    const attachmentImageUrl = await notePreview.getByRole('img', { name: 'Gambar.png' }).getAttribute('src');
+    const attachmentHeaders = { 'Cf-Access-Jwt-Assertion': token };
+    const imageDownload = await worker.fetch(new Request(attachmentImageUrl, { headers: attachmentHeaders }), env);
+    assert.equal(imageDownload.headers.get('Content-Type'), 'image/png');
+    assert.deepEqual(Buffer.from(await imageDownload.arrayBuffer()), png);
+    assert.equal((await worker.fetch(new Request(attachmentImageUrl), env)).status, 403);
+    await notePreview.getByRole('button', { name: 'Tutup' }).click();
+    await noteFile.setInputFiles({ name: 'Ringkasan.txt', mimeType: 'text/plain', buffer: Buffer.from('Isi lampiran') });
+    const downloadFile = noteAttachment.getByRole('link', { name: 'Unduh: Ringkasan.txt' });
+    await downloadFile.waitFor();
+    const downloadUrl = await downloadFile.getAttribute('href');
+    const downloaded = await worker.fetch(new Request(downloadUrl, { headers: attachmentHeaders }), env);
+    assert.match(downloaded.headers.get('Content-Disposition'), /^attachment;.*Ringkasan.txt/);
+    assert.equal(await downloaded.text(), 'Isi lampiran');
+    const wrongKind = new URL(downloadUrl);
+    wrongKind.pathname = '/workroom/tasks/';
+    assert.equal((await worker.fetch(new Request(wrongKind, { headers: attachmentHeaders }), env)).status, 404);
+    assert.ok(await notePreview.isHidden());
     await page.locator('#edit-body h2').filter({ hasText: 'Judul lama' }).waitFor();
     assert.equal(await page.locator('#edit-body strong').textContent(), 'Tebal');
     assert.equal(await page.locator('#edit-body input[type=checkbox]').isChecked(), true);
@@ -515,9 +539,9 @@ module.exports = async function checkWorkroom(browser, origin) {
     });
     for (const pair of priorityColors) assert.deepEqual(pair, Array(2).fill(['rgb(167, 29, 50)', 'rgb(255, 255, 255)']));
     const pdfSection = page.getByRole('region', { name: 'Bukti tugas' });
-    const pdfInput = pdfSection.getByLabel(/Pilih PDF/);
+    const pdfInput = pdfSection.getByLabel(/Pilih file/);
     await pdfInput.setInputFiles({ name: 'rusak.pdf', mimeType: 'application/pdf', buffer: Buffer.from('bukan PDF') });
-    await pdfSection.getByText(/PDF gagal diunggah/).waitFor();
+    await pdfSection.getByText(/File gagal diunggah/).waitFor();
     const objects = [
       '<< /Type /Catalog /Pages 2 0 R >>',
       '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
@@ -541,7 +565,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     const preview = await worker.fetch(new Request(previewUrl, { headers: { 'Cf-Access-Jwt-Assertion': token } }), env);
     assert.equal(preview.headers.get('Content-Type'), 'application/pdf');
     assert.equal(await preview.text(), pdfDocument);
-    assert.match(await pdfSection.locator('[data-pdf-uploaded]').textContent(), /Diunggah .*\d{2}[.:]\d{2} WITA/);
+    assert.match(await pdfSection.locator('[data-attachment-uploaded]').textContent(), /Diunggah .*\d{2}[.:]\d{2} WITA/);
     assert.equal((await worker.fetch(new Request(previewUrl), env)).status, 403);
     const closePdf = pdfDialog.getByRole('button', { name: 'Tutup' });
     assert.equal((await closePdf.textContent()).trim(), '');

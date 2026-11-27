@@ -1703,3 +1703,15 @@ img[data-image-selected] { opacity: 0; }
     }
   }
 }
+
+
+#note-attachment { padding: .65rem .85rem; border-block-start: 1px solid var(--line); }
+#note-attachment[hidden], .task-pdf [hidden] { display: none; }
+.workroom-attachment-download { justify-self: start; overflow-wrap: anywhere; }
+.workroom-attachment-image {
+  display: block;
+  max-inline-size: 100%;
+  max-block-size: 65dvh;
+  margin: .8rem auto 0;
+  object-fit: contain;
+}
