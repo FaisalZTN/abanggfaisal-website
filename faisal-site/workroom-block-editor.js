@@ -65,7 +65,7 @@ const blocks = [
   ['Tabel', 'table', chain => chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true })],
 ];
 
-const allowedImage = src => typeof src === 'string' && (/^https:\/\/[^\s]+$/i.test(src) || /^\/workroom\/images\/[a-f0-9]{64}$/.test(src));
+const allowedImage = src => typeof src === 'string' && (/^https:\/\/[^\s]+$/i.test(src) || /^\/workroom\/images\/[a-f0-9]{64}(?:#[a-z0-9=&-]+)?$/.test(src));
 const SafeImage = Image.extend({
   addAttributes() {
     const layouts = ['left', 'right', 'behind', 'front'];

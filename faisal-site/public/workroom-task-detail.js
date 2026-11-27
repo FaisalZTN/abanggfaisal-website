@@ -50,13 +50,13 @@ export function mount(panel, signal) {
 
   function imagePreview(url, label) {
     const source = new URL(url);
-    if (source.origin === location.origin && /^\/workroom\/images\/[a-f0-9]{64}$/.test(source.pathname) &&
-        /^#layout=(left|right|front|behind)$/.test(source.hash)) {
+    if (source.origin === location.origin && /^\/workroom\/images\/[a-f0-9]{64}$/.test(source.pathname)) {
+      const placement = new URLSearchParams(source.hash.slice(1)).get('layout');
       const image = document.createElement('img');
       image.alt = label || 'Gambar tugas';
-      image.dataset.imageLayout = source.hash.slice('#layout='.length);
-      source.hash = '';
-      image.src = source.href;
+      image.className = 'task-uploaded-image';
+      if (['left', 'right', 'front', 'behind'].includes(placement)) image.dataset.imageLayout = placement;
+      image.src = source.pathname;
       return image;
     }
     const item = document.createElement('div');
@@ -166,14 +166,18 @@ export function mount(panel, signal) {
     const field = tools.closest('form').elements.body;
     const preview = tools.querySelector('.task-detail-preview');
     const status = tools.querySelector('.task-detail-status');
+    const imageControls = document.createElement('div');
+    imageControls.className = 'workroom-image-controls';
+    preview.before(imageControls);
     const toggle = tools.querySelector('.task-image-toggle');
     const imageFields = tools.querySelector('.task-image-fields');
     const imageUrl = tools.querySelector('.task-image-url');
 
     function render() {
       const text = field.value;
-      const tokens = /!\[([^\]\r\n]*)\]\(((?:https:\/\/[^\s)]+|\/workroom\/images\/[a-f0-9]{64}(?:#layout=(?:left|right|front|behind))?))\)|https?:\/\/[^\s<>"'\u0060]+/gi;
+      const tokens = /!\[([^\]\r\n]*)\]\(((?:https:\/\/[^\s)]+|\/workroom\/images\/[a-f0-9]{64}(?:#[a-z0-9=&-]+)?))\)|https?:\/\/[^\s<>"'\u0060]+/gi;
       const nodes = [];
+      const buttons = [];
       let offset = 0;
       for (const match of text.matchAll(tokens)) {
         const isImage = match[2] !== undefined;
@@ -182,12 +186,34 @@ export function mount(panel, signal) {
           ? new URL(value, location.origin).href : webUrl(value, isImage);
         if (!url) continue;
         nodes.push(text.slice(offset, match.index));
-        nodes.push(isImage ? imagePreview(url, match[1]) : linkPreview(url, value));
+        const node = isImage ? imagePreview(url, match[1]) : linkPreview(url, value);
+        nodes.push(node);
+        if (node.classList.contains('task-uploaded-image')) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = 'Edit gambar ' + (buttons.length + 1);
+          button.onclick = () => field.dispatchEvent(new CustomEvent('workroom-image-edit', { bubbles: true, detail: {
+            url, layout: node.dataset.imageLayout,
+            apply({ url }) {
+              const start = match.index;
+              const end = start + match[0].length;
+              const next = '![' + match[1] + '](' + url + ')';
+              if (field.value !== text || field.value.length - (end - start) + next.length > field.maxLength) return false;
+              field.setRangeText(next, start, end, 'end');
+              field.dispatchEvent(new Event('input', { bubbles: true }));
+              field.focus();
+              return true;
+            },
+          } }));
+          buttons.push(button);
+        }
         offset = match.index + (isImage ? match[0].length : value.length);
       }
       preview.hidden = !nodes.length;
       if (nodes.length) nodes.push(text.slice(offset));
       preview.replaceChildren(...nodes);
+      imageControls.replaceChildren(...buttons);
+      imageControls.hidden = !buttons.length;
     }
 
     toggle.onclick = () => {
@@ -228,9 +254,7 @@ export function mount(panel, signal) {
     tools.querySelector('.task-image-add').onclick = insertImage;
     field.addEventListener('workroom-image', event => {
       const cursor = field.selectionEnd;
-      const { url, layout } = event.detail;
-      const placement = layout === 'inline' ? '' : '#layout=' + layout;
-      const insert = '\n![](' + url + placement + ')\n';
+      const insert = '\n![](' + event.detail.url + ')\n';
       if (field.value.length + insert.length <= field.maxLength) {
         field.setRangeText(insert, cursor, cursor, 'end');
         field.dispatchEvent(new Event('input', { bubbles: true }));

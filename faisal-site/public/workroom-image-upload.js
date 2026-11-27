@@ -100,7 +100,7 @@ export function mount(panel, signal) {
       error.hidden = false;
       return;
     }
-    finishCrop({ crop, layout: layout.value });
+    finishCrop({ crop, edges: fields.map(field => Number(field.value)), layout: layout.value });
     dialog.close();
   });
   signal.addEventListener('abort', () => {
@@ -108,9 +108,15 @@ export function mount(panel, signal) {
     if (dialog.open) dialog.close();
   }, { once: true });
 
-  function chooseCrop(image) {
+  function chooseCrop(image, existing) {
     previewImage = image;
     dialog.querySelector('form').reset();
+    dialog.querySelector('h2').textContent = existing ? 'Edit gambar' : 'Siapkan gambar';
+    dialog.querySelector('[type="submit"]').textContent = existing ? 'Simpan gambar' : 'Sisipkan gambar';
+    if (existing) {
+      layout.value = existing.layout;
+      fields.forEach((field, index) => { field.value = existing.edges[index]; });
+    }
     const scale = Math.min(1, 640 / image.width, 400 / image.height);
     canvas.width = Math.max(1, Math.round(image.width * scale));
     canvas.height = Math.max(1, Math.round(image.height * scale));
@@ -138,40 +144,76 @@ export function mount(panel, signal) {
     return blob;
   }
 
-  async function upload(editor, file) {
+  const privateImagePath = /^\/workroom\/images\/[a-f0-9]{64}$/;
+  async function storeImage(blob) {
+    const response = await fetch('/workroom/images/', {
+      method: 'POST', headers: { 'Content-Type': 'image/webp' }, body: blob, signal,
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Gambar gagal diunggah.');
+    if (!privateImagePath.test(data.url)) throw new Error('Alamat gambar tidak valid.');
+    return data.url;
+  }
+
+  async function upload(editor, file, edit) {
     if (pending.has(editor) || dialog.open) return;
-    if (file.size > 15 * 1024 * 1024) {
+    if (file?.size > 15 * 1024 * 1024) {
       status(editor, 'Ukuran gambar awal maksimal 15 MB.');
       return;
     }
     pending.add(editor);
     let image;
     try {
+      let existing;
+      if (edit) {
+        const current = new URL(edit.url, location.origin);
+        if (current.origin !== location.origin || !privateImagePath.test(current.pathname)) return;
+        const params = new URLSearchParams(current.hash.slice(1));
+        const original = params.get('source');
+        const source = /^[a-f0-9]{64}$/.test(original ?? '') ? '/workroom/images/' + original : current.pathname;
+        const edges = (params.get('crop') ?? '').split('-').map(Number);
+        const validEdges = edges.length === 4 && edges.every(value => Number.isInteger(value) && value >= 0 && value <= 99) &&
+          edges[0] + edges[2] < 100 && edges[1] + edges[3] < 100;
+        existing = { path: current.pathname, source, edges: validEdges && source !== current.pathname ? edges : [0, 0, 0, 0],
+          layout: ['left', 'right', 'behind', 'front'].includes(edit.layout) ? edit.layout : 'inline' };
+        const response = await fetch(source, { signal });
+        if (!response.ok) throw new Error('Gambar sumber belum bisa dimuat.');
+        file = await response.blob();
+      }
       image = await createImageBitmap(file);
       if (signal.aborted || !editor.isConnected || dialog.open) return;
-      const result = await chooseCrop(image);
+      const result = await chooseCrop(image, existing);
       if (!result || signal.aborted || !editor.isConnected) return;
-      status(editor, 'Mengompresi dan mengunggah gambar…');
-      const blob = await compress(image, result.crop);
-      const response = await fetch('/workroom/images/', {
-        method: 'POST', headers: { 'Content-Type': 'image/webp' }, body: blob, signal,
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Gambar gagal diunggah.');
-      if (!/^\/workroom\/images\/[a-f0-9]{64}$/.test(data.url)) throw new Error('Alamat gambar tidak valid.');
-      if (!editor.isConnected) return;
-      const inserted = !editor.dispatchEvent(new CustomEvent('workroom-image', {
-        detail: { url: data.url, layout: result.layout }, bubbles: true, cancelable: true,
+      status(editor, 'Menyiapkan gambar…');
+      const cropped = result.edges.some(Boolean);
+      const cropUnchanged = existing && result.edges.every((value, index) => value === existing.edges[index]);
+      const full = { x: 0, y: 0, width: image.width, height: image.height };
+      const source = existing?.source ?? await storeImage(await compress(image, full));
+      const display = cropUnchanged ? existing.path : cropped ? await storeImage(await compress(image, result.crop)) : source;
+      const params = new URLSearchParams({ layout: result.layout });
+      if (cropped && display !== source) {
+        params.set('source', source.split('/').at(-1));
+        params.set('crop', result.edges.join('-'));
+      }
+      const detail = { url: display + '#' + params, layout: result.layout };
+      if (!editor.isConnected || signal.aborted) return;
+      const inserted = edit ? edit.apply(detail) : !editor.dispatchEvent(new CustomEvent('workroom-image', {
+        detail, bubbles: true, cancelable: true,
       }));
-      status(editor, inserted ? 'Gambar ditambahkan.'
-        : 'Gambar belum bisa disisipkan ke editor.');
+      status(editor, inserted ? (edit ? 'Gambar diperbarui.' : 'Gambar ditambahkan.')
+        : 'Gambar belum bisa diterapkan. Coba lagi dari editor.');
     } catch (error) {
-      if (editor.isConnected) status(editor, error.message || 'Gambar gagal diunggah.');
+      if (!signal.aborted && editor.isConnected) status(editor, error.message || 'Gambar gagal diunggah.');
     } finally {
       image?.close();
       pending.delete(editor);
     }
   }
+
+  listen(panel, 'workroom-image-edit', event => {
+    const editor = targetEditor(event.target);
+    if (editor) void upload(editor, null, event.detail);
+  });
   for (const type of ['paste', 'drop']) {
     listen(document, type, event => {
       const editor = targetEditor(event.target);

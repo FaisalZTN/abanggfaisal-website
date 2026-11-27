@@ -65,6 +65,40 @@ export function mount(panel, signal) {
         (readOnly ? ' dalam mode baca. Beralih ke edit' : ' dalam mode edit. Beralih ke baca'));
     }
     showFormatting(!split || (toolbarSide === 'right' && rightReadOnly && !leftReadOnly) ? 'left' : toolbarSide);
+    renderImageControls('left');
+    renderImageControls('right');
+  }
+
+  function renderImageControls(side) {
+    const target = side === 'right' ? splitPreview : blockEditor;
+    const host = el(side === 'right' ? 'note-split-body' : 'edit-body');
+    const controls = el('note-image-controls-' + side);
+    if (!controls) return;
+    const buttons = [];
+    const editor = target?.editor;
+    if (editor?.isEditable) editor.state.doc.descendants((node, pos) => {
+      if (node.type.name !== 'image') return;
+      const src = URL.canParse(node.attrs.src, location.origin) && new URL(node.attrs.src, location.origin);
+      if (src?.origin !== location.origin || !/^\/workroom\/images\/[a-f0-9]{64}$/.test(src.pathname)) return;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = 'Edit gambar ' + (buttons.length + 1);
+      button.onclick = () => {
+        const doc = editor.state.doc;
+        host.dispatchEvent(new CustomEvent('workroom-image-edit', { bubbles: true, detail: {
+          url: node.attrs.src, layout: node.attrs.layout,
+          apply({ url, layout }) {
+            if (editor.isDestroyed || !editor.isEditable || editor.state.doc !== doc || doc.nodeAt(pos) !== node) return false;
+            editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, src: url, layout }));
+            editor.commands.focus();
+            return true;
+          },
+        } }));
+      };
+      buttons.push(button);
+    });
+    controls.replaceChildren(...buttons);
+    controls.hidden = !buttons.length;
   }
 
   function updateNoteBody(note, document, side) {
@@ -73,6 +107,8 @@ export function mount(panel, signal) {
       const other = side === 'left' ? splitPreview : blockEditor;
       other?.editor.commands.setContent(document, { emitUpdate: false });
     }
+    renderImageControls('left');
+    renderImageControls('right');
     scheduleSave(note);
     renderNoteIndex();
   }
@@ -546,6 +582,7 @@ export function mount(panel, signal) {
               <input type="date" id="insert-date" aria-label="Sisipkan tanggal">
             </label>
           </div>
+          <div id="note-image-controls-left" class="workroom-image-controls" hidden></div>
           <div id="edit-body" class="note-rendered"></div>
           <div class="note-footer"><button type="button" id="copy-note-whatsapp">Salin untuk WhatsApp</button><label>Kategori <select id="note-category">${options.map(([key,label]) => `<option value="${key}"${key === (note.category || 'none') ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select></label>
             <button type="button" id="pin-note"${note.id === null ? ' hidden' : ''} aria-pressed="${Boolean(note.pinned)}" aria-label="${pinNoteLabel(note.pinned)}" title="${pinNoteLabel(note.pinned)}">${noteActionIcon('pin')}</button>
@@ -553,6 +590,7 @@ export function mount(panel, signal) {
           </div>` : '<p>Tambah catatan untuk mulai menulis.</p>'}</section>
         <section id="note-split-pane" class="note-sheet" aria-label="Panel catatan kanan" hidden>
           <div class="note-split-heading"><h2 id="note-split-title"></h2><button type="button" id="note-mode-right">Baca</button><button type="button" id="close-note-split" aria-label="Tutup Split View" title="Tutup Split View">×</button></div>
+          <div id="note-image-controls-right" class="workroom-image-controls" hidden></div>
           <div id="note-split-body" class="note-rendered"></div>
         </section>
       </div>`;
