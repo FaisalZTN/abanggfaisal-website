@@ -37,6 +37,7 @@ editor_bundle = subprocess.check_output([str(editor_bundler), 'workroom-block-ed
 editor_url = asset('workroom-block-editor.js', editor_bundle)
 workroom_note_format = asset('workroom-note-format.js')
 workroom_image_upload = asset('workroom-image-upload.js')
+workroom_attachment = asset('workroom-attachment.js')
 workroom_source = workroom_source.replace(
     "import { notePreview, readBlockNote, noteBodyText } from './workroom-note-format.js';",
     (P / 'public/workroom-note-format.js').read_text(encoding='utf-8').replace('export function ', 'function '),
@@ -46,12 +47,14 @@ workroom_notes_source = workroom_asset_data('workroom-notes.js').decode('utf-8')
     "'./workroom-note-format.js'", f"'.{workroom_note_format}'"
 )
 workroom_notes_source = workroom_notes_source.replace('/workroom-block-editor.js', editor_url).replace('/workroom-image-upload.js', workroom_image_upload)
+workroom_notes_source = workroom_notes_source.replace('/workroom-attachment.js', workroom_attachment)
 workroom_notes.write_text(workroom_notes_source, encoding='utf-8')
 workroom_notes_url = asset('workroom-notes.js', workroom_notes_source.encode('utf-8'))
 workroom_source = workroom_source.replace('"/workroom-notes.js"', f'"{workroom_notes_url}"')
 for workroom_asset in ('workroom.css', 'workroom-theme.js', 'workroom-nav.js', 'workroom-greeting.js', 'workroom-calendar.js', 'workroom-agenda-check.js', 'workroom-review.js', 'workroom-private-notes.js', 'workroom-task-detail.js', 'workroom-quick-check.js', 'workroom-link-options.js', 'workroom-image-upload.js', 'workroom-hero.webp', 'workroom-favicon.svg'):
     source = workroom_asset_data(workroom_asset)
     if workroom_asset == 'workroom-task-detail.js':
+        source = source.replace(b'/workroom-attachment.js', workroom_attachment.encode())
         source = source.replace(b'/workroom-image-upload.js', workroom_image_upload.encode()).replace(
             b'/workroom-block-editor.js', editor_url.encode(),
         ).replace(b'/workroom-note-format.js', workroom_note_format.encode())

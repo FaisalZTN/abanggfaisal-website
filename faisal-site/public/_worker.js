@@ -530,23 +530,7 @@ function workroomWorkspace(entries, params, areas) {
   }).join('');
   const editor = selected ? `<section class="collection workspace-editor"><h2 class="note-sr-only">${e(selected.title)}</h2>
     ${workroomForm(selected.kind, selected, entries.filter(entry => entry.kind === 'project'), true)}
-    <section class="task-pdf" data-task-pdf="${e(selected.id)}" data-max-bytes="${taskPdfLimit}" aria-labelledby="task-pdf-heading" hidden>
-      <h3 id="task-pdf-heading">Bukti tugas</h3>
-      <label class="task-pdf-picker"><input class="note-sr-only" type="file" accept="application/pdf,.pdf" disabled><span>Pilih PDF <small>· maks. 10 MB</small></span></label>
-      <button type="button" data-pdf-open hidden></button>
-      <small data-pdf-uploaded hidden></small>
-      <p role="status"></p>
-      <dialog class="workroom-url-dialog task-pdf-preview" aria-labelledby="task-pdf-title">
-        <div class="task-pdf-actions">
-          <h2 id="task-pdf-title"></h2>
-          <a target="_blank" rel="noopener noreferrer">Buka PDF di tab baru</a>
-          <form method="dialog"><button aria-label="Tutup" title="Tutup">
-            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
-          </button></form>
-        </div>
-        <iframe title="Pratinjau PDF bukti tugas"></iframe>
-      </dialog>
-    </section>
+    <section class="task-pdf" data-task-attachment="${e(selected.id)}" hidden></section>
     <details class="task-delete">
       <summary aria-label="Hapus tugas" title="Hapus tugas">${workroomIcon('trash')}</summary>
       <button form="task-editor-form" name="action" value="delete" formnovalidate>Konfirmasi hapus tugas</button>
@@ -1514,17 +1498,33 @@ async function workroomImage(request, url, db) {
   return reply({ url: WORKROOM + 'images/' + key }, 201);
 }
 
-const taskPdfLimit = 10000000;
-const taskPdfChunkSize = 1000000;
+const attachmentLimit = 10000000;
+const attachmentChunkSize = 1000000;
 
-async function workroomTaskPdf(request, url, db) {
-  const match = /^\d+$/.exec(url.searchParams.get('pdf'));
+const attachmentPreviewTypes = {
+  pdf: 'application/pdf', jpeg: 'image/jpeg', jpg: 'image/jpeg',
+  png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+};
+const attachmentDownloadTypes = new Set('doc docx odt rtf txt md csv tsv xls xlsx ods ppt pptx odp zip mp3 m4a wav mp4 mov heic'.split(' '));
+
+function validAttachmentPreview(type, bytes) {
+  const header = new TextDecoder().decode(bytes.subarray(0, 12));
+  if (type === 'application/pdf') return /^%PDF-\d\.\d/.test(header);
+  if (type === 'image/jpeg') return bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
+  if (type === 'image/png') return [137, 80, 78, 71, 13, 10, 26, 10].every((value, i) => bytes[i] === value);
+  if (type === 'image/gif') return /^GIF8[79]a/.test(header);
+  if (type === 'image/webp') return header.startsWith('RIFF') && header.slice(8) === 'WEBP';
+  return true;
+}
+
+async function workroomAttachment(request, url, db, kind) {
+  const match = /^\d+$/.exec(url.searchParams.get('attachment') ?? url.searchParams.get('pdf'));
   const reply = (value, status = 200) => Response.json(value, {
     status, headers: { ...privateHeaders, 'Content-Type': 'application/json; charset=utf-8' },
   });
-  if (!match) return reply({ error: 'Tugas tidak ditemukan.' }, 404);
+  if (!match) return reply({ error: 'Entri tidak ditemukan.' }, 404);
   const id = Number(match[0]);
-  if (!Number.isSafeInteger(id)) return reply({ error: 'Tugas tidak ditemukan.' }, 404);
+  if (!Number.isSafeInteger(id)) return reply({ error: 'Entri tidak ditemukan.' }, 404);
   const upload = request.method === 'POST';
   if (upload && request.headers.get('Origin') !== url.origin) return reply({ error: 'Permintaan ditolak.' }, 403);
   if (!upload && request.method !== 'GET') return reply({ error: 'Metode tidak didukung.' }, 405);
@@ -1532,67 +1532,86 @@ async function workroomTaskPdf(request, url, db) {
     task_id INTEGER PRIMARY KEY REFERENCES workroom_entries(id) ON DELETE CASCADE,
     name TEXT NOT NULL, bytes BLOB NOT NULL
   )`).run();
+  // Keep existing PDF rows and their URLs compatible with the attachment store.
+  const { results: columns } = await db.prepare('PRAGMA table_info(workroom_task_pdfs)').all();
+  if (!columns.some(column => column.name === 'media_type')) {
+    try {
+      await db.prepare("ALTER TABLE workroom_task_pdfs ADD COLUMN media_type TEXT NOT NULL DEFAULT 'application/pdf'").run();
+    } catch (error) {
+      if (!/duplicate column name: media_type/i.test(String(error))) throw error;
+    }
+  }
   await db.prepare(`CREATE TABLE IF NOT EXISTS workroom_task_pdf_chunks (
     task_id INTEGER NOT NULL REFERENCES workroom_task_pdfs(task_id) ON DELETE CASCADE,
     part INTEGER NOT NULL, bytes BLOB NOT NULL, uploaded_at TEXT NOT NULL,
     PRIMARY KEY (task_id, part)
   )`).run();
   if (!upload) {
-    if (!url.searchParams.has('preview')) {
-      const pdf = await db.prepare(`SELECT p.name, c.uploaded_at FROM workroom_entries t
+    if (!url.searchParams.has('preview') && !url.searchParams.has('download')) {
+      const pdf = await db.prepare(`SELECT p.name, p.media_type, c.uploaded_at FROM workroom_entries t
         LEFT JOIN workroom_task_pdfs p ON p.task_id = t.id
         LEFT JOIN workroom_task_pdf_chunks c ON c.task_id = p.task_id AND c.part = 0
-        WHERE t.id = ? AND t.kind = 'task'`).bind(id).first();
-      return pdf ? reply(pdf) : reply({ error: 'PDF tidak ditemukan.' }, 404);
+        WHERE t.id = ? AND t.kind = ? AND t.status <> 'trashed'`).bind(id, kind).first();
+      return pdf ? reply(pdf) : reply({ error: 'Lampiran tidak ditemukan.' }, 404);
     }
-    const { results } = await db.prepare(`SELECT COALESCE(c.bytes, p.bytes) AS bytes
+    const { results } = await db.prepare(`SELECT p.name, p.media_type, COALESCE(c.bytes, p.bytes) AS bytes
       FROM workroom_task_pdfs p JOIN workroom_entries t ON t.id = p.task_id
       LEFT JOIN workroom_task_pdf_chunks c ON c.task_id = p.task_id
-      WHERE p.task_id = ? AND t.kind = 'task' ORDER BY c.part`).bind(id).all();
-    if (!results.length) return reply({ error: 'PDF tidak ditemukan.' }, 404);
+      WHERE p.task_id = ? AND t.kind = ? AND t.status <> 'trashed' ORDER BY c.part`).bind(id, kind).all();
+    if (!results.length) return reply({ error: 'Lampiran tidak ditemukan.' }, 404);
+    const { name, media_type: mediaType } = results[0];
+    const inline = !url.searchParams.has('download') && Object.values(attachmentPreviewTypes).includes(mediaType);
+    const filename = encodeURIComponent(name.toWellFormed()).replace(/['()*]/g,
+      character => '%' + character.charCodeAt(0).toString(16).toUpperCase());
     return new Response(new Blob(results.map(row => new Uint8Array(row.bytes))), { headers: {
       ...privateHeaders,
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': 'inline',
+      'Content-Type': inline ? mediaType : 'application/octet-stream',
+      'Content-Disposition': (inline ? 'inline' : 'attachment') + "; filename*=UTF-8''" + filename,
       'Cross-Origin-Resource-Policy': 'same-origin',
       'Content-Security-Policy': "default-src 'none'; frame-ancestors 'self'; base-uri 'none'",
     } });
   }
 
-  if (request.headers.get('Content-Type') !== 'application/pdf') return reply({ error: 'Pilih file PDF.' }, 415);
+  const name = (url.searchParams.get('name') || '').replace(/[\x00-\x1f\x7f/\\]/g, '_').trim();
+  if (!name || name.length > 255) return reply({ error: 'Nama file tidak valid atau terlalu panjang.' }, 400);
+  const extension = /\.([a-z0-9]+)$/i.exec(name)?.[1].toLowerCase();
+  const mediaType = Object.hasOwn(attachmentPreviewTypes, extension) ? attachmentPreviewTypes[extension] : null;
+  if (!mediaType && !attachmentDownloadTypes.has(extension)) return reply({ error: 'Format file belum didukung.' }, 415);
   const reader = request.body?.getReader();
-  if (!reader) return reply({ error: 'PDF kosong.' }, 400);
-  const buffer = new Uint8Array(taskPdfLimit);
+  if (!reader) return reply({ error: 'File kosong.' }, 400);
+  const buffer = new Uint8Array(attachmentLimit);
   let size = 0;
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     if (size + value.length > buffer.length) {
       await reader.cancel();
-      return reply({ error: 'Ukuran PDF maksimal 10 MB.' }, 413);
+      return reply({ error: 'Ukuran file maksimal 10 MB.' }, 413);
     }
     buffer.set(value, size);
     size += value.length;
   }
   const bytes = buffer.slice(0, size);
-  if (!/^%PDF-\d\.\d/.test(new TextDecoder().decode(bytes.subarray(0, 8)))) {
-    return reply({ error: 'File ini bukan PDF yang valid.' }, 415);
+  if (!size) return reply({ error: 'File kosong.' }, 400);
+  if (mediaType && !validAttachmentPreview(mediaType, bytes)) {
+    return reply({ error: 'Isi file tidak cocok dengan formatnya.' }, 415);
   }
-  const name = (url.searchParams.get('name') || 'Bukti tugas.pdf').slice(0, 160);
   const uploadedAt = new Date().toISOString();
   const statements = [
-    db.prepare(`INSERT INTO workroom_task_pdfs (task_id, name, bytes)
-      SELECT id, ?, X'' FROM workroom_entries WHERE id = ? AND kind = 'task'
-      ON CONFLICT(task_id) DO UPDATE SET name = excluded.name, bytes = excluded.bytes RETURNING name`).bind(name, id),
-    db.prepare('DELETE FROM workroom_task_pdf_chunks WHERE task_id = ?').bind(id),
+    db.prepare(`INSERT INTO workroom_task_pdfs (task_id, name, bytes, media_type)
+      SELECT id, ?, X'', ? FROM workroom_entries WHERE id = ? AND kind = ? AND status <> 'trashed'
+      ON CONFLICT(task_id) DO UPDATE SET name = excluded.name, bytes = excluded.bytes, media_type = excluded.media_type
+      RETURNING name`).bind(name, mediaType ?? 'application/octet-stream', id, kind),
+    db.prepare(`DELETE FROM workroom_task_pdf_chunks WHERE task_id = ? AND EXISTS (
+      SELECT 1 FROM workroom_entries WHERE id = ? AND kind = ? AND status <> 'trashed')`).bind(id, id, kind),
   ];
-  for (let offset = 0; offset < size; offset += taskPdfChunkSize) {
+  for (let offset = 0; offset < size; offset += attachmentChunkSize) {
     statements.push(db.prepare(`INSERT INTO workroom_task_pdf_chunks (task_id, part, bytes, uploaded_at)
-      SELECT task_id, ?, ?, ? FROM workroom_task_pdfs WHERE task_id = ?`)
-      .bind(offset / taskPdfChunkSize, bytes.slice(offset, offset + taskPdfChunkSize).buffer, uploadedAt, id));
+      SELECT id, ?, ?, ? FROM workroom_entries WHERE id = ? AND kind = ? AND status <> 'trashed'`)
+      .bind(offset / attachmentChunkSize, bytes.slice(offset, offset + attachmentChunkSize).buffer, uploadedAt, id, kind));
   }
   const [stored] = await db.batch(statements);
-  return stored.results[0] ? reply({ name, uploaded_at: uploadedAt }, 201) : reply({ error: 'Tugas tidak ditemukan.' }, 404);
+  return stored.results[0] ? reply({ name, media_type: mediaType ?? 'application/octet-stream', uploaded_at: uploadedAt }, 201) : reply({ error: 'Entri tidak ditemukan.' }, 404);
 }
 
 const privateNotesCookie = '__Secure-workroom-private-notes';
@@ -1824,9 +1843,10 @@ async function handleWorkroom(request, env, url) {
       await ensureTaskCompletion(db);
     }
   };
-  if (page === 'task' && url.searchParams.has('pdf')) {
+  if ((['task', 'note'].includes(page) && url.searchParams.has('attachment')) ||
+      (page === 'task' && url.searchParams.has('pdf'))) {
     await ensureEntries();
-    return workroomTaskPdf(request, url, db);
+    return workroomAttachment(request, url, db, page);
   }
   const renderNotes = async () => {
     await ensureWorkroomNotes(db);
