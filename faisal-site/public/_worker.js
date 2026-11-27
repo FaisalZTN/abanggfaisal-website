@@ -540,7 +540,9 @@ function workroomWorkspace(entries, params, areas) {
         <div class="task-pdf-actions">
           <h2 id="task-pdf-title"></h2>
           <a target="_blank" rel="noopener noreferrer">Buka PDF di tab baru</a>
-          <form method="dialog"><button>Tutup</button></form>
+          <form method="dialog"><button aria-label="Tutup" title="Tutup">
+            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button></form>
         </div>
         <iframe title="Pratinjau PDF bukti tugas"></iframe>
       </dialog>

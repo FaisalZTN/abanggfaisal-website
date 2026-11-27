@@ -492,11 +492,28 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(Number(await count.textContent()), before);
     await page.setViewportSize({ width: 1280, height: 800 });
     const project = db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('project', 'Tugas Akhir', '', 'active', '', 'normal')").run().lastInsertRowid;
-    db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority, project_id) VALUES ('task', 'Baca jurnal', '', 'active', '2027-09-30', 'normal', ?), ('task', 'Buat kerangka', '', 'done', '', 'normal', ?)").run(project, project);
+    db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority, project_id) VALUES ('task', 'Baca jurnal', '', 'active', '2027-09-30', 'high', ?), ('task', 'Buat kerangka', '', 'done', '', 'normal', ?)").run(project, project);
     await page.locator('.workroom-nav > a[aria-label="Tugas"]').click();
     db.prepare("UPDATE workroom_entries SET body = ? WHERE title = 'Baca jurnal'").run('# Referensi lama');
     await page.getByRole('link', { name: 'Baca jurnal' }).click();
     await page.locator('.workspace-editor').locator('select[name=status]').waitFor();
+    const priorityColors = await page.evaluate(() => {
+      const root = document.documentElement;
+      const original = root.getAttribute('data-workroom-theme');
+      const badge = document.querySelector('.task-badge-priority');
+      const select = document.querySelector('#task-editor-form [name="priority"]');
+      const colors = ['graphite', 'midnight', 'blue', 'light'].map(theme => {
+        root.setAttribute('data-workroom-theme', theme);
+        return [badge, select].map(element => {
+          const style = getComputedStyle(element);
+          return [style.backgroundColor, style.color];
+        });
+      });
+      if (original === null) root.removeAttribute('data-workroom-theme');
+      else root.setAttribute('data-workroom-theme', original);
+      return colors;
+    });
+    for (const pair of priorityColors) assert.deepEqual(pair, Array(2).fill(['rgb(167, 29, 50)', 'rgb(255, 255, 255)']));
     const pdfSection = page.getByRole('region', { name: 'Bukti tugas' });
     const pdfInput = pdfSection.getByLabel(/Pilih PDF/);
     await pdfInput.setInputFiles({ name: 'rusak.pdf', mimeType: 'application/pdf', buffer: Buffer.from('bukan PDF') });
@@ -526,7 +543,12 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(await preview.text(), pdfDocument);
     assert.match(await pdfSection.locator('[data-pdf-uploaded]').textContent(), /Diunggah .*\d{2}[.:]\d{2} WITA/);
     assert.equal((await worker.fetch(new Request(previewUrl), env)).status, 403);
-    await pdfDialog.getByRole('button', { name: 'Tutup' }).click();
+    const closePdf = pdfDialog.getByRole('button', { name: 'Tutup' });
+    assert.equal((await closePdf.textContent()).trim(), '');
+    assert.equal(await closePdf.locator('svg').count(), 1);
+    const [closeBox, titleBox] = await Promise.all([closePdf.boundingBox(), pdfDialog.getByRole('heading').boundingBox()]);
+    assert.ok(closeBox.x >= titleBox.x + titleBox.width);
+    await closePdf.click();
     await page.reload();
     await pdfSection.getByRole('button', { name: /Lihat PDF/ }).click();
     await pdfDialog.getByRole('button', { name: 'Tutup' }).click();
@@ -542,6 +564,16 @@ module.exports = async function checkWorkroom(browser, origin) {
     const taskBody = page.locator('.workspace-editor').getByRole('textbox', { name: 'Detail tugas' });
     const detailSummary = page.locator('.task-detail-disclosure > summary');
     await taskBody.waitFor();
+    assert.ok(await taskBody.evaluate(editor => {
+      const scroller = editor.closest('.note-rendered');
+      const spacer = document.createElement('div');
+      spacer.style.height = '100vh';
+      scroller.append(spacer);
+      scroller.scrollTop = scroller.scrollHeight;
+      const scrollsInside = scroller.scrollTop > 0 && scroller.scrollHeight > scroller.clientHeight;
+      spacer.remove();
+      return scrollsInside;
+    }));
     const taskViewport = page.viewportSize();
     const taskPanel = page.locator('.workspace-editor');
     const format = taskPanel.getByRole('group', { name: 'Format detail tugas' });

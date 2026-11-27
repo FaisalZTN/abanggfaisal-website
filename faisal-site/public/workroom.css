@@ -274,7 +274,6 @@ button { justify-self: start; padding: .45rem .95rem; background: var(--green); 
 .overview-card-heading p { color: var(--muted); font-size: .83rem; margin: .35rem 0; }
 .overview-icon-link { display: grid; place-items: center; min-width: 44px; min-height: 44px; }
 .overview-icon-link:is(:hover, :focus-visible) { background: var(--selected); }
-.overview-priority { display: inline-block; margin-inline-start: .4rem; color: var(--accent); font-size: .73rem; font-weight: 650; }
 .overview-calendar > h2 { margin-block-end: .6rem; }
 .overview-calendar .agenda-heading h2 { font-size: .95rem; }
 .overview .recent-notes a { overflow-wrap: anywhere; }
@@ -901,7 +900,13 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
-.task-badge-priority { background: var(--selected); color: var(--ink); }
+.task-badge-priority, .workroom-layout select[name="priority"]:has(option[value="high"]:checked) {
+  background-color: #a71d32;
+  border-color: #a71d32;
+  color: #fff;
+  font-weight: 650;
+}
+.workroom-layout select[name="priority"] option { background: var(--paper); color: var(--ink); }
 .daily-task-title:hover, .project-next a:hover { color: var(--accent); }
 .daily-task-card p { margin: 0; padding: .35rem .9rem .85rem; color: var(--muted); }
 
@@ -1617,6 +1622,15 @@ img[data-image-selected] { opacity: 0; }
 .task-block-editor { border: 1px solid var(--line); }
 .task-block-editor .note-rendered { min-height: 0; }
 .task-block-editor .tiptap { min-height: 4.5rem; }
+#task-editor-form .task-block-editor .note-rendered {
+  max-block-size: min(22rem, 50dvh);
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+#task-editor-form [data-task-detail-source] textarea {
+  min-height: 4.5rem;
+  max-block-size: min(22rem, 50dvh);
+}
 .task-block-editor .note-toolbar { flex-wrap: nowrap; overflow-x: auto; }
 .task-block-editor .note-toolbar > * { flex: 0 0 auto; }
 
@@ -1647,8 +1661,16 @@ img[data-image-selected] { opacity: 0; }
 .task-pdf > p { margin: 0; }
 .task-pdf > button, .task-pdf-preview h2 { overflow-wrap: anywhere; }
 .task-pdf-preview { inline-size: min(64rem, calc(100% - 1.5rem)); }
-.task-pdf-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; }
-.task-pdf-actions h2 { flex: 1 1 100%; margin: 0; }
+.task-pdf-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: .35rem .75rem;
+}
+.task-pdf-actions h2 { margin: 0; align-self: center; }
+.task-pdf-actions a { grid-row: 2; justify-self: start; }
+.task-pdf-actions form { grid-column: 2; grid-row: 1; }
+.task-pdf-actions button { display: grid; place-items: center; inline-size: 44px; padding: 0; }
 .task-pdf-preview iframe { display: block; inline-size: 100%; block-size: 65dvh; margin-block-start: .8rem; border: 1px solid var(--line); }
 .task-detail-disclosure { min-inline-size: 0; }
 .task-detail-disclosure > summary { min-block-size: 44px; align-content: center; }
@@ -1659,3 +1681,25 @@ img[data-image-selected] { opacity: 0; }
 }
 .task-delete > summary::-webkit-details-marker { display: none; }
 .task-delete[open] > button { margin-block-start: .5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .daily-task-chevron { transition: transform 280ms var(--workroom-motion-ease); }
+  @supports (interpolate-size: allow-keywords) and selector(::details-content) {
+    main[data-workroom-panel] details {
+      interpolate-size: allow-keywords;
+    }
+    main[data-workroom-panel] details::details-content {
+      block-size: 0;
+      overflow: clip;
+      overflow-clip-margin: 3px;
+      transition: block-size 280ms var(--workroom-motion-ease),
+        content-visibility 280ms allow-discrete;
+    }
+    main[data-workroom-panel] details[open]::details-content { block-size: auto; }
+  }
+  @supports not ((interpolate-size: allow-keywords) and selector(::details-content)) {
+    main[data-workroom-panel] details[open] > :not(summary) {
+      animation: workroom-menu-reveal var(--workroom-motion-reveal) var(--workroom-motion-ease);
+    }
+  }
+}
