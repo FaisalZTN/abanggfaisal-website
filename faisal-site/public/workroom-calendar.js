@@ -16,7 +16,7 @@ export function mount(panel, signal) {
   const tasks = [...dueList.children, ...template.content.children]
     .sort((a, b) => a.dataset.due.localeCompare(b.dataset.due));
 
-  const dateLabel = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+  const dateLabel = new Intl.DateTimeFormat('id-ID', { dateStyle: 'long', timeZone: 'UTC' });
   const monthLabel = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric', timeZone: 'UTC' });
   const months = new Map();
   const pending = new Map();
@@ -105,7 +105,10 @@ export function mount(panel, signal) {
     showMonth(day);
     dayHeading.textContent = dateLabel.format(toDate(day));
     if (taskDate) taskDate.textContent = day === today ? 'Hari ini dan lewat tenggat' : dayHeading.textContent;
-    const due = tasks.filter(task => !task.hidden && (day === today ? task.dataset.due <= today : task.dataset.due === day));
+    for (const task of tasks) task.querySelector('input[name="day"]').value = day;
+    const due = tasks.filter(task => day === today
+      ? task.dataset.due <= today && (task.dataset.status !== 'done' || task.dataset.due === today || task.hasAttribute('data-completed-today'))
+      : task.dataset.due === day);
     dueList.replaceChildren(...due);
     dueList.hidden = !due.length;
     empty.hidden = Boolean(due.length);
@@ -147,6 +150,6 @@ export function mount(panel, signal) {
     if (location.pathname === calendarPath) showDay(day);
   }, { signal });
 
-  root.addEventListener('agenda-task-change', () => updateDays(months.get(selected.slice(0, 7))?.calendar));
+  panel.addEventListener('agenda-task-change', () => updateDays(months.get(selected.slice(0, 7))?.calendar), { signal });
   showDay(selected);
 }
