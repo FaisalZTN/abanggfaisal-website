@@ -1554,3 +1554,19 @@ img[data-image-layout="front"] { z-index: 1; }
 .workroom-url-dialog h2 { font-size: 1.25rem; font-weight: 680; }
 .workroom-url-dialog form > p { margin: 0; color: var(--muted); }
 .workroom-url-dialog [hidden] { display: none; }
+
+.workroom-image-controls:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  padding: .4rem;
+}
+.workroom-image-controls button {
+  min-height: 44px;
+  border-radius: .65rem;
+  background: var(--selected);
+  color: var(--ink);
+  font-size: .875rem;
+}
+.task-uploaded-image { max-width: 100%; height: auto; }
+.task-uploaded-image:not([data-image-layout]) { display: block; }
