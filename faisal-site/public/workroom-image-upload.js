@@ -1,5 +1,21 @@
 const privateImagePath = /^\/workroom\/images\/[a-f0-9]{64}$/;
 
+export async function compressWorkroomImage(image, { x, y, width, height }, targetBytes = 1024 * 1024) {
+  let scale = Math.min(1, 1600 / Math.max(width, height));
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    context.drawImage(image, x, y, width, height, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', .78));
+    if (!blob || blob.type !== 'image/webp') throw new Error('Browser belum bisa mengompresi gambar.');
+    if (blob.size <= targetBytes) return blob;
+    scale *= .75;
+  }
+  throw new Error('Gambar terlalu besar setelah dikompresi.');
+}
+
 export function bindImageEditing(image, url, layout, apply) {
   const params = new URL(url, location.origin).hash.slice(1);
   const metadata = new URLSearchParams(params);
@@ -174,19 +190,6 @@ export function mount(panel, signal) {
     });
   }
 
-  async function compress(image, { x, y, width, height }) {
-    const scale = Math.min(1, 1600 / Math.max(width, height));
-    const cropped = document.createElement('canvas');
-    cropped.width = Math.max(1, Math.round(width * scale));
-    cropped.height = Math.max(1, Math.round(height * scale));
-    cropped.getContext('2d').drawImage(image, x, y, width, height, 0, 0, cropped.width, cropped.height);
-    const blob = await new Promise(resolve => cropped.toBlob(resolve, 'image/webp', .78));
-    if (!blob || blob.type !== 'image/webp' || blob.size > 1024 * 1024) {
-      throw new Error('Gambar terlalu besar setelah dikompresi.');
-    }
-    return blob;
-  }
-
   async function storeImage(blob) {
     const response = await fetch('/workroom/images/', {
       method: 'POST', headers: { 'Content-Type': 'image/webp' }, body: blob, signal,
@@ -214,8 +217,8 @@ export function mount(panel, signal) {
         : await chooseCrop(image);
       if (!result || signal.aborted || !editor.isConnected) return;
       status(editor, 'Menyiapkan gambar…');
-      const source = await storeImage(await compress(image, full));
-      const display = result.edges.some(Boolean) ? await storeImage(await compress(image, result.crop)) : source;
+      const source = await storeImage(await compressWorkroomImage(image, full));
+      const display = result.edges.some(Boolean) ? await storeImage(await compressWorkroomImage(image, result.crop)) : source;
       const detail = imageDetail(display, source, result.edges, result.layout);
       if (!editor.isConnected || signal.aborted) return;
       const inserted = !editor.dispatchEvent(new CustomEvent('workroom-image', {
@@ -349,7 +352,7 @@ export function mount(panel, signal) {
           const [left, top, right, bottom] = nextEdges.map(edge => edge / 100);
           const startX = Math.min(bitmap.width - 1, Math.round(bitmap.width * left));
           const startY = Math.min(bitmap.height - 1, Math.round(bitmap.height * top));
-          display = await storeImage(await compress(bitmap, {
+          display = await storeImage(await compressWorkroomImage(bitmap, {
             x: startX, y: startY,
             width: Math.max(1, Math.round(bitmap.width * (1 - right)) - startX),
             height: Math.max(1, Math.round(bitmap.height * (1 - bottom)) - startY),
