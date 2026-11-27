@@ -333,6 +333,7 @@ export function mount(panel, signal) {
     const { id, title, body, category } = note;
     const payload = { action:'save', id, title:title.trim() || 'Catatan baru', body, category:category || 'none' };
     if (id === null) payload.createKey = note.createKey ??= crypto.randomUUID();
+    else payload.baseUpdated = note.updated ?? null;
     message('Menyimpan otomatis…');
     saving = request(payload);
     let succeeded = false;
