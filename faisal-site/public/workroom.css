@@ -1631,3 +1631,12 @@ img[data-image-selected] { opacity: 0; }
 .task-pdf-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; }
 .task-pdf-actions h2 { flex: 1 1 100%; margin: 0; }
 .task-pdf-preview iframe { display: block; inline-size: 100%; block-size: 65dvh; margin-block-start: .8rem; border: 1px solid var(--line); }
+.task-detail-disclosure { min-inline-size: 0; }
+.task-detail-disclosure > summary { min-block-size: 44px; align-content: center; }
+.task-delete { margin-block-start: 1rem; border-block-start: 1px solid var(--line); padding-block-start: .65rem; }
+.task-delete > summary {
+  display: grid; place-items: center; inline-size: 44px; block-size: 44px;
+  border: 1px solid var(--line); border-radius: .7rem; cursor: pointer;
+}
+.task-delete > summary::-webkit-details-marker { display: none; }
+.task-delete[open] > button { margin-block-start: .5rem; }
