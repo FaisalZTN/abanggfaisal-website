@@ -1,3 +1,19 @@
+import { compressWorkroomImage } from '/workroom-image-upload.js';
+
+const photoCompressionThreshold = 1000000;
+
+async function compressPhoto(file) {
+  const bitmap = await createImageBitmap(file);
+  try {
+    const blob = await compressWorkroomImage(bitmap, {
+      x: 0, y: 0, width: bitmap.width, height: bitmap.height,
+    }, photoCompressionThreshold);
+    return new File([blob], file.name.replace(/\.[^.]+$/, '.webp'), { type: blob.type });
+  } finally {
+    bitmap.close();
+  }
+}
+
 const uploadTime = new Intl.DateTimeFormat('id-ID', {
   dateStyle: 'long', timeStyle: 'short', timeZone: 'Asia/Makassar',
 });
@@ -91,16 +107,20 @@ export function mountAttachment(section, kind, id, signal) {
       return;
     }
     input.disabled = true;
-    status.textContent = 'Mengunggah file…';
-    const upload = new URL(endpoint);
-    upload.searchParams.set('name', file.name);
+    const optimize = file.size > photoCompressionThreshold && /\.(jpe?g|png)$/i.test(file.name);
     try {
+      status.textContent = optimize ? 'Mengompresi foto…' : 'Mengunggah file…';
+      const payload = optimize ? await compressPhoto(file) : file;
+      if (signal.aborted || !section.isConnected) return;
+      status.textContent = 'Mengunggah file…';
+      const upload = new URL(endpoint);
+      upload.searchParams.set('name', payload.name);
       const attachment = await request(upload, {
-        method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: file,
+        method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: payload,
       });
       if (signal.aborted || !section.isConnected) return;
       display(attachment);
-      status.textContent = 'Lampiran tersimpan.';
+      status.textContent = optimize ? 'Foto dikompresi dan disimpan.' : 'Lampiran tersimpan.';
       if (!open.hidden && !dialog.open) showPreview();
     } catch (error) {
       if (!signal.aborted) status.textContent = 'File gagal diunggah. ' + error.message;

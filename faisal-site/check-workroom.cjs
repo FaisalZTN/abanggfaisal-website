@@ -139,6 +139,34 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.deepEqual(Buffer.from(await imageDownload.arrayBuffer()), png);
     assert.equal((await worker.fetch(new Request(attachmentImageUrl), env)).status, 403);
     await notePreview.getByRole('button', { name: 'Tutup' }).click();
+    const largePng = Buffer.from(await page.evaluate(async () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1800;
+      canvas.height = 900;
+      const context = canvas.getContext('2d');
+      const pixels = context.createImageData(canvas.width, canvas.height);
+      for (let offset = 0; offset < pixels.data.length; offset += 65536) {
+        crypto.getRandomValues(pixels.data.subarray(offset, offset + 65536));
+      }
+      context.putImageData(pixels, 0, 0);
+      const blob = await new Promise(resolve => canvas.toBlob(resolve));
+      return await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(blob);
+      });
+    }), 'base64');
+    assert.ok(largePng.length > 1000000 && largePng.length <= 10000000);
+    await noteFile.setInputFiles({ name: 'Foto besar.png', mimeType: 'image/png', buffer: largePng });
+    const photoPreview = noteAttachment.getByRole('dialog', { name: 'Foto besar.webp' });
+    const photo = photoPreview.getByRole('img', { name: 'Foto besar.webp' });
+    await photoPreview.waitFor();
+    await page.waitForFunction(() => document.querySelector('#note-attachment img')?.naturalWidth > 0);
+    assert.ok(await photo.evaluate(image => image.naturalWidth <= 1600));
+    const compressedPhoto = await worker.fetch(new Request(await photo.getAttribute('src'), { headers: attachmentHeaders }), env);
+    assert.equal(compressedPhoto.headers.get('Content-Type'), 'image/webp');
+    assert.ok((await compressedPhoto.arrayBuffer()).byteLength <= 1000000);
+    await photoPreview.getByRole('button', { name: 'Tutup' }).click();
     await noteFile.setInputFiles({ name: 'Ringkasan.txt', mimeType: 'text/plain', buffer: Buffer.from('Isi lampiran') });
     const downloadFile = noteAttachment.getByRole('link', { name: 'Unduh: Ringkasan.txt' });
     await downloadFile.waitFor();

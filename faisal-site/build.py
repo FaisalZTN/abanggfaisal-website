@@ -37,7 +37,9 @@ editor_bundle = subprocess.check_output([str(editor_bundler), 'workroom-block-ed
 editor_url = asset('workroom-block-editor.js', editor_bundle)
 workroom_note_format = asset('workroom-note-format.js')
 workroom_image_upload = asset('workroom-image-upload.js')
-workroom_attachment = asset('workroom-attachment.js')
+workroom_attachment = asset('workroom-attachment.js', workroom_asset_data('workroom-attachment.js').replace(
+    b'/workroom-image-upload.js', workroom_image_upload.encode(),
+))
 workroom_source = workroom_source.replace(
     "import { notePreview, readBlockNote, noteBodyText } from './workroom-note-format.js';",
     (P / 'public/workroom-note-format.js').read_text(encoding='utf-8').replace('export function ', 'function '),
