@@ -396,10 +396,27 @@ module.exports = async function checkWorkroom(browser, origin) {
     }
     await page.setViewportSize({ width: 360, height: 800 });
     db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('task', 'Tugas Ringkasan', '', 'active', ?, 'high')").run(today);
+    db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority, note_updated) VALUES ('note', 'Catatan disunting terakhir', '', 'active', '', 'normal', ?)").run(Date.now() + 1000);
+    for (let index = 0; index < 3; index++) {
+      db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('note', ?, '', 'active', '', 'normal')").run('Catatan tanpa tanggal ' + index);
+    }
     await page.getByRole('link', { name: 'Ringkasan', exact: true }).first().click();
     const dashboard = page.locator('.overview-shell');
     await dashboard.getByRole('heading', { name: 'Ringkasan', exact: true }).waitFor();
     await dashboard.getByRole('form', { name: 'Catat cepat' }).waitFor();
+    assert.equal(await dashboard.locator('.recent-notes li strong').first().textContent(), 'Catatan disunting terakhir');
+    const edited = db.prepare("SELECT id, note_updated FROM workroom_entries WHERE title = ?")
+      .get('Catatan disunting terakhir');
+    const saveNote = body => worker.fetch(new Request(origin + '/workroom/notes/?notes-data=', {
+      method: 'POST',
+      headers: { Origin: origin, 'Cf-Access-Jwt-Assertion': token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', id: edited.id, title: 'Catatan disunting terakhir',
+        body, category: 'none', baseUpdated: edited.note_updated }),
+    }), env);
+    assert.equal((await saveNote('Isi dari tab pertama')).status, 200);
+    assert.equal((await saveNote('Isi dari tab kedua')).status, 409);
+    assert.equal(db.prepare('SELECT body FROM workroom_entries WHERE id = ?').get(edited.id).body,
+      'Isi dari tab pertama');
     await dashboard.getByRole('link', { name: 'Kuliah hari ini' }).waitFor();
     await dashboard.getByRole('link', { name: 'Kuliah besok' }).waitFor();
     const agendaLink = dashboard.getByRole('link', { name: 'Lihat agenda', exact: true });
