@@ -158,20 +158,21 @@ function workroomForm(kind, entry, projects, standalone = false, defaultDue = ''
   const projectOptions = projects.map(project =>
     `<option value="${project.id}"${entry?.project_id === project.id ? ' selected' : ''}>${e(project.title)}</option>`).join('');
   const blockBody = kind === 'note' && readBlockNote(entry?.body);
+  const richTask = kind === 'task' && readBlockNote(entry?.body);
   return `<form method="post" action="${workroomPages[kind].path}">
     <input type="hidden" name="kind" value="${kind}">
     <input type="hidden" name="id" value="${entry?.id ?? ''}">
     <label>Judul<input name="title" required maxlength="160" value="${e(entry?.title)}"></label>
-    <label>${kind === 'note' ? 'Isi catatan (Markdown)' : 'Detail'}<textarea name="body" rows="${standalone ? 12 : 3}" maxlength="10000"${blockBody ? ' disabled' : ''}>${e(blockBody ? noteBodyText(entry.body) : entry?.body)}</textarea></label>
+    <label${kind === 'task' ? ' data-task-detail-source' : ''}${richTask ? ' hidden' : ''}>${kind === 'note' ? 'Isi catatan (Markdown)' : 'Detail'}<textarea name="body" rows="${standalone ? 12 : 3}" maxlength="${richTask ? 100000 : 10000}"${blockBody ? ' disabled' : ''}>${e(blockBody ? noteBodyText(entry.body) : entry?.body)}</textarea></label>
     ${blockBody ? `<p><a href="${workroomPages.note.path}?edit=${entry.id}">Edit isi di editor blok</a></p>` : ''}
+    ${richTask ? `<noscript><p>Detail</p><p>${e(noteBodyText(entry.body))}</p></noscript>` : ''}
     ${kind === 'task' ? `<div class="task-detail-tools" hidden>
-      <button type="button" class="task-image-toggle" aria-expanded="false">+ Tambah gambar lewat URL</button>
-      <div class="task-image-fields" hidden>
-        <label>URL gambar HTTPS<input type="text" inputmode="url" class="task-image-url" placeholder="https://…" autocomplete="off"></label>
-        <button type="button" class="task-image-add">Sisipkan gambar</button>
+      <span>Detail</span>
+      <div class="note-sheet task-block-editor">
+        <div class="note-toolbar" role="group" aria-label="Format detail tugas"></div>
+        <div class="note-rendered" data-task-detail-input></div>
       </div>
       <p class="task-detail-status" role="status"></p>
-      <div class="task-detail-preview" aria-label="Pratinjau detail tugas" hidden></div>
     </div>` : ''}
     <div class="fields">
     ${kind !== 'note' ? `<label>Status<select name="status">${statuses}</select></label>
@@ -1734,7 +1735,7 @@ async function handleWorkroom(request, env, url) {
     const due = kind === 'note' ? '' : get('due');
     const priority = kind === 'task' ? get('priority') : 'normal';
     const project = kind !== 'project' && get('project_id') ? Number(get('project_id')) : null;
-    if (!title || title.length > 160 || body.length > (kind === 'note' && readBlockNote(body) ? 100000 : 10000) || !Object.hasOwn(workroomKinds[kind].statuses, status) ||
+    if (!title || title.length > 160 || body.length > (['note', 'task'].includes(kind) && readBlockNote(body) ? 100000 : 10000) || !Object.hasOwn(workroomKinds[kind].statuses, status) ||
         !['normal', 'high'].includes(priority) ||
         (due && (!/^\d{4}-\d{2}-\d{2}$/.test(due) || !Number.isFinite(Date.parse(due)) ||
           new Date(due).toISOString().slice(0, 10) !== due))) return invalid();

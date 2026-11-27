@@ -1,91 +1,126 @@
-import { bindImageEditing } from '/workroom-image-upload.js';
+import { bindBlockImages } from '/workroom-image-upload.js';
+import { legacyContent, readBlockNote, blockNoteBody } from '/workroom-note-format.js';
+
+const formatButtons = [
+  ['blocks', 'Tambah blok', 'plus'], ['toggleBold', 'Tebal', 'bold'], ['toggleItalic', 'Miring', 'italic'],
+  ['toggleUnderline', 'Garis bawah', 'underline'], ['toggleSuperscript', 'Superskrip', 'superscript'],
+  ['toggleSubscript', 'Subskrip', 'subscript'], ['link', 'Sisipkan atau edit tautan', 'link'],
+];
+const paragraphOptions = {
+  alignment: ['Perataan paragraf', { left: 'Kiri', center: 'Tengah', right: 'Kanan', justify: 'Rata kiri-kanan' }],
+  leading: ['Spasi antarbaris', { '1': '1', normal: '1,25', '1.5': '1,5', '2': '2', '2.5': '2,5', '3': '3' }],
+  spacing: ['Jarak antarparagraf', { none: 'Tanpa jarak', normal: 'Normal', wide: 'Lebar' }],
+};
+
+function mountDetail(tools, mountBlockEditor, signal) {
+  const field = tools.closest('form').elements.body;
+  const host = tools.querySelector('[data-task-detail-input]');
+  const toolbar = tools.querySelector('.note-toolbar');
+  const dialog = document.createElement('dialog');
+  dialog.className = 'workroom-url-dialog';
+  dialog.innerHTML = `<form>
+    <h2></h2><label>Alamat URL<input type="url" required inputmode="url" autocomplete="off" placeholder="https://…"></label>
+    <div class="workroom-url-actions"><button type="button" data-remove-link hidden>Hapus tautan</button>
+      <button type="button" data-cancel>Batal</button><button type="submit">Simpan</button></div>
+  </form>`;
+  tools.append(dialog);
+  const urlInput = dialog.querySelector('input');
+  const remove = dialog.querySelector('[data-remove-link]');
+  let applyUrl;
+  let removeUrl;
+  function openUrl(title, value, apply, removeLink) {
+    dialog.setAttribute('aria-label', title);
+    dialog.querySelector('h2').textContent = title;
+    dialog.querySelector('[type="submit"]').textContent = title;
+    urlInput.value = value;
+    urlInput.setCustomValidity('');
+    remove.hidden = !removeLink;
+    applyUrl = apply;
+    removeUrl = removeLink;
+    dialog.showModal();
+    urlInput.select();
+  }
+  dialog.querySelector('[data-cancel]').onclick = () => dialog.close();
+  remove.onclick = () => { dialog.close(); removeUrl(); };
+  urlInput.oninput = () => urlInput.setCustomValidity('');
+  dialog.querySelector('form').onsubmit = event => {
+    event.preventDefault();
+    const href = urlInput.value.trim();
+    if (!/^https:\/\/[^\s]+$/i.test(href) || !URL.canParse(href)) {
+      urlInput.setCustomValidity('Masukkan URL HTTPS yang valid.');
+      urlInput.reportValidity();
+      return;
+    }
+    dialog.close();
+    applyUrl(href);
+  };
+
+  toolbar.innerHTML = formatButtons.map(([command, label, icon]) =>
+    `<button type="button" data-task-format="${command}" aria-label="${label}" title="${label}"><svg class="ui-icon" aria-hidden="true"><use href="/gentleface-icons.svg#${icon}"/></svg></button>`).join('') +
+    `<details class="task-format-options"><summary>Format paragraf</summary><div class="fields"><label>Warna teks<input type="color" data-task-color value="#1d97f1"></label>
+    <label>Ukuran teks<select data-task-size><option value="">Bawaan</option>${[10, 13, 16, 18, 24, 32, 48].map(size => `<option value="${size}px">${size} px</option>`).join('')}</select></label>
+    ${Object.entries(paragraphOptions).map(([key, [label, options]]) => `<label>${label}<select data-task-paragraph="${key}">
+      ${Object.entries(options).map(([value, name]) => `<option value="${value}">${name}</option>`).join('')}</select></label>`).join('')}
+    <label>Sisipkan tanggal<input type="date" data-task-date></label></div></details>`;
+  const legacy = field.value.replace(/!\[([^\]\r\n]*)\]\((https?:\/\/[^\s)]+)\)/g, (token, label, value) => {
+    if (!URL.canParse(value)) return token;
+    const url = new URL(value);
+    return url.origin === location.origin && /^\/workroom\/images\/[a-f0-9]{64}$/.test(url.pathname)
+      ? '![' + label + '](' + url.pathname + url.hash + ')' : token;
+  });
+  const block = mountBlockEditor(host, readBlockNote(field.value) ?? legacyContent(legacy), document => {
+    field.value = blockNoteBody(document);
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    bindBlockImages(block.editor);
+  }, attrs => {
+    for (const select of toolbar.querySelectorAll('[data-task-paragraph]')) {
+      select.value = attrs[select.dataset.taskParagraph] ?? (select.dataset.taskParagraph === 'alignment' ? 'left' : 'normal');
+    }
+  }, 'Detail tugas', apply => openUrl('Sisipkan gambar dari URL', '', apply));
+  const { editor } = block;
+  bindBlockImages(editor);
+  field.closest('label').hidden = true;
+  tools.hidden = false;
+  toolbar.onmousedown = event => {
+    if (event.target.closest('button')) event.preventDefault();
+  };
+  toolbar.onclick = event => {
+    const command = event.target.closest('button')?.dataset.taskFormat;
+    if (!command) return;
+    if (command === 'blocks') return block.showBlocks();
+    if (command !== 'link') return editor.chain().focus()[command]().run();
+    const { selection, doc } = editor.state;
+    const value = editor.getAttributes('link').href;
+    function update(href) {
+      if (editor.state.doc !== doc || editor.isDestroyed) return;
+      const chain = editor.chain().focus().setTextSelection({ from: selection.from, to: selection.to });
+      if (value && selection.empty) chain.extendMarkRange('link');
+      if (!href) chain.unsetLink().run();
+      else if (value || !selection.empty) chain.setLink({ href }).run();
+      else chain.insertContent({ type: 'text', text: href, marks: [{ type: 'link', attrs: { href } }] }).run();
+    }
+    openUrl(value ? 'Simpan tautan' : 'Sisipkan tautan', value ?? '', update, value ? () => update() : null);
+  };
+  toolbar.onchange = ({ target }) => {
+    const chain = editor.chain().focus();
+    if (target.matches('[data-task-color]')) chain.setColor(target.value).run();
+    if (target.matches('[data-task-size]')) (target.value ? chain.setFontSize(target.value) : chain.unsetFontSize()).run();
+    if (target.dataset.taskParagraph) chain.setParagraphLayout(target.dataset.taskParagraph, target.value).run();
+    if (target.matches('[data-task-date]') && target.value) {
+      chain.insertContent(target.value).run();
+      target.value = '';
+    }
+  };
+  host.addEventListener('workroom-image', event => {
+    if (block.image(event.detail.url, event.detail.layout)) event.preventDefault();
+  }, { signal });
+  signal.addEventListener('abort', () => {
+    if (dialog.open) dialog.close();
+    block.destroy();
+  }, { once: true });
+}
 
 export function mount(panel, signal) {
-  function webUrl(value, httpsOnly = false) {
-    try {
-      const url = new URL(value);
-      if ((url.protocol === 'https:' || (!httpsOnly && url.protocol === 'http:')) &&
-          !url.username && !url.password) return url.href;
-    } catch {
-      return null;
-    }
-    return null;
-  }
-
-  function trimLink(value) {
-    let opens = 0;
-    let closes = 0;
-    for (const character of value) {
-      if (character === '(') opens++;
-      if (character === ')') closes++;
-    }
-    let end = value.length;
-    while (end && (/[.,;:!?]/.test(value[end - 1]) || (value[end - 1] === ')' && closes > opens))) {
-      if (value[end - 1] === ')') closes--;
-      end--;
-    }
-    return value.slice(0, end);
-  }
-
-  function externalLink(url, label) {
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.textContent = label;
-    return link;
-  }
-
-  function linkPreview(url, label) {
-    const item = document.createElement('div');
-    item.className = 'task-detail-link';
-    const toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.innerHTML = '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="/gentleface-icons.svg#more-horizontal"/></svg>';
-    toggle.setAttribute('aria-label', 'Opsi link');
-    toggle.title = 'Opsi link';
-    toggle.dataset.linkOptions = '';
-    toggle.setAttribute('aria-expanded', 'false');
-    item.append(externalLink(url, label), toggle);
-    return item;
-  }
-
-  function imagePreview(url, label) {
-    const source = new URL(url);
-    if (source.origin === location.origin && /^\/workroom\/images\/[a-f0-9]{64}$/.test(source.pathname)) {
-      const placement = new URLSearchParams(source.hash.slice(1)).get('layout');
-      const image = document.createElement('img');
-      image.alt = label || 'Gambar tugas';
-      image.className = 'task-uploaded-image';
-      if (['left', 'right', 'front', 'behind'].includes(placement)) image.dataset.imageLayout = placement;
-      image.src = source.pathname;
-      return image;
-    }
-    const item = document.createElement('div');
-    item.className = 'task-detail-image';
-    const show = document.createElement('button');
-    show.type = 'button';
-    show.textContent = 'Tampilkan gambar';
-    const link = externalLink(url, label || 'Buka gambar di tab baru');
-    item.append(show, link);
-    show.onclick = () => {
-      const image = document.createElement('img');
-      image.alt = label || 'Gambar tugas';
-      image.decoding = 'async';
-      image.referrerPolicy = 'no-referrer';
-      image.onerror = () => {
-        const message = document.createElement('p');
-        message.textContent = 'Gambar gagal dimuat. Coba buka tautannya di tab baru.';
-        image.replaceWith(message);
-      };
-      item.append(image);
-      image.src = url;
-      show.remove();
-      link.focus();
-    };
-    return item;
-  }
-
   const editor = panel.querySelector('.workspace-editor form');
   let guard;
   if (editor) {
@@ -164,139 +199,22 @@ export function mount(panel, signal) {
     };
   }
 
-  for (const tools of panel.querySelectorAll('.task-detail-tools')) {
-    const field = tools.closest('form').elements.body;
-    const preview = tools.querySelector('.task-detail-preview');
-    const status = tools.querySelector('.task-detail-status');
-    const toggle = tools.querySelector('.task-image-toggle');
-    const imageFields = tools.querySelector('.task-image-fields');
-    const imageUrl = tools.querySelector('.task-image-url');
-    tools.prepend(preview);
-
-    const input = field.cloneNode(false);
-    input.removeAttribute('name');
-    input.dataset.taskDetailInput = '';
-    input.rows = 5;
-    field.replaceWith(input);
-    input.closest('label').after(field);
-    field.hidden = true;
-
-    const tokens = /!\[([^\]\r\n]*)\]\(((?:https:\/\/[^\s)]+|\/workroom\/images\/[a-f0-9]{64}(?:#[a-z0-9=&-]+)?))\)|https?:\/\/[^\s<>"'`]+/gi;
-    const markerPattern = /〔Gambar (\d+)〕/g;
-    let images = [];
-    function expand(text) {
-      return text.replace(markerPattern, (marker, index) => images[Number(index) - 1] ?? marker);
-    }
-    function sourceCursor() {
-      let cursor = input.selectionEnd;
-      for (const marker of input.value.matchAll(markerPattern)) {
-        if (cursor > marker.index && cursor < marker.index + marker[0].length) {
-          cursor = marker.index + marker[0].length;
-          break;
-        }
+  const tools = [...panel.querySelectorAll('.task-detail-tools')];
+  if (tools.length) void import('/workroom-block-editor.js').then(({ mountBlockEditor }) => {
+    if (signal.aborted) return;
+    for (const field of tools) {
+      try { mountDetail(field, mountBlockEditor, signal); }
+      catch {
+        field.hidden = false;
+        field.querySelector('.task-detail-status').textContent = 'Editor detail belum bisa dimuat.';
       }
-      return expand(input.value.slice(0, cursor)).length;
     }
-    function renderInput() {
-      images = [];
-      input.value = field.value.replace(tokens, (token, label, url) => {
-        if (url === undefined) return token;
-        return '〔Gambar ' + images.push(token) + '〕';
-      });
+  }).catch(() => {
+    if (signal.aborted) return;
+    for (const field of tools) {
+      field.hidden = false;
+      field.querySelector('.task-detail-status').textContent = 'Editor detail belum bisa dimuat.';
     }
-    function publishBody() {
-      field.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    input.addEventListener('input', () => {
-      const text = expand(input.value);
-      if (text.length > field.maxLength) {
-        status.textContent = 'Detail tugas terlalu panjang.';
-        renderInput();
-        return;
-      }
-      field.value = text;
-      publishBody();
-    });
-
-    function render() {
-      const text = field.value;
-      const nodes = [];
-      let offset = 0;
-      for (const match of text.matchAll(tokens)) {
-        const isImage = match[2] !== undefined;
-        const value = isImage ? match[2] : trimLink(match[0]);
-        const url = isImage && value.startsWith('/workroom/images/')
-          ? new URL(value, location.origin).href : webUrl(value, isImage);
-        if (!url) continue;
-        nodes.push(text.slice(offset, match.index));
-        const node = isImage ? imagePreview(url, match[1]) : linkPreview(url, value);
-        nodes.push(node);
-        if (node.classList.contains('task-uploaded-image')) bindImageEditing(node, url, node.dataset.imageLayout, ({ url }) => {
-          const start = match.index;
-          const end = start + match[0].length;
-          const next = '![' + match[1] + '](' + url + ')';
-          if (field.value !== text || field.value.length - (end - start) + next.length > field.maxLength) return false;
-          field.setRangeText(next, start, end, 'end');
-          renderInput();
-          publishBody();
-          input.focus();
-          return true;
-        });
-        offset = match.index + (isImage ? match[0].length : value.length);
-      }
-      preview.hidden = !nodes.length;
-      if (nodes.length) nodes.push(text.slice(offset));
-      preview.replaceChildren(...nodes);
-    }
-
-    toggle.onclick = () => {
-      imageFields.hidden = !imageFields.hidden;
-      toggle.setAttribute('aria-expanded', String(!imageFields.hidden));
-      if (!imageFields.hidden) imageUrl.focus();
-    };
-
-    function attachImage(url) {
-      const cursor = sourceCursor();
-      const insert = (cursor && field.value[cursor - 1] !== '\n' ? '\n' : '') +
-        '![](' + url.replaceAll(')', '%29') + ')' +
-        (cursor < field.value.length && field.value[cursor] !== '\n' ? '\n' : '');
-      if (field.value.length + insert.length > field.maxLength) {
-        status.textContent = 'Detail tugas terlalu panjang untuk menambah gambar.';
-        return false;
-      }
-      field.setRangeText(insert, cursor, cursor, 'end');
-      renderInput();
-      publishBody();
-      input.focus();
-      return true;
-    }
-
-    function insertImage() {
-      const url = webUrl(imageUrl.value.trim(), true);
-      if (!url) {
-        status.textContent = 'Masukkan URL gambar HTTPS yang valid.';
-        return;
-      }
-      if (!attachImage(url)) return;
-      imageUrl.value = '';
-      imageFields.hidden = true;
-      toggle.setAttribute('aria-expanded', 'false');
-      status.textContent = editor?.contains(field) ? 'Gambar ditambahkan.' : 'Gambar ditambahkan. Simpan tugas untuk menyimpan perubahan.';
-    }
-
-    imageUrl.addEventListener('keydown', event => {
-      if (event.key !== 'Enter') return;
-      event.preventDefault();
-      insertImage();
-    });
-    tools.querySelector('.task-image-add').onclick = insertImage;
-    input.addEventListener('workroom-image', event => {
-      if (attachImage(event.detail.url)) event.preventDefault();
-    });
-    field.addEventListener('input', render);
-    tools.hidden = false;
-    renderInput();
-    render();
-  }
+  });
   return guard;
 }

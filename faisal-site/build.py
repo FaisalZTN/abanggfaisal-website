@@ -52,7 +52,9 @@ workroom_source = workroom_source.replace('"/workroom-notes.js"', f'"{workroom_n
 for workroom_asset in ('workroom.css', 'workroom-theme.js', 'workroom-nav.js', 'workroom-greeting.js', 'workroom-calendar.js', 'workroom-agenda-check.js', 'workroom-review.js', 'workroom-private-notes.js', 'workroom-task-detail.js', 'workroom-quick-check.js', 'workroom-link-options.js', 'workroom-image-upload.js', 'workroom-hero.webp', 'workroom-favicon.svg'):
     source = workroom_asset_data(workroom_asset)
     if workroom_asset == 'workroom-task-detail.js':
-        source = source.replace(b'/workroom-image-upload.js', workroom_image_upload.encode())
+        source = source.replace(b'/workroom-image-upload.js', workroom_image_upload.encode()).replace(
+            b'/workroom-block-editor.js', editor_url.encode(),
+        ).replace(b'/workroom-note-format.js', workroom_note_format.encode())
     workroom_source = workroom_source.replace(
         f'"/{workroom_asset}"', f'"{asset(workroom_asset, source)}"'
     )
