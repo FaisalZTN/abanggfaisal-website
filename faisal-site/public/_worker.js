@@ -1220,32 +1220,6 @@ async function renderWorkroom(db, page, url, env, renderPage, driveShortcuts = [
       </section>
       <script type="application/workroom-module" data-src="/workroom-greeting.js"></script>
       <div class="overview calendar-agenda" id="agenda" data-day="${day}" data-today="${today}" data-google="${showGoogle}"${fullCalendar ? ' data-calendar-full' : ''}>
-        <section class="collection overview-tasks agenda-tasks" aria-labelledby="overview-task-heading">
-          <div class="overview-card-heading">
-            <div><h2 id="overview-task-heading">Tugas</h2><p data-overview-task-date>${day === today ? 'Hari ini dan lewat tenggat' : e(reviewDateLabel(day))}</p></div>
-            <a class="overview-icon-link" href="${workroomPages.task.path}?add=task#add-task" aria-label="Tambah tugas" title="Tambah tugas">${workroomIcon('plus')}</a>
-          </div>
-          <ul class="due-list"${due.length ? '' : ' hidden'}>${due.map(entry => workroomDueTask(entry, today, taskContext)).join('')}</ul>
-          <div class="agenda-empty"${due.length ? ' hidden' : ''}>
-            <p role="status">Tidak ada tugas jatuh tempo.</p>
-            <a class="overview-text-action" href="${workroomPages.task.path}">Lihat semua tugas</a>
-          </div>
-        </section>
-        ${studySchedule}
-        <section class="collection overview-exams" id="ujian-terdekat" aria-labelledby="workroom-exams-title"
-          ${exams === null ? 'data-workroom-deferred data-lazy data-url="/workroom/?exams=data" data-retry="/workroom/?view=overview&amp;exams=full#ujian-terdekat"' : ''}>
-          <div class="workroom-study-heading"><h2 id="workroom-exams-title">Ujian terdekat</h2><small>Google Calendar · 30 hari</small></div>
-          <div data-deferred-content>${exams ?? ''}</div>
-          ${exams === null ? `<p data-deferred-status role="status">Memuat jadwal ujian…</p>
-          <noscript><p><a href="${workroomOverviewUrl}&amp;exams=full#ujian-terdekat">Muat jadwal ujian</a></p></noscript>
-          <script type="application/workroom-module" data-src="/workroom-review.js"></script>` : ''}
-        </section>
-        <div class="dashboard-stats">
-          <a href="${workroomPages.task.path}">Tugas terbuka<strong data-overview-open-count>${counts.tasks}</strong></a>
-          <a href="${workroomPages.project.path}">Proyek aktif<strong>${counts.projects}</strong></a>
-          <a href="${workroomPages.note.path}">Catatan<strong>${counts.notes}</strong></a>
-          <a href="${workroomPages.goal.path}">Goals aktif<strong>${counts.goals}</strong></a>
-        </div>
         <section class="collection overview-calendar" aria-labelledby="overview-calendar-title">
           <h2 id="overview-calendar-title">Kalender</h2>
           ${workroomCalendar(day, tasks.filter(task => task.status !== 'done'), today, google.entries, fullCalendar)}
@@ -1258,6 +1232,34 @@ async function renderWorkroom(db, page, url, env, renderPage, driveShortcuts = [
             ${showGoogle && !fullCalendar ? `<noscript><p><a href="${WORKROOM}?day=${day}&amp;calendar=full#agenda">Muat Google Calendar</a></p></noscript>` : ''}
           </section>
         </section>
+        <div class="overview-agenda-list">
+          ${studySchedule}
+          <section class="collection overview-exams" id="ujian-terdekat" aria-labelledby="workroom-exams-title"
+            ${exams === null ? 'data-workroom-deferred data-lazy data-url="/workroom/?exams=data" data-retry="/workroom/?view=overview&amp;exams=full#ujian-terdekat"' : ''}>
+            <div class="workroom-study-heading"><h2 id="workroom-exams-title">Ujian terdekat</h2><small>Google Calendar · 30 hari</small></div>
+            <div data-deferred-content>${exams ?? ''}</div>
+            ${exams === null ? `<p data-deferred-status role="status">Memuat jadwal ujian…</p>
+            <noscript><p><a href="${workroomOverviewUrl}&amp;exams=full#ujian-terdekat">Muat jadwal ujian</a></p></noscript>
+            <script type="application/workroom-module" data-src="/workroom-review.js"></script>` : ''}
+          </section>
+          <section class="collection overview-tasks agenda-tasks" aria-labelledby="overview-task-heading">
+            <div class="overview-card-heading">
+              <div><h2 id="overview-task-heading">Tugas</h2><p data-overview-task-date>${day === today ? 'Hari ini dan lewat tenggat' : e(reviewDateLabel(day))}</p></div>
+              <a class="overview-icon-link" href="${workroomPages.task.path}?add=task#add-task" aria-label="Tambah tugas" title="Tambah tugas">${workroomIcon('plus')}</a>
+            </div>
+            <ul class="due-list"${due.length ? '' : ' hidden'}>${due.map(entry => workroomDueTask(entry, today, taskContext)).join('')}</ul>
+            <div class="agenda-empty"${due.length ? ' hidden' : ''}>
+              <p role="status">Tidak ada tugas jatuh tempo.</p>
+              <a class="overview-text-action" href="${workroomPages.task.path}">Lihat semua tugas</a>
+            </div>
+          </section>
+        </div>
+        <div class="dashboard-stats">
+          <a href="${workroomPages.task.path}">Tugas terbuka<strong data-overview-open-count>${counts.tasks}</strong></a>
+          <a href="${workroomPages.project.path}">Proyek aktif<strong>${counts.projects}</strong></a>
+          <a href="${workroomPages.note.path}">Catatan<strong>${counts.notes}</strong></a>
+          <a href="${workroomPages.goal.path}">Goals aktif<strong>${counts.goals}</strong></a>
+        </div>
         <section class="collection recent-notes"><h2>Catatan terbaru</h2>
           ${entries.some(entry => entry.kind === 'note') ? '<ul>' + entries.filter(entry => entry.kind === 'note').slice(0,3).map(note => {
             const preview = notePreview(note.body);

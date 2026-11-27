@@ -255,7 +255,15 @@ export function mountBlockEditor(root, content, onChange, onSelection, label, re
       clipboardTextSerializer: slice => clipboardText(slice.content.toJSON() ?? []),
       attributes: { role: 'textbox', 'aria-label': label, 'aria-multiline': 'true' },
       handleKeyDown(_view, event) {
-        if (popup.hidden) return false;
+        if (popup.hidden) {
+          const selection = editor.state.selection;
+          const next = selection.$to.nodeAfter;
+          if (event.key === 'Enter' && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey &&
+              selection.node?.type.name === 'image' && next?.type.name === 'paragraph' && !next.content.size) {
+            return editor.commands.setTextSelection(selection.to + 1);
+          }
+          return false;
+        }
         if (event.key === 'Escape') { close(); return true; }
         if (event.key === 'Enter' && choices.length) { choose(choices[active]); return true; }
         if (choices.length && ['ArrowUp', 'ArrowDown'].includes(event.key)) {
