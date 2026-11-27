@@ -31,8 +31,8 @@ export function mount(panel, signal) {
   const listen = (target, type, handler, options) => target.addEventListener(type, handler, { ...options, signal });
   const pending = new WeakSet();
   function targetEditor(target) {
-    return target.closest?.('#edit-body, #note-split-body, .workspace-editor textarea[name="body"], #add-task textarea[name="body"]')
-      ?? target.closest?.('.task-detail-preview')?.closest('form')?.elements.body;
+    return target.closest?.('#edit-body, #note-split-body, textarea[data-task-detail-input], .workspace-editor textarea[name="body"], #add-task textarea[name="body"]')
+      ?? target.closest?.('.task-detail-preview')?.closest('form')?.querySelector('[data-task-detail-input]');
   }
   function status(editor, text) {
     const message = editor.matches('#edit-body, #note-split-body') ? panel.querySelector('#' + 'note-status')
@@ -189,10 +189,12 @@ export function mount(panel, signal) {
     try {
       image = await createImageBitmap(file);
       if (signal.aborted || !editor.isConnected || dialog.open) return;
-      const result = await chooseCrop(image);
+      const full = { x: 0, y: 0, width: image.width, height: image.height };
+      const result = editor.matches('[data-task-detail-input]')
+        ? { crop: full, edges: [0, 0, 0, 0], layout: 'inline' }
+        : await chooseCrop(image);
       if (!result || signal.aborted || !editor.isConnected) return;
       status(editor, 'Menyiapkan gambar…');
-      const full = { x: 0, y: 0, width: image.width, height: image.height };
       const source = await storeImage(await compress(image, full));
       const display = result.edges.some(Boolean) ? await storeImage(await compress(image, result.crop)) : source;
       const detail = imageDetail(display, source, result.edges, result.layout);
