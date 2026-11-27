@@ -232,7 +232,7 @@ button { justify-self: start; padding: .45rem .95rem; background: var(--green); 
   --overview-card-radius: clamp(1.25rem, 2.6vw, 1.85rem);
   --overview-control-radius: .9rem;
 }
-.overview-shell :is(.overview > .collection, .dashboard-stats > a) {
+.overview-shell :is(.overview .collection, .dashboard-stats > a) {
   border-radius: var(--overview-card-radius);
   border-color: color-mix(in srgb, var(--line) 85%, var(--ink));
   background: linear-gradient(150deg, color-mix(in srgb, var(--card) 95%, var(--ink)), var(--card) 45%);
@@ -266,7 +266,7 @@ button { justify-self: start; padding: .45rem .95rem; background: var(--green); 
 .overview {
   display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: .8rem;
 }
-.overview > .collection { min-width: 0; margin: 0; }
+.overview .collection { min-width: 0; margin: 0; }
 .overview .collection h2 { font-size: 1.13rem; font-weight: 670; letter-spacing: -.02em; }
 .overview .workroom-study-heading { gap: .3rem .8rem; }
 .overview-card-heading { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
@@ -1084,6 +1084,8 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-rendered .tiptap { min-height: 12rem; padding-inline-start: 1.4rem; outline: none; }
 .note-rendered .tiptap > * { margin-block: .45rem; }
 .note-rendered .tiptap > :first-child { margin-block-start: 0; }
+.note-rendered .tiptap > img { margin-block-start: calc(.45rem + var(--image-offset-y, 0px)); }
+.note-rendered .tiptap > img:first-child { margin-block-start: var(--image-offset-y, 0px); }
 .note-rendered .tiptap :is(h1, h2, h3) { letter-spacing: -.025em; }
 .note-rendered .tiptap h1 { font-size: 1.85rem; }
 .note-rendered blockquote { padding-inline-start: .8rem; border-inline-start: 3px solid var(--accent); color: var(--muted); }
@@ -1453,7 +1455,7 @@ main { padding-block: clamp(.5rem, 2vw, 1.25rem) 3rem; }
   stroke-linecap: round;
 }
 .overview-greeting h2 { font: 500 clamp(1.55rem, 3.2vw, 2.25rem)/1.15 var(--font-serif); }
-.overview-shell :is(.overview > .collection, .dashboard-stats > a) {
+.overview-shell :is(.overview .collection, .dashboard-stats > a) {
   border-radius: 1.1rem;
   border-color: var(--line);
   background: var(--card);
@@ -1462,17 +1464,13 @@ main { padding-block: clamp(.5rem, 2vw, 1.25rem) 3rem; }
 .dashboard-stats a { display: grid; gap: .2rem; padding: 1.05rem 1.25rem; background: var(--card); }
 .dashboard-stats a:hover { border-color: var(--muted); }
 .dashboard-stats strong { font-size: 1.75rem; font-weight: 650; letter-spacing: -.02em; color: var(--ink); }
+.overview-agenda-list { display: grid; gap: 1rem; }
+@media (min-width: 960px) {
+  .overview > .overview-agenda-list { grid-column: 1 / span 7; grid-row: 1; }
+  .overview > .overview-calendar { grid-column: 8 / -1; grid-row: 1; }
+}
 @media (min-width: 761px) {
-  .overview > :is(.workroom-study-schedule, .overview-exams) { grid-column: span 6; }
-  .overview:not(:has(.workroom-study-schedule)) > .overview-exams { grid-column: 1 / -1; }
-}
-@media (min-width: 1100px) {
-  .overview > .overview-calendar { grid-column: span 5; }
-  .overview > .recent-notes { grid-column: span 4; }
-  .overview > #pintasan-drive { grid-column: span 3; }
-}
-@media (min-width: 761px) and (max-width: 1099px) {
-  .overview > .recent-notes { grid-column: span 6; }
+  .overview > .recent-notes, .overview > #pintasan-drive { grid-column: span 6; }
 }
 @media (max-width: 760px) {
   .overview > .dashboard-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }

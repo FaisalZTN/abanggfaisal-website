@@ -7,7 +7,10 @@ export function bindImageEditing(image, url, layout, apply) {
   const [x, y] = offsets.every(value => Number.isSafeInteger(value) && Math.abs(value) <= 4096) ? offsets : [0, 0];
   const width = Number(metadata.get('width'));
   image.style.width = width > 0 && width <= 100 ? width + '%' : '';
-  image.style.translate = x || y ? x + 'px ' + y + 'px' : '';
+  const inFlow = layout === 'inline' && image.parentElement?.matches('.tiptap');
+  const translateY = inFlow ? 0 : y;
+  image.style.translate = x || translateY ? x + 'px ' + translateY + 'px' : '';
+  image.style.setProperty('--image-offset-y', inFlow && y ? y + 'px' : '');
   image.tabIndex = apply ? 0 : -1;
   image.toggleAttribute('data-editable-image', Boolean(apply));
   image.draggable = !apply;

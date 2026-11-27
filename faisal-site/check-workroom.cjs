@@ -201,6 +201,27 @@ module.exports = async function checkWorkroom(browser, origin) {
     }
     const editor = page.getByRole('textbox', { name: 'Isi catatan', exact: true });
     await editor.click();
+    await page.keyboard.type('Teks sebelum gambar');
+    await pasteScreenshot(editor, 'inline');
+    await editor.locator('img').waitFor();
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Teks setelah gambar');
+    const imageParagraph = editor.locator('img + p').filter({ hasText: 'Teks setelah gambar' });
+    await imageParagraph.waitFor();
+    assert.equal(await imageParagraph.locator('xpath=following-sibling::p').count(), 0);
+    const pastedImage = editor.locator('img');
+    const imageGap = () => pastedImage.evaluate(image =>
+      image.nextElementSibling.getBoundingClientRect().top - image.getBoundingClientRect().bottom);
+    const initialGap = await imageGap();
+    await pastedImage.click();
+    const pastedImageFrame = page.getByRole('group', { name: 'Pindah dan potong gambar' });
+    await pastedImageFrame.waitFor();
+    await dragImageControl(pastedImageFrame, 0, -24);
+    await editor.locator('img[src*="&y=-"]').waitFor();
+    assert.equal(await imageGap(), initialGap);
+    await page.getByText('Tersimpan otomatis.', { exact: true }).waitFor();
+    await page.locator('[data-new-note]').click();
+    await editor.click();
     await page.keyboard.type('# Judul blok');
     await editor.locator('h1').filter({ hasText: 'Judul blok' }).waitFor();
     await page.keyboard.press('Enter');
@@ -423,7 +444,22 @@ module.exports = async function checkWorkroom(browser, origin) {
     const agendaBox = await agendaLink.boundingBox();
     assert.ok(agendaBox.height >= 44 && agendaBox.y + agendaBox.height <= 800);
     assert.equal(await agendaLink.getAttribute('href'), '#agenda');
-    assert.ok(await dashboard.locator('#agenda > section').first().getByRole('heading', { name: 'Tugas' }).isVisible());
+    const calendar = dashboard.locator('.overview-calendar');
+    const schedule = dashboard.locator('.workroom-study-schedule');
+    const exams = dashboard.locator('.overview-exams');
+    const tasks = dashboard.locator('.overview-tasks');
+    const [phoneCalendar, phoneSchedule, phoneExams, phoneTasks] = await Promise.all(
+      [calendar, schedule, exams, tasks].map(panel => panel.boundingBox()));
+    assert.ok(phoneCalendar.y < phoneSchedule.y && phoneSchedule.y < phoneExams.y && phoneExams.y < phoneTasks.y);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const [desktopCalendar, desktopSchedule, desktopExams, desktopTasks] = await Promise.all(
+      [calendar, schedule, exams, tasks].map(panel => panel.boundingBox()));
+    assert.equal(desktopCalendar.y, desktopSchedule.y);
+    assert.ok(desktopCalendar.x > desktopSchedule.x);
+    assert.equal(desktopSchedule.x, desktopExams.x);
+    assert.equal(desktopSchedule.x, desktopTasks.x);
+    assert.ok(desktopSchedule.y < desktopExams.y && desktopExams.y < desktopTasks.y);
+    await page.setViewportSize({ width: 360, height: 800 });
     assert.ok((await dashboard.locator('.workroom-study-heading a').boundingBox()).height >= 44);
     const emptyTasksLink = dashboard.getByRole('link', { name: 'Lihat semua tugas', exact: true });
     assert.ok(await emptyTasksLink.isHidden());
