@@ -1455,6 +1455,12 @@ main { padding-block: clamp(.5rem, 2vw, 1.25rem) 3rem; }
   stroke-width: 2.2;
   stroke-linecap: round;
 }
+@media (prefers-reduced-motion: no-preference) {
+  .overview-greeting .today-mark { animation: workroom-greeting-spin 24s linear infinite; }
+}
+@keyframes workroom-greeting-spin {
+  to { transform: rotate(1turn); }
+}
 .overview-greeting h2 { font: 500 clamp(1.55rem, 3.2vw, 2.25rem)/1.15 var(--font-serif); }
 .overview-shell :is(.overview .collection, .dashboard-stats > a) {
   border-radius: 1.1rem;
