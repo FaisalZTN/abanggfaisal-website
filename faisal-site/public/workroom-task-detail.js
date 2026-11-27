@@ -150,11 +150,18 @@ export function mount(panel, signal) {
       status.textContent = 'Menyimpan…';
       data.set('action', 'save');
       data.set('autosave', '1');
+      const submittedStatus = data.get('status');
+      if (submittedStatus === new URLSearchParams(saved).get('status')) data.set('preserve_status', '1');
       let success = false;
       try {
         const response = await fetch(editor.getAttribute('action'), { method: 'POST', body: data });
-        if (!response.ok || !(await response.json()).saved) throw new Error('Save failed');
-        saved = snapshot;
+        if (!response.ok) throw new Error('Save failed');
+        const result = await response.json();
+        if (!result.saved) throw new Error('Save failed');
+        const persisted = new URLSearchParams(snapshot);
+        persisted.set('status', result.status);
+        if (editor.elements.status.value === submittedStatus) editor.elements.status.value = result.status;
+        saved = persisted.toString();
         success = true;
         status.textContent = 'Tersimpan otomatis.';
       } catch {
@@ -166,7 +173,7 @@ export function mount(panel, signal) {
         const current = new URLSearchParams(new FormData(editor)).toString();
         dirty = current !== saved;
         if (success) saveButton.hidden = true;
-        if (dirty && current !== snapshot) void save();
+        if (success && dirty && current !== snapshot) void save();
       }
     }
 
