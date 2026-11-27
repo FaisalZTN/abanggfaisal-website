@@ -143,6 +143,16 @@ def build_study(root, output, write, head, escape, render_article, preview=False
         json.dumps(schedule, ensure_ascii=False, separators=(',', ':')), encoding='utf-8',
     )
 
+    schedule_months = defaultdict(dict)
+    for day, sessions in schedule.items():
+        schedule_months[day[:7]][day] = sessions
+    schedule_directory = output / 'study-schedule'
+    schedule_directory.mkdir(exist_ok=True)
+    for month, days in schedule_months.items():
+        (schedule_directory / f'{month}.json').write_text(
+            json.dumps(days, ensure_ascii=False, separators=(',', ':')), encoding='utf-8',
+        )
+
     ordered = sorted(blocks.values(), key=lambda b: (b['id'] != DEFAULT_BLOCK,
                                                      b['status'] == 'coming-soon', b['title'].casefold()))
     for block in ordered:
