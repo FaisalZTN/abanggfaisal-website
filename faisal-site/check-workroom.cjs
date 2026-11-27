@@ -457,6 +457,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 360);
     await page.getByRole('radio', { name: 'Mona Sans' }).check();
     assert.match(await page.locator('main h1').evaluate(element => getComputedStyle(element).fontFamily), /Mona Sans/);
+    assert.match(await page.locator('.workroom-header .workroom-wordmark').evaluate(element => getComputedStyle(element).fontFamily), /Mona Sans/);
     await page.getByRole('radio', { name: 'Plus Jakarta Sans' }).check();
     await page.reload();
     await page.getByRole('radio', { name: 'Terang' }).waitFor();
@@ -465,6 +466,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(await page.getByRole('radio', { name: 'Plus Jakarta Sans' }).isChecked(), true);
     await page.evaluate(() => document.fonts.load('400 16px "Plus Jakarta Sans"'));
     assert.match(await page.locator('main h1').evaluate(element => getComputedStyle(element).fontFamily), /Plus Jakarta Sans/);
+    assert.match(await page.locator('.workroom-nav .workroom-wordmark').evaluate(element => getComputedStyle(element).fontFamily), /Plus Jakarta Sans/);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const editedUrl = 'https://drive.google.com/drive/folders/another-folder?hl=ID';
     const overview = origin + '/workroom/?view=overview';
