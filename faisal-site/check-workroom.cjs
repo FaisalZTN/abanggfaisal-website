@@ -544,14 +544,20 @@ module.exports = async function checkWorkroom(browser, origin) {
     await taskBody.waitFor();
     const taskViewport = page.viewportSize();
     const taskPanel = page.locator('.workspace-editor');
-    const taskForm = taskPanel.locator('#task-editor-form');
     const format = taskPanel.getByRole('group', { name: 'Format detail tugas' });
     assert.equal(await format.locator('.note-icon-field').count(), 6);
     for (const width of [1280, 360]) {
       await page.setViewportSize({ width, height: 800 });
-      const [fields, proof] = await Promise.all([taskForm.boundingBox(), pdfSection.boundingBox()]);
-      if (width === 1280) assert.ok(proof.x >= fields.x + fields.width && Math.abs(proof.y - fields.y) < 1);
-      else assert.ok(proof.y >= fields.y + fields.height && proof.y - fields.y < 20);
+      const { beside, below } = await taskPanel.evaluate(panel => {
+        const fields = panel.querySelector('#task-editor-form').getBoundingClientRect();
+        const proof = panel.querySelector('.task-pdf').getBoundingClientRect();
+        const gap = parseFloat(getComputedStyle(panel).rowGap);
+        return {
+          beside: proof.left >= fields.right && Math.abs(proof.top - fields.top) < 1,
+          below: Math.abs(proof.top - fields.bottom - gap) < 2,
+        };
+      });
+      assert.equal(width === 1280 ? beside : below, true, 'Task cards at ' + width + 'px');
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
     }
     await page.setViewportSize(taskViewport);
