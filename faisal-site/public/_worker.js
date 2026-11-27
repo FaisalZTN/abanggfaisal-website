@@ -757,9 +757,14 @@ async function workroomStudySchedule(env, url, today) {
   const source = '<a href="/ruang-belajar/#ringkasan-jadwal">Lihat di Ruang Belajar</a>';
   let content;
   try {
-    const response = await env.ASSETS.fetch(new Request(new URL('/study-schedule.json', url)));
-    if (!response.ok) throw new Error('Jadwal tidak tersedia');
-    const schedule = await response.json();
+    const months = new Set([today.slice(0, 7), tomorrow.slice(0, 7)]);
+    const files = await Promise.all([...months].map(async month => {
+      const response = await env.ASSETS.fetch(new Request(new URL('/study-schedule/' + month + '.json', url)));
+      if (response.status === 404) return {};
+      if (!response.ok) throw new Error('Jadwal tidak tersedia');
+      return response.json();
+    }));
+    const schedule = Object.assign({}, ...files);
     content = '<div class="today-workspace-grid workroom-study-days">' +
       [[today, 'Hari ini'], [tomorrow, 'Besok']].map(([day, label]) => {
         const sessions = schedule[day] ?? [];
@@ -1238,7 +1243,12 @@ const workroomNoteFields = `id, kind, title, body,
   CASE WHEN note_category IN (SELECT id FROM workroom_archived_categories) THEN NULL ELSE note_category END AS category,
   note_updated AS updated, note_pinned AS pinned`;
 
-async function readWorkroomNotes(db) {
+function workroomNoteSelection(value) {
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+async function readWorkroomNotes(db, selectedId) {
   const [notes, trash, customCategories, archived] = await db.batch([
     db.prepare(`SELECT ${workroomNoteFields} FROM workroom_entries WHERE kind = 'note' AND status <> 'trashed' ORDER BY id DESC`),
     db.prepare("SELECT id, title FROM workroom_entries WHERE kind = 'note' AND status = 'trashed' ORDER BY id DESC"),
@@ -1247,20 +1257,38 @@ async function readWorkroomNotes(db) {
   ]);
   const hidden = new Set(archived.results.map(row => row.id));
   const categories = [...Object.entries(builtInNoteCategories).map(([id, name]) => ({ id, name })), ...customCategories.results];
+  const selected = notes.results.find(note => note.id === selectedId) ?? notes.results[0];
   return {
-    notes: notes.results, trash: trash.results,
+    notes: notes.results.map(({ body, ...note }) => ({
+      ...note, preview: notePreview(body), ...(note.id === selected?.id ? { body } : {}),
+    })), trash: trash.results,
     categories: categories.filter(category => !hidden.has(category.id)),
     archivedCategories: categories.filter(category => hidden.has(category.id)),
   };
 }
 
-async function workroomNotesData(request, db) {
+async function workroomNotesData(request, db, url) {
   const reply = (value, status = 200) => Response.json(value, {status, headers: {
     'Cache-Control': 'private, no-store',
     'X-Content-Type-Options': 'nosniff',
   }});
   await ensureWorkroomNotes(db);
-  if (request.method === 'GET') return reply(await readWorkroomNotes(db));
+  if (request.method === 'GET') {
+    if (url.searchParams.has('body')) {
+      const id = workroomNoteSelection(url.searchParams.get('body'));
+      const note = id && await db.prepare("SELECT body FROM workroom_entries WHERE id = ? AND kind = 'note' AND status <> 'trashed'").bind(id).first();
+      return note ? reply(note) : reply({error:'Catatan tidak ditemukan.'}, 404);
+    }
+    if (url.searchParams.has('q')) {
+      const query = url.searchParams.get('q').trim().toLocaleLowerCase('id');
+      if (!query || query.length > 512) return reply({ ids: [] });
+      const { results } = await db.prepare("SELECT id, body FROM workroom_entries WHERE kind = 'note' AND status <> 'trashed'").all();
+      return reply({ ids: results.filter(({ body }) =>
+        body.toLocaleLowerCase('id').includes(query) || notePreview(body, Infinity).toLocaleLowerCase('id').includes(query)
+      ).map(note => note.id) });
+    }
+    return reply(await readWorkroomNotes(db, workroomNoteSelection(url.searchParams.get('edit'))));
+  }
   let data;
   try { data = await request.json(); } catch { return reply({error:'Permintaan tidak valid.'}, 400); }
   if (!data || typeof data !== 'object') return reply({error:'Permintaan tidak valid.'}, 400);
@@ -1625,7 +1653,7 @@ async function handleWorkroom(request, env, url) {
   )`).run();
   const renderNotes = async () => {
     await ensureWorkroomNotes(db);
-    const notes = escapeWorkroom(JSON.stringify(await readWorkroomNotes(db)));
+    const notes = escapeWorkroom(JSON.stringify(await readWorkroomNotes(db, workroomNoteSelection(url.searchParams.get('edit')))));
     return `<div id="view" aria-busy="true">Memuat catatan…</div><p id="note-status" role="status"></p><div hidden id="workroom-notes-data">${notes}</div><noscript>Aktifkan JavaScript untuk membuka editor. <a href="?basic">Buka daftar catatan dasar</a></noscript><script type="application/workroom-module" data-src="/workroom-notes.js"></script>`;
   };
   if (request.method === 'GET' && !url.search && ['task', 'note', 'review'].includes(page)) {
@@ -1647,7 +1675,7 @@ async function handleWorkroom(request, env, url) {
   if (request.method === 'POST' || page === 'review') await ensureWorkroomActivity(db);
   if (page === 'review' && request.method === 'GET') return renderWorkroomReview(db, url, env, renderPage);
   if ((page === 'home' || page === 'note') && url.searchParams.has('notes-data')) {
-    return workroomNotesData(request, db);
+    return workroomNotesData(request, db, url);
   }
   if (request.method === 'GET') {
     if (page === 'home' && url.searchParams.has('notes')) {

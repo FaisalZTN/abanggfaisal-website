@@ -1,5 +1,4 @@
 import { noteInline, noteLines, notePreview, readBlockNote, blockNoteBody } from './workroom-note-format.js';
-import { mountBlockEditor } from '/workroom-block-editor.js';
 
 export function mount(panel, signal) {
   const el = id => panel.querySelector('#' + id);
@@ -8,11 +7,21 @@ export function mount(panel, signal) {
   });
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const noteCategories = {all:'Semua',none:'Tanpa kategori'};
+  const compactNotes = matchMedia('(max-width: 700px)');
   let archivedCategories = [];
   const clock = new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Makassar',dateStyle:'short',timeStyle:'short'});
   const noteTime = item => item.updated ? clock.format(new Date(item.updated)) : '';
   let fromTime='', toTime='';
+  let editorModule;
+  function loadBlockEditor() {
+    return editorModule ??= import('/workroom-block-editor.js').catch(error => {
+      editorModule = undefined;
+      throw error;
+    });
+  }
+
   let blockEditor;
+  let mountedNote;
   let fullscreenNotes = false;
   let splitNote;
   let splitPreview;
@@ -68,7 +77,9 @@ export function mount(panel, signal) {
     renderNoteIndex();
   }
 
-  function refreshSplitView() {
+  let splitRender = 0;
+  async function refreshSplitView() {
+    const renderId = ++splitRender;
     showFormatting('left');
     splitPreview?.destroy();
     splitPreview = undefined;
@@ -78,9 +89,18 @@ export function mount(panel, signal) {
     view.classList.toggle('notes-split', Boolean(target));
     if (target) {
       el('note-split-title').textContent = target.title || 'Catatan baru';
-      splitPreview = mountBlockEditor(el('note-split-body'), readBlockNote(target.body) ?? legacyContent(target.body),
-        document => updateNoteBody(target, document, 'right'),
-        attrs => { if (toolbarSide === 'right') syncLayout(attrs); }, 'Isi catatan panel kanan', requestImageUrl);
+      const host = el('note-split-body');
+      host.textContent = 'Memuat catatan…';
+      try {
+        const [{ mountBlockEditor }] = await Promise.all([loadBlockEditor(), loadNoteBody(target)]);
+        if (signal.aborted || renderId !== splitRender || !host.isConnected) return;
+        host.textContent = '';
+        splitPreview = mountBlockEditor(host, readBlockNote(target.body) ?? legacyContent(target.body),
+          document => updateNoteBody(target, document, 'right'),
+          attrs => { if (toolbarSide === 'right') syncLayout(attrs); }, 'Isi catatan panel kanan', requestImageUrl);
+      } catch (error) {
+        if (renderId === splitRender && host.isConnected) host.textContent = error.message;
+      }
     }
     applyPaneModes();
   }
@@ -205,6 +225,66 @@ export function mount(panel, signal) {
     urlInput.value = '';
   });
 
+  const actionDialog = document.createElement('dialog');
+  actionDialog.className = 'workroom-url-dialog';
+  actionDialog.setAttribute('aria-labelledby', 'note-action-title');
+  actionDialog.setAttribute('aria-describedby', 'note-action-description');
+  actionDialog.innerHTML = `<form>
+    <h2 id="note-action-title"></h2>
+    <p id="note-action-description" hidden></p>
+    <label>Nama kategori<input maxlength="40" required></label>
+    <p data-note-action-error role="alert" hidden>Nama kategori sudah ada.</p>
+    <div class="workroom-url-actions">
+      <button type="button" data-cancel-note-action>Batal</button>
+      <button type="submit"></button>
+    </div>
+  </form>`;
+  panel.append(actionDialog);
+  const categoryInput = actionDialog.querySelector('input');
+  const actionError = actionDialog.querySelector('[data-note-action-error]');
+  const cancelAction = actionDialog.querySelector('[data-cancel-note-action]');
+  let resolveAction;
+
+  function noteAction({ title, submit, description = '', category = false }) {
+    if (actionDialog.open) return Promise.resolve(null);
+    const detail = actionDialog.querySelector('#note-action-description');
+    actionDialog.querySelector('h2').textContent = title;
+    actionDialog.querySelector('[type="submit"]').textContent = submit;
+    detail.textContent = description;
+    detail.hidden = !description;
+    categoryInput.closest('label').hidden = !category;
+    categoryInput.disabled = !category;
+    categoryInput.value = '';
+    categoryInput.removeAttribute('aria-invalid');
+    actionError.hidden = true;
+    actionDialog.returnValue = '';
+    actionDialog.showModal();
+    (category ? categoryInput : cancelAction).focus();
+    return new Promise(resolve => { resolveAction = resolve; });
+  }
+
+  listen(cancelAction, 'click', () => actionDialog.close());
+  listen(categoryInput, 'input', () => {
+    categoryInput.removeAttribute('aria-invalid');
+    actionError.hidden = true;
+  });
+  listen(actionDialog, 'submit', event => {
+    event.preventDefault();
+    const name = categoryInput.value.trim();
+    if (!categoryInput.disabled && (!name || Object.values(noteCategories).some(label => label.toLowerCase() === name.toLowerCase()))) {
+      actionError.textContent = name ? 'Nama kategori sudah ada.' : 'Masukkan nama kategori.';
+      actionError.hidden = false;
+      categoryInput.setAttribute('aria-invalid', 'true');
+      categoryInput.focus();
+      return;
+    }
+    actionDialog.close(categoryInput.disabled ? 'confirmed' : name);
+  });
+  listen(actionDialog, 'close', () => {
+    resolveAction?.(actionDialog.returnValue || null);
+    resolveAction = undefined;
+  });
+
   function requestImageUrl(apply) {
     openUrlDialog({ title: 'Sisipkan gambar dari URL', button: 'Sisipkan gambar', apply });
   }
@@ -311,27 +391,83 @@ export function mount(panel, signal) {
     undo.textContent = 'Urungkan';
     status.append(' ', undo);
   }
-  async function request(data) {
-    const response=await fetch('/workroom/notes/?notes-data', data ? {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)} : {});
-    const result=await response.json().catch(()=>({}));
-    if(!response.ok) throw new Error(result.error || 'Workroom tidak bisa menyimpan atau memuat catatan. Coba lagi setelah masuk.');
+  async function request(data, params = {}, requestSignal = signal) {
+    const query = new URLSearchParams({ 'notes-data': '', ...params });
+    const response = await fetch('/workroom/notes/?' + query, {
+      ...(data ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) } : {}),
+      signal: requestSignal,
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || 'Workroom tidak bisa menyimpan atau memuat catatan. Coba lagi setelah masuk.');
     return result;
   }
+
+  async function loadNoteBody(note) {
+    if (note && note.body === undefined) {
+      const { body } = await request(null, { body: note.id });
+      note.body ??= body;
+    }
+  }
+
+  const previewCache = new WeakMap();
+  function noteIndexText(note) {
+    if (note.body === undefined) return { preview: note.preview };
+    const cached = previewCache.get(note);
+    if (cached?.body === note.body) return cached;
+    const text = { body: note.body, preview: notePreview(note.body),
+      search: (note.body + ' ' + notePreview(note.body, Infinity)).toLocaleLowerCase('id') };
+    previewCache.set(note, text);
+    return text;
+  }
+
+  let searchResult;
+  let searchTimer;
+  let searchRequest;
+  let searchError;
+  function normalizedQuery() { return noteQuery.trim().toLocaleLowerCase('id'); }
+
+  function updateNoteSearch() {
+    clearTimeout(searchTimer);
+    searchRequest?.abort();
+    searchError = false;
+    const query = normalizedQuery();
+    if (query && searchResult?.query !== query && entries.some(note => note.body === undefined)) {
+      searchTimer = setTimeout(async () => {
+        const controller = new AbortController();
+        searchRequest = controller;
+        try {
+          const result = await request(null, { q: query }, AbortSignal.any([signal, controller.signal]));
+          if (controller.signal.aborted || query !== normalizedQuery()) return;
+          searchResult = { query, ids: new Set(result.ids) };
+        } catch {
+          if (signal.aborted || controller.signal.aborted || query !== normalizedQuery()) return;
+          searchError = true;
+        }
+        if (!signal.aborted) renderNoteIndex();
+      }, 220);
+    }
+    renderNoteIndex();
+  }
+
   function noteActionIcon(name, label = '') {
     return `<svg class="ui-icon" viewBox="0 0 24 24" focusable="false"${label ? ` role="img" aria-label="${label}"` : ' aria-hidden="true"'}><use href="/gentleface-icons.svg#${name}"/></svg>`;
   }
   const pinNoteLabel = pinned => pinned ? 'Lepas pin' : 'Pin catatan';
 
   function renderNoteIndex() {
-    const q = noteQuery.trim().toLocaleLowerCase('id');
+    const q = normalizedQuery();
     const notes = entries.filter(item => item.kind === 'note' &&
       (noteCategory === 'all' || (item.category || 'none') === noteCategory) &&
-      (!q || (item.title + ' ' + item.body + ' ' + notePreview(item.body, Infinity) + ' ' + noteTime(item)).toLocaleLowerCase('id').includes(q)) &&
+      (!q || (item.title + ' ' + noteTime(item)).toLocaleLowerCase('id').includes(q) ||
+        (item.body === undefined ? noteIndexText(item).preview.toLocaleLowerCase('id').includes(q) ||
+          searchResult?.query === q && searchResult.ids.has(item.id) : noteIndexText(item).search.includes(q))) &&
       (!fromTime || (noteTime(item) && noteTime(item).replace(' ','T') >= fromTime)) &&
       (!toTime || (noteTime(item) && noteTime(item).replace(' ','T') <= toTime)));
     notes.sort((a, b) => (b.pinned || 0) - (a.pinned || 0) || (b.updated || 0) - (a.updated || 0));
     el('note-list').innerHTML = notes.map(note => `<button data-open="${note.id ?? 'new'}"${note.id === activeNote ? ' aria-current="true"' : ''}>
-      <span class="note-row-head"><span class="note-row-title">${note.pinned ? noteActionIcon('pin', 'Catatan dipin') : ''}<strong>${escape(note.title)}</strong></span>${noteTime(note) ? `<time title="${noteTime(note)} WITA">${noteTime(note).slice(-5)}</time>` : ''}</span><small>${escape(notePreview(note.body) || 'Catatan kosong')}</small><small class="note-tag">${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || '<p class="empty">Tidak ada catatan.</p>';
+      <span class="note-row-head"><span class="note-row-title">${note.pinned ? noteActionIcon('pin', 'Catatan dipin') : ''}<strong>${escape(note.title)}</strong></span>${noteTime(note) ? `<time title="${noteTime(note)} WITA">${noteTime(note).slice(-5)}</time>` : ''}</span><small>${escape(noteIndexText(note).preview || 'Catatan kosong')}</small><small class="note-tag">${escape(noteCategories[note.category || 'none'])}</small></button>`).join('') || (q && searchResult?.query !== q && entries.some(note => note.body === undefined)
+      ? (searchError ? '<p role="status">Isi catatan belum bisa dicari. Coba ketik ulang.</p>' : '<p role="status">Mencari isi catatan…</p>')
+      : '<p class="empty">Tidak ada catatan.</p>');
   }
   function renderNotes(notes) {
     if (urlDialog.open) urlDialog.close();
@@ -350,8 +486,12 @@ export function mount(panel, signal) {
     </details>`;
     splitPreview?.destroy();
     splitPreview = undefined;
-    blockEditor?.destroy();
-    blockEditor = undefined;
+    const retainedEditor = blockEditor && mountedNote === note ? el('edit-body') : null;
+    if (!retainedEditor) {
+      blockEditor?.destroy();
+      blockEditor = undefined;
+    }
+    mountedNote = note;
     toolbarSide = 'left';
     el('view').classList.toggle('notes-fullscreen', fullscreenNotes);
     el('view').innerHTML = `<div class="note-fullscreen-bar">
@@ -372,7 +512,7 @@ export function mount(panel, signal) {
       <div class="notes-desk${noteEditing ? ' is-editing' : ''}">
         <section class="note-categories" aria-label="Kategori"><div class="category-head"><h2>Kategori</h2><div class="category-head-actions"><button type="button" id="add-category" aria-label="Kategori baru" title="Kategori baru">${noteActionIcon('plus')}</button>${deleteCategory}</div></div>${Object.entries(noteCategories).map(([key, label]) =>
           `<button data-category="${key}" aria-pressed="${key === noteCategory}"><span>${escape(label)}</span><small class="note-category-count">${notes.filter(item => key === 'all' || (item.category || 'none') === key).length}</small></button>`).join('')}</section>
-        <section class="note-index" aria-label="Daftar catatan"><input type="search" id="note-query" aria-label="Cari catatan" placeholder="Cari catatan…" value="${escape(noteQuery)}"><div class="note-mobile-category">
+        <section class="note-index" aria-label="Daftar catatan"><input type="search" maxlength="512" id="note-query" aria-label="Cari catatan" placeholder="Cari catatan…" value="${escape(noteQuery)}"><div class="note-mobile-category">
           <label><span class="note-sr-only">Kategori</span>${noteActionIcon('filter')}
             <select id="note-category-filter">${Object.entries(noteCategories).map(([key, label]) =>
               `<option value="${key}"${key === noteCategory ? ' selected' : ''}>${escape(label)}</option>`).join('')}</select>
@@ -416,10 +556,23 @@ export function mount(panel, signal) {
           <div id="note-split-body" class="note-rendered"></div>
         </section>
       </div>`;
-    if (note) {
-      blockEditor = mountBlockEditor(el('edit-body'), readBlockNote(note.body) ?? legacyContent(note.body),
-        document => updateNoteBody(note, document, 'left'),
-        attrs => { if (toolbarSide === 'left') syncLayout(attrs); }, 'Isi catatan', requestImageUrl);
+    if (note && (retainedEditor || !compactNotes.matches || noteEditing || fullscreenNotes)) {
+      if (retainedEditor) el('edit-body').replaceWith(retainedEditor);
+      else {
+        const host = el('edit-body');
+        host.setAttribute('aria-busy', 'true');
+        host.textContent = 'Memuat editor…';
+        void loadBlockEditor().then(({ mountBlockEditor }) => {
+          if (signal.aborted || !host.isConnected) return;
+          host.textContent = '';
+          blockEditor = mountBlockEditor(host, readBlockNote(note.body) ?? legacyContent(note.body),
+            document => updateNoteBody(note, document, 'left'),
+            attrs => { if (toolbarSide === 'left') syncLayout(attrs); }, 'Isi catatan', requestImageUrl);
+          applyPaneModes();
+        }).catch(() => {
+          if (!signal.aborted && host.isConnected) host.textContent = 'Editor belum bisa dimuat. Buka kembali catatan untuk mencoba lagi.';
+        }).finally(() => host.removeAttribute('aria-busy'));
+      }
       for (const menu of panel.querySelectorAll('.note-layout-popover')) {
         menu.addEventListener('beforetoggle', event => {
           if (event.newState !== 'open') return;
@@ -472,7 +625,22 @@ export function mount(panel, signal) {
     if(button.id==='clear-time'){fromTime='';toTime='';render();el('note-query').focus();}
     if(button.dataset.category){noteCategory=button.dataset.category;noteEditing=false;render();}
     if(button.id==='note-back'){noteEditing=false;render();el('note-query').focus();}
-    if(button.dataset.open){activeNote=button.dataset.open==='new'?null:Number(button.dataset.open);noteEditing=true;render();el('edit-title').focus();}
+    if (button.dataset.open) {
+      const id = button.dataset.open === 'new' ? null : Number(button.dataset.open);
+      const note = entries.find(item => item.id === id);
+      if (!note) return;
+      busy = true;
+      try {
+        await loadNoteBody(note);
+        if (signal.aborted) return;
+        activeNote = note.id;
+        noteEditing = true;
+        render();
+        el('edit-title').focus();
+      } catch (error) { if (!signal.aborted) message(error.message); }
+      finally { busy = false; }
+      return;
+    }
     if(button.hasAttribute('data-new-note')){
       if(!entries.some(note=>note.id===null))entries.unshift({id:null,kind:'note',title:'',body:'',category:noteCategory==='all'?'none':noteCategory});
       noteQuery=''; activeNote=null;noteEditing=true;render();el('edit-title').focus();
@@ -500,7 +668,8 @@ export function mount(panel, signal) {
     if (button.hasAttribute('data-delete-category') || button.dataset.restoreNote || button.dataset.restoreCategory) {
       const deletingCategory = button.hasAttribute('data-delete-category');
       const category = button.dataset.restoreCategory ?? noteCategory;
-      if (deletingCategory && !confirm(`Hapus kategori “${noteCategories[category]}”? Catatannya akan dipindah ke Tanpa kategori.`)) return;
+      if (deletingCategory && !await noteAction({ title: `Hapus kategori “${noteCategories[category]}”?`,
+        description: 'Catatannya akan dipindah ke Tanpa kategori.', submit: 'Hapus kategori' })) return;
       busy = true;
       el('view').inert = true;
       try {
@@ -562,11 +731,13 @@ export function mount(panel, signal) {
       const note = entries.find(item => item.id === activeNote);
       if (!note) return;
       const deleting = button.id === 'delete-note';
-      if (deleting && !confirm(note.id === null ? 'Buang draf ini?' : 'Pindahkan catatan ini ke Sampah? Perubahan yang belum disimpan akan dibuang.')) return;
+      if (deleting && !await noteAction({ title: note.id === null ? 'Buang draf ini?' : 'Pindahkan catatan ke Sampah?',
+        description: 'Perubahan yang belum disimpan akan dibuang.', submit: note.id === null ? 'Buang draf' : 'Pindahkan ke Sampah' })) return;
       busy = true;
       el('view').inert = true;
       try {
         if (deleting) {
+          await loadNoteBody(entries.find(item => item !== note));
           if (note.id !== null) {
             const removed = await request({ action: 'delete', id: note.id });
             trash.unshift(removed);
@@ -603,12 +774,8 @@ export function mount(panel, signal) {
 
     const addingCategory = button.id === 'add-category' || button.hasAttribute('data-add-category');
     if (addingCategory) {
-      const name = prompt('Nama kategori baru')?.trim();
+      const name = await noteAction({ title: 'Nama kategori baru', submit: 'Buat kategori', category: true });
       if (!name) return;
-      if (Object.values(noteCategories).some(label => label.toLowerCase() === name.toLowerCase())) {
-        message('Kategori sudah ada.');
-        return;
-      }
       const note = entries.find(item => item.id === activeNote);
       busy = true;
       el('view').inert = true;
@@ -661,7 +828,7 @@ export function mount(panel, signal) {
     }
   });
   listen(document, 'input', event=>{
-    if(event.target.id==='note-query'){noteQuery=event.target.value;renderNoteIndex();return;}
+    if(event.target.id==='note-query'){noteQuery=event.target.value;updateNoteSearch();return;}
     if (event.target.id !== 'edit-title') return;
     const note=entries.find(item=>item.id===activeNote);
     note.title = event.target.value.replace(/\n/g, ' ');
@@ -682,20 +849,24 @@ export function mount(panel, signal) {
       : event.target === el('note-split-body') ? splitPreview : null;
     if (!busy && target?.editor.isEditable && target.image(event.detail.url, event.detail.layout)) event.preventDefault();
   });
+  listen(compactNotes, 'change', () => {
+    if (!compactNotes.matches && !blockEditor && entries.length) render();
+  });
   listen(window, 'beforeunload',event=>{if(dirty.size){event.preventDefault();event.returnValue='';}});
   const bootstrap = el('workroom-notes-data');
-  const initialNotes = bootstrap ? Promise.resolve().then(() => JSON.parse(bootstrap.textContent)) : request();
+  const selected = new URLSearchParams(location.search).get('edit');
+  const initialNotes = bootstrap ? Promise.resolve().then(() => JSON.parse(bootstrap.textContent)) : request(null, selected ? { edit: selected } : {});
   initialNotes.then(data=>{
     bootstrap?.remove();
     entries=data.notes;
     trash=data.trash ?? [];
     archivedCategories=data.archivedCategories ?? [];
     for(const {id,name} of data.categories)noteCategories[id]=name;
-    const selected=Number(new URLSearchParams(location.search).get('edit'));
-    if(entries.some(note=>note.id===selected)){activeNote=selected;noteEditing=true;}
+    const selectedId = Number(selected);
+    if(entries.some(note=>note.id===selectedId)){activeNote=selectedId;noteEditing=true;}
     render();
   }).catch(error=>{el('view').textContent=error.message;}).finally(()=>el('view').removeAttribute('aria-busy'));
 
-  signal.addEventListener('abort', () => { if (urlDialog.open) urlDialog.close(); clearTimeout(saveTimer); splitPreview?.destroy(); blockEditor?.destroy(); }, { once: true });
+  signal.addEventListener('abort', () => { if (urlDialog.open) urlDialog.close(); if (actionDialog.open) actionDialog.close(); clearTimeout(saveTimer); clearTimeout(searchTimer); splitPreview?.destroy(); blockEditor?.destroy(); }, { once: true });
   return () => busy || saving ? "busy" : dirty.size > 0;
 }

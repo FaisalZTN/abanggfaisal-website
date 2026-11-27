@@ -32,8 +32,10 @@ module.exports = async function checkWorkroom(browser, origin) {
   const tomorrow = new Date(Date.parse(today + 'T12:00:00Z') + 86400000).toISOString().slice(0, 10);
   const session = title => ({ title, start: '08:00', end: '09:30', location: 'Ruang 1', block: 'Blok Uji', url: '/ruang-belajar/#jadwal-kuliah' });
   const env = {ASSETS: { fetch: request => {
-      assert.equal(new URL(request.url).pathname, '/study-schedule.json');
-      return Response.json({ [today]: [session('Kuliah hari ini')], [tomorrow]: [session('Kuliah besok')] });
+      const month = new URL(request.url).pathname.match(/^\/study-schedule\/(\d{4}-\d{2})\.json$/)?.[1];
+      assert.ok(month);
+      const days = { [today]: [session('Kuliah hari ini')], [tomorrow]: [session('Kuliah besok')] };
+      return Response.json(Object.fromEntries(Object.entries(days).filter(([day]) => day.startsWith(month))));
     } }, WORKROOM_ACCESS_ISSUER:issuer, WORKROOM_ACCESS_AUD:'test',WORKROOM_OWNER_EMAIL:'test@example.com',
     WORKROOM_PRIVATE_NOTES_PASSWORD: 'local-test-password', WORKROOM_PRIVATE_NOTES_KEY: 'a'.repeat(64),
     WORKROOM_DB:{prepare:adapt,batch:async statements=>Promise.all(statements.map(statement => statement.all()))}};
@@ -63,6 +65,9 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.goto(origin+'/workroom/review/');
     await page.waitForSelector('.workroom-review h1');
     await page.waitForSelector('.workroom-route-status',{state:'attached'});
+    const olderText = 'Pembuka '.repeat(30) + 'Kata unik di akhir catatan';
+    db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('note', ?, ?, 'active', '', 'normal')")
+      .run('Catatan tambahan', olderText);
     db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('note', ?, ?, 'active', '', 'normal')")
       .run('Catatan lama', '## Judul lama\n**Tebal**\n- [x] Sudah selesai');
 
@@ -76,6 +81,7 @@ module.exports = async function checkWorkroom(browser, origin) {
       await navigationGate;
       await route.fallback();
     }, { times: 1 });
+    const notesResponse = page.waitForResponse(response => response.url() === notesUrl && response.request().method() === 'GET');
     await notesDestination.click();
     try {
       await page.getByText('Memuat halaman…', { exact: true }).waitFor();
@@ -97,6 +103,28 @@ module.exports = async function checkWorkroom(browser, origin) {
     ]);
     assert.ok(Math.abs((icon.y + icon.height / 2) - (label.y + label.height / 2)) <= 1);
     assert.equal(await page.evaluate(()=>window.testDocument), true);
+    const bootstrapHtml = await (await notesResponse).text();
+    assert.match(bootstrapHtml, /Catatan tambahan/);
+    assert.doesNotMatch(bootstrapHtml, /Kata unik di akhir catatan/);
+    await page.getByRole('searchbox', { name: 'Cari catatan' }).fill('Kata unik di akhir catatan');
+    await page.getByRole('button', { name: /Catatan tambahan/ }).click();
+    await page.locator('#edit-body').getByText(/Kata unik di akhir catatan/).waitFor();
+    await page.getByRole('searchbox', { name: 'Cari catatan' }).fill('');
+
+    await page.locator('#add-category').click();
+    const categoryDialog = page.getByRole('dialog', { name: 'Nama kategori baru' });
+    await categoryDialog.getByLabel('Nama kategori').fill('Belajar');
+    await categoryDialog.getByRole('button', { name: 'Buat kategori' }).click();
+    await categoryDialog.getByRole('alert').waitFor();
+    await categoryDialog.getByLabel('Nama kategori').fill('Kategori uji');
+    await categoryDialog.getByRole('button', { name: 'Buat kategori' }).click();
+    await page.getByText('Kategori dibuat.', { exact: true }).waitFor();
+    const categoryPane = page.getByRole('region', { name: 'Kategori', exact: true });
+    await categoryPane.getByRole('button', { name: /Kategori uji/ }).click();
+    await categoryPane.getByRole('button', { name: 'Hapus kategori', exact: true }).click();
+    await page.getByRole('dialog', { name: /Hapus kategori/ }).getByRole('button', { name: 'Hapus kategori' }).click();
+    await page.getByRole('status').filter({ hasText: 'Kategori dihapus. Catatan tersedia di Tanpa kategori.' }).waitFor();
+    await categoryPane.getByRole('button', { name: /^Semua/ }).click();
     await page.getByRole('button', { name: /Catatan lama/ }).click();
     await page.locator('#edit-body h2').filter({ hasText: 'Judul lama' }).waitFor();
     assert.equal(await page.locator('#edit-body strong').textContent(), 'Tebal');
@@ -406,7 +434,8 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.locator('.workroom-nav > a[aria-label="Catatan"]').click();
     const privateLink = page.locator('.notes-head').getByRole('link', { name: 'Catatan Rahasia' });
     await privateLink.waitFor();
-    assert.equal(await privateLink.locator('span').isVisible(), false);
+    await privateLink.locator('span').waitFor({ state: 'hidden' });
+    assert.equal(await page.locator('#edit-body .tiptap').count(), 0);
     assert.ok((await privateLink.boundingBox()).width >= 44);
     await privateLink.click();
     await page.getByLabel('Sandi Catatan Rahasia').waitFor();

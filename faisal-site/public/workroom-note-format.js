@@ -65,20 +65,22 @@ export function blockNoteBody(document) {
   return 'workroom-blocks-v1:' + JSON.stringify(document);
 }
 
+function blockNoteText(node) {
+  if (node.type === 'image') return node.attrs?.alt || 'Gambar';
+  return node.text ?? (node.content ?? []).map(blockNoteText).join(node.type === 'paragraph' || node.type === 'heading' ? '' : '\n');
+}
+
 export function noteBodyText(body) {
   const document = readBlockNote(body);
-  if (!document) return body;
-  function text(node) {
-    if (node.type === 'image') return node.attrs?.alt || 'Gambar';
-    return node.text ?? (node.content ?? []).map(text).join(node.type === 'paragraph' || node.type === 'heading' ? '' : '\n');
-  }
-  return text(document);
+  return document ? blockNoteText(document) : body;
 }
 
 export function notePreview(body, limit = 120) {
-  const text = (readBlockNote(body) ? noteBodyText(body) : noteLines(body)
+  const document = readBlockNote(body);
+  const text = (document ? blockNoteText(document) : noteLines(body)
     .map(line => noteInline(line.replace(/^(?:#{1,6} |- (?:\[[ xX]\] )?)/, ''), true))
     .join(' ')).replace(/\s+/g, ' ').trim();
+  if (text.length <= limit) return text;
   const characters = Array.from(text);
   return characters.length > limit ? characters.slice(0, limit).join('').trimEnd() + '…' : text;
 }
