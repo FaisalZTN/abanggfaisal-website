@@ -1738,3 +1738,36 @@ img[data-image-selected] { opacity: 0; }
 .workroom-attachment-list summary:is(:hover, :focus-visible) { background: var(--selected); }
 .workroom-attachment-list summary::-webkit-details-marker { display: none; }
 .workroom-attachment-list details[open] { grid-column: 1 / -1; grid-row: auto; }
+
+[data-task-attachment] .workroom-attachment-list:not([hidden]) { display: grid; gap: .4rem; }
+[data-task-attachment] .workroom-attachment-list > li {
+  min-inline-size: 0;
+  gap: 0 .25rem;
+  padding: .25rem .35rem;
+  border: 1px solid var(--line);
+  border-radius: .65rem;
+  background: var(--card);
+}
+[data-task-attachment] .workroom-file-action {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  min-inline-size: 0;
+  min-block-size: 44px;
+  border: 0;
+  border-radius: .45rem;
+  padding: .35rem;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+  text-align: start;
+  text-decoration: none;
+}
+[data-task-attachment] .workroom-file-action:is(:hover, :focus-visible) { background: var(--selected); }
+.workroom-file-action .ui-icon { flex: none; color: var(--accent); }
+.workroom-file-action small {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+}
+[data-task-attachment] .workroom-attachment-list summary { color: var(--muted); }

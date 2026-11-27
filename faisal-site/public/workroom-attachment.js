@@ -75,6 +75,12 @@ export function mountAttachment(section, kind, id, signal) {
         action.download = '';
         action.textContent = 'Unduh: ' + file.name;
       }
+      if (kind === 'task') {
+        action.setAttribute('aria-label', action.textContent);
+        action.classList.add('workroom-file-action');
+        action.innerHTML = `<svg class="ui-icon" aria-hidden="true"><use href="/gentleface-icons.svg#${file.media_type.startsWith('image/') ? 'image' : 'file-text'}"/></svg><span></span>`;
+        action.lastElementChild.textContent = file.name;
+      }
       const timestamp = document.createElement('small');
       timestamp.dataset.attachmentUploaded = '';
       timestamp.textContent = file.uploaded_at ? 'Diunggah ' + uploadTime.format(new Date(file.uploaded_at)) + ' WITA'
@@ -83,7 +89,9 @@ export function mountAttachment(section, kind, id, signal) {
       confirmation.innerHTML = `<summary><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M9 6V3h6v3m3 0-1 15H7L6 6m4 4v7m4-7v7"/></svg></summary><button type="button">Konfirmasi hapus lampiran</button>`;
       confirmation.querySelector('summary').setAttribute('aria-label', 'Hapus ' + file.name);
       confirmation.querySelector('button').onclick = () => remove(file);
-      row.append(action, confirmation, timestamp);
+      row.append(action, confirmation);
+      if (kind === 'task') action.lastElementChild.append(timestamp);
+      else row.append(timestamp);
       return row;
     }));
   }
