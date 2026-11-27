@@ -497,6 +497,38 @@ module.exports = async function checkWorkroom(browser, origin) {
     db.prepare("UPDATE workroom_entries SET body = ? WHERE title = 'Baca jurnal'").run('# Referensi lama');
     await page.getByRole('link', { name: 'Baca jurnal' }).click();
     await page.locator('.workspace-editor').locator('select[name=status]').waitFor();
+    const pdfSection = page.getByRole('region', { name: 'Bukti tugas' });
+    const pdfInput = pdfSection.getByLabel(/Pilih PDF/);
+    await pdfInput.setInputFiles({ name: 'rusak.pdf', mimeType: 'application/pdf', buffer: Buffer.from('bukan PDF') });
+    await pdfSection.getByText(/PDF gagal diunggah/).waitFor();
+    const objects = [
+      '<< /Type /Catalog /Pages 2 0 R >>',
+      '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] >>',
+    ];
+    let pdfDocument = '%PDF-1.4\n';
+    const offsets = objects.map((object, index) => {
+      const offset = pdfDocument.length;
+      pdfDocument += (index + 1) + ' 0 obj\n' + object + '\nendobj\n';
+      return offset;
+    });
+    const xref = pdfDocument.length;
+    pdfDocument += 'xref\n0 4\n0000000000 65535 f \n' +
+      offsets.map(offset => String(offset).padStart(10, '0') + ' 00000 n \n').join('') +
+      'trailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n';
+    await pdfInput.setInputFiles({ name: 'Bukti.pdf', mimeType: 'application/pdf', buffer: Buffer.from(pdfDocument) });
+    const pdfDialog = pdfSection.getByRole('dialog', { name: 'Bukti.pdf' });
+    await pdfDialog.waitFor();
+    const previewUrl = await pdfDialog.getByRole('link', { name: 'Buka PDF di tab baru' }).getAttribute('href');
+    assert.equal(await pdfDialog.locator('iframe').getAttribute('src'), previewUrl);
+    const preview = await worker.fetch(new Request(previewUrl, { headers: { 'Cf-Access-Jwt-Assertion': token } }), env);
+    assert.equal(preview.headers.get('Content-Type'), 'application/pdf');
+    assert.match(await preview.text(), /^%PDF-/);
+    assert.equal((await worker.fetch(new Request(previewUrl), env)).status, 403);
+    await pdfDialog.getByRole('button', { name: 'Tutup' }).click();
+    await page.reload();
+    await pdfSection.getByRole('button', { name: /Lihat PDF/ }).click();
+    await pdfDialog.getByRole('button', { name: 'Tutup' }).click();
     db.prepare("UPDATE workroom_entries SET status = 'doing' WHERE title = 'Baca jurnal'").run();
     const autosave = page.waitForResponse(response => response.request().method() === 'POST' && response.request().postData()?.includes('autosave=1'));
     await page.locator('.workspace-editor').getByLabel('Area', { exact: true }).fill('Akademik');

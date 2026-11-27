@@ -1622,3 +1622,12 @@ img[data-image-selected] { opacity: 0; }
 
 [data-task-detail-source][hidden] { display: none; }
 .task-format-options[open] { flex-basis: 100%; }
+
+.task-pdf { display: grid; gap: .6rem; margin-block-start: 1rem; padding-block-start: 1rem; border-block-start: 1px solid var(--line); }
+.task-pdf > label { display: grid; gap: .35rem; }
+.task-pdf > p { margin: 0; }
+.task-pdf > button, .task-pdf-preview h2 { overflow-wrap: anywhere; }
+.task-pdf-preview { inline-size: min(64rem, calc(100% - 1.5rem)); }
+.task-pdf-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; }
+.task-pdf-actions h2 { flex: 1 1 100%; margin: 0; }
+.task-pdf-preview iframe { display: block; inline-size: 100%; block-size: 65dvh; margin-block-start: .8rem; border: 1px solid var(--line); }

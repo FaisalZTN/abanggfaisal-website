@@ -25,7 +25,7 @@ const privateHeaders = {
   'Cache-Control': 'private, no-store',
   'X-Robots-Tag': 'noindex, nofollow',
   'X-Content-Type-Options': 'nosniff',
-  'Content-Security-Policy': "default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; font-src 'self'; img-src 'self' https:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+  'Content-Security-Policy': "default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; font-src 'self'; img-src 'self' https:; frame-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
 };
 
 function escapeWorkroom(value) {
@@ -526,7 +526,21 @@ function workroomWorkspace(entries, params, areas) {
     return `<a href="${path}?${e(query)}#workspace"${view === key ? ' aria-current="true"' : ''}>${label}</a>`;
   }).join('');
   const editor = selected ? `<section class="collection workspace-editor"><h2>${e(selected.title)}</h2>
-    ${workroomForm(selected.kind, selected, entries.filter(entry => entry.kind === 'project'), true)}</section>` : '';
+    ${workroomForm(selected.kind, selected, entries.filter(entry => entry.kind === 'project'), true)}
+    <section class="task-pdf" data-task-pdf="${e(selected.id)}" aria-labelledby="task-pdf-heading" hidden>
+      <h3 id="task-pdf-heading">Bukti tugas</h3>
+      <label>Pilih PDF <small>(maks. 1,9 MB)</small><input type="file" accept="application/pdf,.pdf" disabled></label>
+      <button type="button" data-pdf-open hidden></button>
+      <p role="status"></p>
+      <dialog class="workroom-url-dialog task-pdf-preview" aria-labelledby="task-pdf-title">
+        <div class="task-pdf-actions">
+          <h2 id="task-pdf-title"></h2>
+          <a target="_blank" rel="noopener noreferrer">Buka PDF di tab baru</a>
+          <form method="dialog"><button>Tutup</button></form>
+        </div>
+        <iframe title="Pratinjau PDF bukti tugas"></iframe>
+      </dialog>
+    </section></section>` : '';
   return `<div class="workspace" id="workspace">${editor}<section class="collection">
     <h2>Daftar tugas</h2><div class="workspace-tools">${views}
     <form method="get" action="${path}#workspace" data-task-filter><input type="hidden" name="area" value="${e(area)}"><input type="hidden" name="view" value="${view}">
@@ -1489,6 +1503,66 @@ async function workroomImage(request, url, db) {
   return reply({ url: WORKROOM + 'images/' + key }, 201);
 }
 
+const taskPdfLimit = 1900000;
+
+async function workroomTaskPdf(request, url, db) {
+  const match = /^\d+$/.exec(url.searchParams.get('pdf'));
+  const reply = (value, status = 200) => Response.json(value, {
+    status, headers: { ...privateHeaders, 'Content-Type': 'application/json; charset=utf-8' },
+  });
+  if (!match) return reply({ error: 'Tugas tidak ditemukan.' }, 404);
+  const id = Number(match[0]);
+  if (!Number.isSafeInteger(id)) return reply({ error: 'Tugas tidak ditemukan.' }, 404);
+  const upload = request.method === 'POST';
+  if (upload && request.headers.get('Origin') !== url.origin) return reply({ error: 'Permintaan ditolak.' }, 403);
+  if (!upload && request.method !== 'GET') return reply({ error: 'Metode tidak didukung.' }, 405);
+  await db.prepare(`CREATE TABLE IF NOT EXISTS workroom_task_pdfs (
+    task_id INTEGER PRIMARY KEY REFERENCES workroom_entries(id) ON DELETE CASCADE,
+    name TEXT NOT NULL, bytes BLOB NOT NULL
+  )`).run();
+  if (!upload) {
+    const preview = url.searchParams.has('preview');
+    const pdf = await db.prepare(`SELECT p.name${preview ? ', p.bytes' : ''}
+      FROM workroom_entries t LEFT JOIN workroom_task_pdfs p ON p.task_id = t.id
+      WHERE t.id = ? AND t.kind = 'task'`).bind(id).first();
+    if (!pdf || (preview && !pdf.bytes)) return reply({ error: 'PDF tidak ditemukan.' }, 404);
+    if (!preview) return reply({ name: pdf.name });
+    return new Response(new Uint8Array(pdf.bytes), { headers: {
+      ...privateHeaders,
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'inline',
+      'Cross-Origin-Resource-Policy': 'same-origin',
+      'Content-Security-Policy': "default-src 'none'; frame-ancestors 'self'; base-uri 'none'",
+    } });
+  }
+
+  if (request.headers.get('Content-Type') !== 'application/pdf') return reply({ error: 'Pilih file PDF.' }, 415);
+  const reader = request.body?.getReader();
+  if (!reader) return reply({ error: 'PDF kosong.' }, 400);
+  const buffer = new Uint8Array(taskPdfLimit);
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (size + value.length > buffer.length) {
+      await reader.cancel();
+      return reply({ error: 'Ukuran PDF maksimal 1,9 MB.' }, 413);
+    }
+    buffer.set(value, size);
+    size += value.length;
+  }
+  const bytes = buffer.slice(0, size);
+  if (!/^%PDF-\d\.\d/.test(new TextDecoder().decode(bytes.subarray(0, 8)))) {
+    return reply({ error: 'File ini bukan PDF yang valid.' }, 415);
+  }
+  const name = (url.searchParams.get('name') || 'Bukti tugas.pdf').slice(0, 160);
+  const stored = await db.prepare(`INSERT INTO workroom_task_pdfs (task_id, name, bytes)
+    SELECT id, ?, ? FROM workroom_entries WHERE id = ? AND kind = 'task'
+    ON CONFLICT(task_id) DO UPDATE SET name = excluded.name, bytes = excluded.bytes
+    RETURNING name`).bind(name, bytes.buffer, id).first();
+  return stored ? reply(stored, 201) : reply({ error: 'Tugas tidak ditemukan.' }, 404);
+}
+
 const privateNotesCookie = '__Secure-workroom-private-notes';
 const privateNotesLifetime = 300;
 const privateNotesEncoder = new TextEncoder();
@@ -1718,6 +1792,10 @@ async function handleWorkroom(request, env, url) {
       await ensureTaskCompletion(db);
     }
   };
+  if (page === 'task' && url.searchParams.has('pdf')) {
+    await ensureEntries();
+    return workroomTaskPdf(request, url, db);
+  }
   const renderNotes = async () => {
     await ensureWorkroomNotes(db);
     const notes = escapeWorkroom(JSON.stringify(await readWorkroomNotes(db, workroomNoteSelection(url.searchParams.get('edit')))));
