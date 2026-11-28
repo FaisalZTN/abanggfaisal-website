@@ -205,7 +205,7 @@ def render_unified_search(groups, e):
                          f'<a href="{e(url)}"{pdf_link}><strong>{e(title)}</strong>'
                          f'<span>{e(detail_text)}</span></a></li>')
         if links:
-            sections.append(f'<section data-search-group="{e(label)}" hidden><h3>{e(label)}</h3>'
+            sections.append(f'<section data-search-group="{e(label)}" hidden><h2>{e(label)}</h2>'
                             f'<ul></ul><details hidden><summary></summary><ul></ul></details>'
                             f'<template>{"".join(links)}</template></section>')
     return ('<div class="study-search" role="search" aria-label="Pencarian Ruang Belajar" hidden>'
@@ -724,7 +724,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
           </div>
           <label class="study-feedback-consent" data-public-comment-option hidden>
             <input type="checkbox" name="public_comment" value="yes">
-            <span>Izinkan nama dan pesan saya langsung tampil sebagai komentar publik. Email tetap pribadi.</span>
+            <span>Izinkan nama dan pesan saya ditampilkan sebagai komentar publik setelah disetujui. Email tetap pribadi.</span>
           </label>
           <input type="hidden" name="subject" value="Masukan Ruang Belajar">
           <div class="study-feedback-actions">

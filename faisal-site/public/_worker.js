@@ -1821,7 +1821,11 @@ async function handleWorkroom(request, env, url) {
   if (page === 'privateNotes') return workroomPrivateNotes(request, url, env, renderPage);
 
   if (page === 'settings') {
+    if (request.method === 'POST' && url.searchParams.get('comments') === 'moderate') {
+      return moderateStudyComment(request, env.COMMENTS_DB);
+    }
     if (request.method !== 'GET') return workroomPage('<h1>Metode tidak didukung</h1>', 405);
+    const moderation = env.COMMENTS_DB ? await renderStudyModeration(env.COMMENTS_DB, url.searchParams.get('comment')) : '';
     return renderPage(`<div class="dashboard-content">
       <h1>Pengaturan</h1>
       <fieldset class="collection workroom-themes">
@@ -1845,6 +1849,7 @@ async function handleWorkroom(request, env, url) {
             </label>`).join('')}
         </div>
       </fieldset>
+      ${moderation}
     </div>`, 200, page);
   }
 
@@ -2029,13 +2034,65 @@ function json(data, status = 200) {
   return Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
+async function ensureStudyComments(db) {
+  await db.batch([
+    db.prepare(`CREATE TABLE IF NOT EXISTS study_comments (
+      id INTEGER PRIMARY KEY, name TEXT NOT NULL, message TEXT NOT NULL
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS study_comments_pending (
+      id TEXT PRIMARY KEY, name TEXT NOT NULL, message TEXT NOT NULL,
+      submitted_at INTEGER NOT NULL DEFAULT (unixepoch())
+    )`),
+  ]);
+}
+
+async function renderStudyModeration(db, result) {
+  let comments;
+  try {
+    await ensureStudyComments(db);
+    ({ results: comments } = await db.prepare(`SELECT id, name, message FROM study_comments_pending
+      ORDER BY submitted_at, id LIMIT 30`).all());
+  } catch {
+    return '<section class="collection" id="moderasi-komentar"><h2>Moderasi komentar</h2><p>Antrean belum bisa dimuat.</p></section>';
+  }
+  const status = { approved: 'Komentar diterbitkan.', rejected: 'Komentar ditolak.', missing: 'Komentar sudah diproses.' };
+  return `<section class="collection" id="moderasi-komentar" aria-labelledby="moderasi-komentar-title">
+    <h2 id="moderasi-komentar-title">Moderasi komentar Ruang Belajar</h2>
+    ${Object.hasOwn(status, result) ? `<p role="status">${status[result]}</p>` : ''}
+    ${comments.length ? '<ul class="study-moderation-list">' + comments.map(comment => `<li>
+      <strong>${escapeWorkroom(comment.name)}</strong><p>${escapeWorkroom(comment.message)}</p>
+      <form method="post" action="/workroom/settings/?comments=moderate">
+        <input type="hidden" name="id" value="${escapeWorkroom(comment.id)}">
+        <button name="action" value="approve">Terbitkan</button>
+        <button name="action" value="reject">Tolak</button>
+      </form></li>`).join('') + '</ul>' : '<p>Belum ada komentar yang menunggu.</p>'}
+  </section>`;
+}
+
+async function moderateStudyComment(request, db) {
+  if (!db) return workroomPage('<h1>Moderasi belum tersedia</h1>', 503);
+  const fields = await request.formData();
+  const id = fields.get('id');
+  const action = fields.get('action');
+  if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/.test(id) || !['approve', 'reject'].includes(action)) {
+    return workroomPage('<h1>Permintaan tidak valid</h1>', 400);
+  }
+  await ensureStudyComments(db);
+  const remove = db.prepare('DELETE FROM study_comments_pending WHERE id = ? RETURNING id').bind(id);
+  const operations = action === 'approve'
+    ? [db.prepare(`INSERT INTO study_comments (name, message)
+        SELECT name, message FROM study_comments_pending WHERE id = ?`).bind(id), remove]
+    : [remove];
+  const results = await db.batch(operations);
+  const result = results.at(-1).results.length ? (action === 'approve' ? 'approved' : 'rejected') : 'missing';
+  return new Response(null, { status: 303, headers: {
+    ...privateHeaders, Location: '/workroom/settings/?comment=' + result + '#moderasi-komentar',
+  } });
+}
+
 async function comments(request, db) {
   if (!db) return json({ error: 'Database binding COMMENTS_DB is missing' }, 503);
-  await db.prepare(`CREATE TABLE IF NOT EXISTS study_comments (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    message TEXT NOT NULL
-  )`).run();
+  await ensureStudyComments(db);
 
   if (request.method === 'GET') {
     const { results } = await db.prepare(
@@ -2066,11 +2123,12 @@ async function comments(request, db) {
   if (!sent.ok) return json({ error: 'Feedback could not be sent' }, 502);
 
   try {
-    await db.prepare('INSERT INTO study_comments (name, message) VALUES (?, ?)').bind(name, message).run();
+    await db.prepare('INSERT INTO study_comments_pending (id, name, message) VALUES (?, ?, ?)')
+      .bind(crypto.randomUUID(), name, message).run();
   } catch {
     return json({ published: false });
   }
-  return json({ published: true, comment: { name, message } }, 201);
+  return json({ published: false, pending: true }, 202);
 }
 
 export default {
