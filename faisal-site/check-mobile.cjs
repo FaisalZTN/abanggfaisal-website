@@ -30,7 +30,7 @@ async function checkStudyFlow(page, width) {
   await page.getByRole('link', { name: 'Jadwal kuliah hari ini', exact: true }).click();
   assert.match(page.url(), /\/ruang-belajar\/#ringkasan-jadwal$/);
   const overview = page.locator('#ringkasan-jadwal');
-  assert.ok(await overview.getByRole('link', { name: 'Buka materi' }).isVisible());
+  await overview.getByRole('link', { name: 'Buka materi' }).waitFor();
   await overview.getByRole('link', { name: 'Jadwal lengkap', exact: true }).click();
   assert.match(page.url(), /\/ruang-belajar\/#jadwal-kuliah$/);
   await checkWidth(page, 'Agenda', width);
@@ -96,9 +96,10 @@ async function checkStudyFlow(page, width) {
   await chooseBlock(page, 'Keluhan Neuropsikiatri Arsip');
   assert.equal(await page.locator('[data-agenda-clock]').count(), 0);
   const archive = page.locator('#jadwal-kuliah');
-  await archive.locator('summary').click();
+  await archive.getByRole('link', { name: /Lihat jadwal lengkap/ }).click();
+  await page.waitForURL('**/neuropsikiatri/jadwal-lengkap/');
   await checkWidth(page, 'Arsip Neuropsikiatri terbuka', width);
-  await archive.getByRole('link', { name: 'Anatomi otak, hubungan dengan peningkatan TIK' }).press('Enter');
+  await page.locator('[data-full-schedule]').getByRole('link', { name: 'Anatomi otak, hubungan dengan peningkatan TIK' }).press('Enter');
   await page.waitForFunction(() => document.activeElement.matches('#neuro-anatomi-otak-hubungan-dengan-peningkatan-tik h3'));
   assert.ok(await page.getByRole('link', { name: 'Anakku kejang', exact: true }).isVisible());
 
@@ -173,8 +174,9 @@ async function checkKmsAndResearch(page, width) {
   await page.goto(base + '/ruang-belajar/');
   await chooseBlock(page, 'Keluhan Muskuloskeletal (KMS) Arsip');
   await checkWidth(page, 'Arsip KMS', width);
-  await page.locator('#jadwal-kuliah summary').click();
-  assert.ok(await page.locator('#jadwal-kuliah').getByRole('link', { name: 'Ortopedi Onkologi 1' }).isVisible());
+  await page.locator('#jadwal-kuliah').getByRole('link', { name: /Lihat jadwal lengkap/ }).click();
+  await page.locator('[data-full-schedule]').getByRole('link', { name: 'Ortopedi Onkologi 1' }).waitFor();
+  await page.getByRole('link', { name: 'Kembali ke ringkasan jadwal' }).click();
   await page.locator('#study-catalogue > summary').click();
   const conflicting = page.locator('#kms-streptococcus .study-date');
   assert.match(await conflicting.textContent(), /Tanggal berbeda/);
@@ -207,6 +209,7 @@ async function checkDashboardOverview(page, width) {
   await page.clock.setFixedTime(new Date('2026-11-19T01:30:00Z'));
   await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
   const today = page.locator('[data-study-next]');
+  await page.locator('[data-agenda-days]').waitFor();
   assert.equal(await today.getByRole('heading', { level: 2 }).textContent(), 'Hari Ini');
   assert.match(await today.textContent(), /Sedang berlangsung.*Radang telinga luar.*08:00–10:00 WITA · RKB 4/s);
   await today.getByRole('link', { name: 'Buka materi' }).click();
@@ -333,17 +336,19 @@ async function checkPageTransition(browser) {
     });
     await page.getByRole('link', { name: 'Jelajahi Journal', exact: false }).first().tap();
     await page.waitForURL('**/journal/');
+    await page.waitForFunction(() => document.activeElement.matches('#main h1') &&
+      document.querySelector('#site-route-status').textContent.includes('A collection of thoughts'));
     await page.waitForFunction(() => document.documentElement.hasAttribute('data-page-cover-duration'));
     assert.equal(await page.locator('html').getAttribute('data-page-cover-duration'), '160');
     assert.ok(await page.evaluate(() => window.originalHeader === document.querySelector('header')));
 
     await page.goBack();
     await page.waitForURL(base + '/');
-    await page.locator('.home-carousel.is-interactive').waitFor();
+    await page.locator('.site-destinations').waitFor();
     assert.ok(await page.evaluate(() => window.originalHeader === document.querySelector('header')));
 
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.locator('.home-carousel a[href="/ruang-belajar/"]').tap();
+    await page.locator('.site-destinations a[href="/ruang-belajar/"]').tap();
     await page.waitForURL('**/ruang-belajar/');
     const search = page.getByRole('searchbox', { name: 'Cari di Ruang Belajar' });
     await search.fill('agng');
@@ -353,6 +358,83 @@ async function checkPageTransition(browser) {
   } finally {
     await page.close();
   }
+}
+
+async function checkInteractiveAccessibility(browser) {
+  const axePath = require.resolve('axe-core/axe.min.js');
+  for (const width of [360, 1024, 1440]) {
+    const page = await browser.newPage({ viewport: { width, height: 850 }, reducedMotion: 'reduce' });
+    async function audit(selector, state) {
+      await page.addScriptTag({ path: axePath });
+      const violations = await page.evaluate(async context => {
+        const { violations } = await axe.run(context, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa', 'best-practice'] } });
+        return violations.map(rule => [rule.id, rule.nodes.map(node => node.target)]);
+      }, selector);
+      assert.deepEqual(violations, [], state + ' at ' + width + 'px: ' + JSON.stringify(violations));
+    }
+    try {
+      await page.goto(base + '/');
+      if (width === 360) await page.locator('#menu').click();
+      await audit('body > header', 'Open navigation');
+      await checkWidth(page, 'Jelajahi situs', width);
+      assert.equal(await page.locator('.site-destinations li').count(), 4);
+      await page.locator('#theme').click();
+      assert.equal(await page.locator('#theme').getAttribute('aria-pressed'), 'true');
+      await audit('.site-destinations', 'Dark destination grid');
+
+      await page.goto(base + '/ruang-belajar/');
+      const search = page.getByRole('searchbox', { name: 'Cari di Ruang Belajar' });
+      await search.fill('agung');
+      await page.locator('#study-search-results a').first().waitFor();
+      assert.equal(await page.locator('[data-search-group]:visible > h2').count() > 0, true);
+      await audit('#main', 'Open study search');
+
+      await page.route('https://formspree.io/**', route => route.fulfill({ status: 503, json: {} }));
+      const feedback = page.locator('[data-study-feedback]');
+      await feedback.getByLabel('Topik masukan').selectOption({ label: 'Materi belajar' });
+      await feedback.getByLabel('Nama (wajib)', { exact: true }).fill('Penguji');
+      await feedback.getByLabel('Pesan (wajib)', { exact: true }).fill('Uji pesan gagal.');
+      await feedback.getByRole('button', { name: 'Kirim masukan' }).click();
+      await feedback.getByRole('alert').filter({ hasText: 'Masukan belum bisa dikirim' }).waitFor();
+      assert.equal(await feedback.getByLabel('Pesan (wajib)', { exact: true }).inputValue(), 'Uji pesan gagal.');
+      await audit('.study-feedback-form', 'Feedback failure');
+      await checkWidth(page, 'Ruang Belajar', width);
+      if (width === 360) {
+        await page.route('**/api/study-comments', async route => {
+          if (route.request().method() === 'GET') return route.fulfill({ json: { comments: [], siteKey: 'fixture-key' } });
+          assert.match(route.request().postData(), /challenge-fixture/);
+          return route.fulfill({ status: 202, json: { pending: true } });
+        });
+        await page.route('https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit', route =>
+          route.fulfill({ contentType: 'text/javascript', body: `
+            window.turnstile = {
+              render(container, options) {
+                if (options.action !== 'study_comment' || options.sitekey !== 'fixture-key') throw Error('Wrong challenge');
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'cf-turnstile-response';
+                input.value = 'challenge-fixture';
+                container.append(input);
+                return 'fixture';
+              },
+              remove() {},
+              reset() {},
+            };
+          ` }));
+        await page.reload();
+        await feedback.getByLabel('Topik masukan').selectOption({ label: 'Materi belajar' });
+        await feedback.getByLabel('Nama (wajib)', { exact: true }).fill('Penguji');
+        await feedback.getByLabel('Pesan (wajib)', { exact: true }).fill('Uji tantangan.');
+        await feedback.getByRole('checkbox', { name: /Izinkan nama/ }).check();
+        await feedback.locator('[name="cf-turnstile-response"]').waitFor({ state: 'attached' });
+        await feedback.getByRole('button', { name: 'Kirim masukan' }).click();
+        await feedback.getByRole('status').filter({ hasText: 'Komentar menunggu persetujuan' }).waitFor();
+      }
+    } finally {
+      await page.close();
+    }
+  }
+  console.log('PASS axe: interactive navigation, search, and feedback at 360, 1024 and 1440 px');
 }
 
 async function main() {
@@ -383,6 +465,7 @@ async function main() {
     } finally {
       await page.close();
     }
+    await checkInteractiveAccessibility(browser);
     await checkWorkroom(browser, base);
   } finally {
     await browser.close();

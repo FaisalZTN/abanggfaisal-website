@@ -21,6 +21,7 @@ for preview in [False,True]:
         for u in p.links:
             if not u.startswith('/') or u.startswith('//'):continue
             target=urlsplit(u)
+            if target.path == '/workroom/':continue  # Served by the authenticated Worker.
             path=P/'dist'/target.path.lstrip('/')
             if path.is_dir():path=path/'index.html'
             assert path.is_file(),(f,u)

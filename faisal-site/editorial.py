@@ -86,10 +86,11 @@ def render_article(x):
     if not x.get('article','').strip():return ''.join('<p>'+esc(p)+'</p>' for p in x['body'])
     return markdown(x['article'])
 
-def media(x, fallback, eager=False):
+def media(x, fallback, eager=False, decorative=False):
     src=x.get('cover') or x.get('thumbnail')
     if not src:return fallback
-    return tag(src,x.get('cover_alt') or x.get('thumbnail_alt') or x['title'],eager)
+    alt = x.get('cover_alt') or x.get('thumbnail_alt') or ''
+    return tag(src, '' if decorative else alt, eager)
 
 def available(x):return x.get('availability')=='available' and bool(x.get('checkout'))
 

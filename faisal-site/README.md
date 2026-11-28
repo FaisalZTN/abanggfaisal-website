@@ -97,3 +97,24 @@ makes existing notes unreadable. Never commit either secret.
 The private notes route uses Workroom's owner authentication plus a separate
 five-minute unlock. Notes use a dedicated encrypted table. The regular Notes API,
 search and Review do not access it.
+
+### Operasional audit situs
+
+- **Komentar publik.** D1 `COMMENTS_DB` memakai skema di
+  `migrations/comments/0001_moderation_and_limits.sql`. Jalankan SQL itu pada database
+  komentar ketika mengelola migrasi secara manual. Build membundel SQL yang sama untuk
+  pemulihan sekali saat tabel belum ada. Kiriman publik dibatasi lima percobaan per alamat
+  IP per jendela 10 menit berdasarkan header Cloudflare. Antrean diterbitkan dari
+  **Workroom → Pengaturan → Moderasi komentar Ruang Belajar**. Untuk tantangan tambahan,
+  buat widget Turnstile untuk domain produksi dan isi runtime `STUDY_TURNSTILE_SITE_KEY`
+  serta secret `STUDY_TURNSTILE_SECRET` di Cloudflare Pages. Uji pengiriman komentar dan
+  moderasi setelah keduanya terpasang. Masukan privat tetap dikirim ke Formspree.
+- **Core Web Vitals lapangan.** Gunakan Web Analytics otomatis dari dashboard Cloudflare Pages atau set
+  `CF_WEB_ANALYTICS_TOKEN` ke token situs publik pada pengaturan build **Production** untuk penempatan
+  manual. Gunakan satu metode agar beacon tidak terpasang dua kali. Build hanya memasang beacon
+  manual pada halaman publik produksi, dengan Workroom dan preview tidak disertakan. Setelah ada
+  kunjungan, cek LCP, INP, dan CLS per halaman di dashboard dan verifikasi beacon di produksi.
+- **Pengecekan manual.** Pada Android dengan TalkBack, buka Beranda, hasil pencarian Ruang Belajar,
+  formulir gagal kirim, dan Workroom. Periksa urutan fokus, pengumuman navigasi dan error, target
+  kalender, serta alur skip link. Ulangi tema terang dan gelap. Uji CMS dengan JavaScript dimatikan
+  dan saat skrip CDN gagal dimuat.

@@ -41,12 +41,13 @@ def optimize(public, dist):
     (dist/'image-report.json').write_text(json.dumps(report,indent=2))
     return report
 
-def tag(src, alt, eager=False, css='cover'):
+def tag(src, alt, eager=False, css='cover', sizes='(max-width: 600px) calc(100vw - 36px), (max-width: 900px) 50vw, 720px'):
     e=lambda s:html.escape(str(s),quote=True)
     data=ASSETS.get(src); attrs=''
     if data:
         default=data['default'];src=default['src'];w=default['width'];h=default['height']
         if data['variants']:
-            attrs=' srcset="'+e(', '.join(f'{v["src"]} {v["width"]}w' for v in data['variants']))+'" sizes="(max-width: 600px) calc(100vw - 36px), (max-width: 900px) 50vw, 720px"'
+            attrs=' srcset="'+e(', '.join(f'{v["src"]} {v["width"]}w' for v in data['variants']))+'" sizes="'+e(sizes)+'"'
     else:w,h=1200,800
-    return f'<img class="{e(css)}" src="{e(src)}" alt="{e(alt)}" width="{w}" height="{h}"{attrs} loading="{"eager" if eager else "lazy"}" decoding="async">'
+    priority=' fetchpriority="high"' if eager else ''
+    return f'<img class="{e(css)}" src="{e(src)}" alt="{e(alt)}" width="{w}" height="{h}"{attrs}{priority} loading="{"eager" if eager else "lazy"}" decoding="async">'

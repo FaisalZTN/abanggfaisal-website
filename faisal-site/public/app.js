@@ -3,7 +3,7 @@ const themeColor = document.querySelector('meta[name="theme-color"]');
 function setTheme(dark) {
   document.documentElement.classList.toggle('dark', dark);
   themeColor.content = dark ? '#18261f' : '#f6f4ed';
-  theme.setAttribute('aria-label', dark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap');
+  theme.setAttribute('aria-pressed', String(dark));
 }
 setTheme(document.documentElement.classList.contains('dark'));
 theme.addEventListener('click', () => {
@@ -78,6 +78,197 @@ function studyMatchScore(terms, words, context = []) {
   return score;
 }
 
+function initializeStudyAgenda(agenda, schedule, signal) {
+  const wita = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Makassar', calendar: 'gregory', numberingSystem: 'latn',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  });
+  const dateLabel = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full', timeZone: 'UTC' });
+  const clock = agenda.querySelector('[data-agenda-clock]');
+  const clockTime = clock.querySelector('time');
+  const grid = agenda.querySelector('[data-agenda-days]');
+  const panels = [...grid.children];
+  const pastClasses = agenda.querySelector('#arsip-kelas');
+  const nextClass = document.querySelector('[data-study-next]');
+  const slots = new Map();
+  for (const slot of schedule.querySelectorAll('.study-slot')) {
+    const day = slot.dataset.day;
+    if (!slots.has(day)) slots.set(day, []);
+    slots.get(day).push(slot);
+  }
+
+  let shownSlot;
+  let shownStatus;
+  function showNextClass(today, time) {
+    const todaysSlots = slots.get(today) ?? [];
+    const current = todaysSlots.find(({ dataset }) => dataset.start && dataset.start <= time && time < dataset.end);
+    const upcoming = todaysSlots.find(({ dataset }) => dataset.start > time);
+    const untimed = todaysSlots.find(({ dataset }) => !dataset.start);
+    const nextDay = [...slots.keys()].find(day => day > today);
+    const slot = current ?? upcoming ?? untimed ?? slots.get(nextDay)?.[0];
+    const status = current ? 'Sedang berlangsung' : upcoming ? 'Kelas berikutnya hari ini'
+      : untimed ? 'Terjadwal hari ini' : slot ? 'Jadwal terdekat' : 'Belum ada jadwal berikutnya.';
+    if (slot === shownSlot && status === shownStatus) return;
+    shownSlot = slot;
+    shownStatus = status;
+
+    nextClass.querySelector('h2').textContent = !slot ? 'Jadwal Kuliah'
+      : slot.dataset.day === today ? 'Hari Ini' : 'Hari yang Akan Datang';
+    nextClass.querySelector('[data-next-status]').textContent = status;
+    const title = nextClass.querySelector('[data-next-title]');
+    const details = nextClass.querySelector('[data-next-details]');
+    const people = nextClass.querySelector('[data-next-people]');
+    const material = nextClass.querySelector('[data-next-material]');
+    title.hidden = details.hidden = people.hidden = !slot;
+    material.hidden = true;
+    if (slot) {
+      const { day, start, hours, location: room, people: teachers } = slot.dataset;
+      const session = slot.querySelector('.study-slot-title a');
+      title.textContent = session.textContent;
+      details.textContent = [day === today ? '' : dateLabel.format(new Date(day)),
+        start ? hours + ' WITA' : hours, room || 'Lokasi belum tercantum'].filter(Boolean).join(' · ');
+      people.textContent = teachers || 'Dosen belum tercantum';
+      const url = new URL(session.getAttribute('href'), location.href);
+      material.href = url.href;
+      const otherPage = url.pathname !== location.pathname;
+      const lecture = document.getElementById(url.hash.slice(1));
+      material.textContent = otherPage ? 'Lihat sesi' : 'Buka materi';
+      material.hidden = !otherPage && !lecture?.querySelector('.study-material');
+    }
+  }
+
+  function cloneSlot(slot) {
+    const copy = slot.cloneNode(true);
+    const title = copy.querySelector('.study-slot-title');
+    const heading = document.createElement('h4');
+    heading.className = title.className;
+    heading.append(...title.childNodes);
+    title.replaceWith(heading);
+    return copy;
+  }
+
+  function showDay(panel, day) {
+    const key = day.toISOString().slice(0, 10);
+    const date = panel.querySelector('[data-agenda-date]');
+    const sessions = slots.get(key) ?? [];
+    date.textContent = dateLabel.format(day);
+    date.dateTime = key;
+    panel.querySelector('[data-agenda-count]').textContent = `${sessions.length} kuliah`;
+    panel.querySelector('[data-agenda-empty]').hidden = sessions.length > 0;
+    panel.querySelector('[data-agenda-list]').replaceChildren(...sessions.map(cloneSlot));
+  }
+
+  let shownPastCount = -1;
+  function showPastClasses(today, time) {
+    const days = [];
+    let count = 0;
+    // The build emits date groups in chronological order.
+    for (const [day, sessions] of slots) {
+      if (day > today) break;
+      const finished = day < today ? sessions : sessions.filter(slot => slot.dataset.end && slot.dataset.end <= time);
+      if (!finished.length) continue;
+      days.push([day, finished]);
+      count += finished.length;
+    }
+    pastClasses.querySelector('[data-past-count]').textContent = `· ${count} kelas`;
+    pastClasses.hidden = false;
+    if (!pastClasses.open || count === shownPastCount) return;
+
+    const groups = days.reverse().map(([day, finished]) => {
+      const group = document.createElement('div');
+      const heading = document.createElement('h3');
+      const date = document.createElement('time');
+      date.dateTime = day;
+      date.textContent = dateLabel.format(new Date(day));
+      heading.append(date);
+      const list = document.createElement('ul');
+      list.className = 'study-agenda-list';
+      list.append(...finished.map(cloneSlot));
+      group.append(heading, list);
+      return group;
+    });
+    pastClasses.querySelector('[data-past-list]').replaceChildren(...groups);
+    pastClasses.querySelector('[data-past-empty]').hidden = count > 0;
+    shownPastCount = count;
+  }
+
+  pastClasses?.addEventListener('toggle', () => { if (pastClasses.open) refreshAgenda(); }, { signal });
+
+  let shownDay;
+  function refreshAgenda(now = new Date()) {
+    const { year, month, day, hour, minute } = Object.fromEntries(
+      wita.formatToParts(now).map(({ type, value }) => [type, value]),
+    );
+    const key = `${year}-${month}-${day}`;
+    const localTime = `${hour}:${minute}`;
+    clockTime.dateTime = `${key}T${localTime}:00+08:00`;
+    clockTime.textContent = localTime;
+
+    if (nextClass) showNextClass(key, localTime);
+
+    if (key !== shownDay) {
+      // UTC here represents calendar dates after converting the timestamp to WITA.
+      const today = new Date(Date.UTC(+year, +month - 1, +day));
+      const tomorrow = new Date(today);
+      tomorrow.setUTCDate(today.getUTCDate() + 1);
+      showDay(panels[0], today);
+      showDay(panels[1], tomorrow);
+      shownDay = key;
+    }
+
+    if (pastClasses) showPastClasses(key, localTime);
+
+    for (const slot of panels[0].querySelectorAll('.study-slot[data-start]:not([data-start=""])')) {
+      const status = slot.querySelector('[data-session-state]');
+      const { start, end } = slot.dataset;
+      if (localTime < start) {
+        status.textContent = 'Akan mulai';
+        status.dataset.sessionState = 'upcoming';
+      } else if (localTime < end) {
+        status.textContent = 'Sesi terjadwal';
+        status.dataset.sessionState = 'current';
+      } else {
+        status.textContent = 'Jam berlalu';
+        status.dataset.sessionState = 'past';
+      }
+      status.hidden = false;
+    }
+  }
+
+  let agendaTimer;
+  function tickAgenda() {
+    clearTimeout(agendaTimer);
+    refreshAgenda();
+    agendaTimer = setTimeout(tickAgenda, 60_000 - Date.now() % 60_000 + 50);
+  }
+  tickAgenda();
+  grid.hidden = false;
+  clock.hidden = false;
+  signal.addEventListener('abort', () => clearTimeout(agendaTimer), { once: true });
+  window.addEventListener('pageshow', tickAgenda, { signal });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) tickAgenda();
+  }, { signal });
+}
+
+let studyChallengeScript;
+function loadStudyChallenge() {
+  if (!studyChallengeScript) {
+    studyChallengeScript = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.onload = () => window.turnstile ? resolve(window.turnstile) : reject(new Error('Verification unavailable'));
+      script.onerror = () => { script.remove(); reject(new Error('Verification unavailable')); };
+      document.head.append(script);
+    }).catch(error => {
+      studyChallengeScript = undefined;
+      throw error;
+    });
+  }
+  return studyChallengeScript;
+}
+
 function initializePage(signal) {
   const feedback = document.querySelector('[data-study-feedback]');
   const commentsEndpoint = '/api/study-comments';
@@ -94,11 +285,34 @@ function initializePage(signal) {
     commentList.hidden = false;
     comments.querySelector('[data-no-comments]')?.remove();
   }
+  let challengeApi;
+  let challengeWidget;
+  let challengeSiteKey;
+  const consent = feedback?.querySelector('[name="public_comment"]');
+  const challengeHost = feedback?.querySelector('[data-comment-challenge]');
+  async function updateCommentChallenge() {
+    if (!challengeSiteKey) return;
+    challengeHost.hidden = !consent.checked;
+    if (!consent.checked || challengeWidget !== undefined) return;
+    try {
+      challengeApi = await loadStudyChallenge();
+      if (signal.aborted || !consent.checked || challengeWidget !== undefined) return;
+      challengeHost.textContent = '';
+      challengeWidget = challengeApi.render(challengeHost, { sitekey: challengeSiteKey, action: 'study_comment', size: 'compact' });
+    } catch {
+      if (!signal.aborted) challengeHost.textContent = 'Verifikasi belum bisa dimuat. Coba lagi atau kirim masukan secara privat.';
+    }
+  }
+  consent?.addEventListener('change', updateCommentChallenge, { signal });
+  signal.addEventListener('abort', () => {
+    if (challengeWidget !== undefined) challengeApi.remove(challengeWidget);
+  }, { once: true });
   if (feedback && commentList) {
     fetch(commentsEndpoint, { signal })
       .then(response => response.ok ? response.json() : null)
       .then(data => {
         if (!Array.isArray(data?.comments) || signal.aborted) return;
+        challengeSiteKey = data.siteKey;
         for (const comment of data.comments) showComment(comment);
         feedback.querySelector('[data-public-comment-option]').hidden = false;
       })
@@ -109,28 +323,42 @@ function initializePage(signal) {
     const button = feedback.querySelector('button[type="submit"]');
     if (button.disabled) return;
     const status = feedback.querySelector('[data-feedback-status]');
+    const failure = feedback.querySelector('[data-feedback-error]');
     const fields = new FormData(feedback);
+    const publish = fields.get('public_comment') === 'yes';
+    if (publish && challengeSiteKey && !fields.get('cf-turnstile-response')) {
+      failure.textContent = 'Selesaikan verifikasi sebelum mengirim komentar.';
+      void updateCommentChallenge();
+      return;
+    }
     button.disabled = true;
+    failure.textContent = '';
     status.dataset.state = 'pending';
     status.textContent = 'Mengirim masukan…';
     try {
-      const publish = fields.get('public_comment') === 'yes';
       const response = await fetch(publish ? commentsEndpoint : feedback.action, {
         method: 'POST',
         body: fields,
         headers: { Accept: 'application/json' },
       });
+      if (response.status === 429 && publish) {
+        status.textContent = '';
+        failure.textContent = 'Terlalu banyak kiriman. Coba lagi dalam beberapa menit.';
+        return;
+      }
       if (!response.ok) throw new Error('Feedback submission failed');
       const result = publish ? await response.json() : null;
       feedback.reset();
+      if (challengeHost) challengeHost.hidden = true;
       status.dataset.state = 'success';
       status.textContent = result?.pending ? 'Masukan terkirim. Komentar menunggu persetujuan.'
         : result?.published === false ? 'Masukan terkirim, tetapi komentar belum masuk antrean.'
         : 'Masukan berhasil dikirim. Terima kasih!';
     } catch {
-      status.dataset.state = 'error';
-      status.textContent = 'Masukan belum bisa dikirim. Coba lagi atau hubungi alamat email di bawah.';
+      status.textContent = '';
+      failure.textContent = 'Masukan belum bisa dikirim. Coba lagi atau hubungi alamat email di bawah.';
     } finally {
+      if (publish && !signal.aborted && challengeWidget !== undefined) challengeApi.reset(challengeWidget);
       button.disabled = false;
     }
   }, { signal });
@@ -220,173 +448,31 @@ function initializePage(signal) {
       window.addEventListener('hashchange', revealLinkedCard, { signal });
     }
     filter();
-    if (more || sort) revealLinkedCard();
+    if (more || sort) {
+      revealLinkedCard();
+      if (location.hash && document.readyState !== 'complete') {
+        window.addEventListener('pageshow', revealLinkedCard, { once: true, signal });
+      }
+    }
   }
   const agenda = document.querySelector('#jadwal-kuliah');
-  if (agenda?.querySelector('[data-agenda-clock]')) {
-    const wita = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Makassar', calendar: 'gregory', numberingSystem: 'latn',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-    });
-    const dateLabel = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full', timeZone: 'UTC' });
-    const clock = agenda.querySelector('[data-agenda-clock]');
-    const clockTime = clock.querySelector('time');
-    const grid = agenda.querySelector('[data-agenda-days]');
-    const panels = [...grid.children];
-    const pastClasses = agenda.querySelector('#arsip-kelas');
-    const nextClass = document.querySelector('[data-study-next]');
-    const slots = new Map();
-    for (const slot of agenda.querySelectorAll('[data-full-schedule] .study-slot')) {
-      const day = slot.dataset.day;
-      if (!slots.has(day)) slots.set(day, []);
-      slots.get(day).push(slot);
-    }
-
-    let shownSlot;
-    let shownStatus;
-    function showNextClass(today, time) {
-      const todaysSlots = slots.get(today) ?? [];
-      const current = todaysSlots.find(({ dataset }) => dataset.start && dataset.start <= time && time < dataset.end);
-      const upcoming = todaysSlots.find(({ dataset }) => dataset.start > time);
-      const untimed = todaysSlots.find(({ dataset }) => !dataset.start);
-      const nextDay = [...slots.keys()].find(day => day > today);
-      const slot = current ?? upcoming ?? untimed ?? slots.get(nextDay)?.[0];
-      const status = current ? 'Sedang berlangsung' : upcoming ? 'Kelas berikutnya hari ini'
-        : untimed ? 'Terjadwal hari ini' : slot ? 'Jadwal terdekat' : 'Belum ada jadwal berikutnya.';
-      if (slot === shownSlot && status === shownStatus) return;
-      shownSlot = slot;
-      shownStatus = status;
-
-      nextClass.querySelector('h2').textContent = !slot ? 'Jadwal Kuliah'
-        : slot.dataset.day === today ? 'Hari Ini' : 'Hari yang Akan Datang';
-      nextClass.querySelector('[data-next-status]').textContent = status;
-      const title = nextClass.querySelector('[data-next-title]');
-      const details = nextClass.querySelector('[data-next-details]');
-      const people = nextClass.querySelector('[data-next-people]');
-      const material = nextClass.querySelector('[data-next-material]');
-      title.hidden = details.hidden = people.hidden = !slot;
-      material.hidden = true;
-      if (slot) {
-        const { day, start, hours, location: room, people: teachers } = slot.dataset;
-        const session = slot.querySelector('h4 a');
-        title.textContent = session.textContent;
-        details.textContent = [day === today ? '' : dateLabel.format(new Date(day)),
-          start ? hours + ' WITA' : hours, room || 'Lokasi belum tercantum'].filter(Boolean).join(' · ');
-        people.textContent = teachers || 'Dosen belum tercantum';
-        const url = new URL(session.getAttribute('href'), location.href);
-        material.href = url.href;
-        const otherPage = url.pathname !== location.pathname;
-        const lecture = document.getElementById(url.hash.slice(1));
-        material.textContent = otherPage ? 'Lihat sesi' : 'Buka materi';
-        material.hidden = !otherPage && !lecture?.querySelector('.study-material');
-      }
-    }
-
-    function showDay(panel, day) {
-      const key = day.toISOString().slice(0, 10);
-      const date = panel.querySelector('[data-agenda-date]');
-      const sessions = slots.get(key) ?? [];
-      date.textContent = dateLabel.format(day);
-      date.dateTime = key;
-      panel.querySelector('[data-agenda-count]').textContent = `${sessions.length} kuliah`;
-      panel.querySelector('[data-agenda-empty]').hidden = sessions.length > 0;
-      panel.querySelector('[data-agenda-list]').replaceChildren(...sessions.map(slot => slot.cloneNode(true)));
-    }
-
-    let shownPastCount = -1;
-    function showPastClasses(today, time) {
-      const days = [];
-      let count = 0;
-      // The build emits date groups in chronological order.
-      for (const [day, sessions] of slots) {
-        if (day > today) break;
-        const finished = day < today ? sessions : sessions.filter(slot => slot.dataset.end && slot.dataset.end <= time);
-        if (!finished.length) continue;
-        days.push([day, finished]);
-        count += finished.length;
-      }
-      pastClasses.querySelector('[data-past-count]').textContent = `· ${count} kelas`;
-      pastClasses.hidden = false;
-      if (!pastClasses.open || count === shownPastCount) return;
-
-      const groups = days.reverse().map(([day, finished]) => {
-        const group = document.createElement('div');
-        const heading = document.createElement('h3');
-        const date = document.createElement('time');
-        date.dateTime = day;
-        date.textContent = dateLabel.format(new Date(day));
-        heading.append(date);
-        const list = document.createElement('ul');
-        list.className = 'study-agenda-list';
-        list.append(...finished.map(slot => slot.cloneNode(true)));
-        group.append(heading, list);
-        return group;
+  const scheduleSource = agenda?.querySelector('[data-schedule-source]');
+  if (scheduleSource && agenda.querySelector('[data-agenda-clock]')) {
+    fetch(scheduleSource.dataset.scheduleSource, { signal })
+      .then(response => {
+        if (!response.ok) throw new Error('Schedule unavailable');
+        return response.json();
+      })
+      .then(({ markup }) => {
+        if (signal.aborted) return;
+        if (typeof markup !== 'string') throw new Error('Schedule unavailable');
+        const schedule = new DOMParser().parseFromString(markup, 'text/html');
+        initializeStudyAgenda(agenda, schedule, signal);
+      })
+      .catch(() => {
+        if (!signal.aborted) agenda.querySelector('[data-schedule-error]').hidden = false;
       });
-      pastClasses.querySelector('[data-past-list]').replaceChildren(...groups);
-      pastClasses.querySelector('[data-past-empty]').hidden = count > 0;
-      shownPastCount = count;
-    }
-
-    pastClasses?.addEventListener('toggle', () => { if (pastClasses.open) refreshAgenda(); }, { signal });
-
-    let shownDay;
-    function refreshAgenda(now = new Date()) {
-      const { year, month, day, hour, minute } = Object.fromEntries(
-        wita.formatToParts(now).map(({ type, value }) => [type, value]),
-      );
-      const key = `${year}-${month}-${day}`;
-      const localTime = `${hour}:${minute}`;
-      clockTime.dateTime = `${key}T${localTime}:00+08:00`;
-      clockTime.textContent = localTime;
-
-      if (nextClass) showNextClass(key, localTime);
-
-      if (key !== shownDay) {
-        // UTC here represents calendar dates after converting the timestamp to WITA.
-        const today = new Date(Date.UTC(+year, +month - 1, +day));
-        const tomorrow = new Date(today);
-        tomorrow.setUTCDate(today.getUTCDate() + 1);
-        showDay(panels[0], today);
-        showDay(panels[1], tomorrow);
-        shownDay = key;
-      }
-
-      if (pastClasses) showPastClasses(key, localTime);
-
-      for (const slot of panels[0].querySelectorAll('.study-slot[data-start]:not([data-start=""])')) {
-        const status = slot.querySelector('[data-session-state]');
-        const { start, end } = slot.dataset;
-        if (localTime < start) {
-          status.textContent = 'Akan mulai';
-          status.dataset.sessionState = 'upcoming';
-        } else if (localTime < end) {
-          status.textContent = 'Sesi terjadwal';
-          status.dataset.sessionState = 'current';
-        } else {
-          status.textContent = 'Jam berlalu';
-          status.dataset.sessionState = 'past';
-        }
-        status.hidden = false;
-      }
-    }
-
-    let agendaTimer;
-    function tickAgenda() {
-      clearTimeout(agendaTimer);
-      refreshAgenda();
-      agendaTimer = setTimeout(tickAgenda, 60_000 - Date.now() % 60_000 + 50);
-    }
-    tickAgenda();
-    grid.hidden = false;
-    clock.hidden = false;
-    signal.addEventListener('abort', () => clearTimeout(agendaTimer), { once: true });
-    window.addEventListener('pageshow', tickAgenda, { signal });
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) tickAgenda();
-    }, { signal });
   }
-
   const unifiedSearch = document.querySelector('#study-search');
   if (unifiedSearch) {
     const panel = unifiedSearch.closest('[role="search"]');
@@ -453,57 +539,7 @@ function initializePage(signal) {
     signal.addEventListener('abort', () => quoteObserver.disconnect(), { once: true });
   }
 
-  const homeCarousel = document.querySelector('.home-carousel');
-  if (homeCarousel && 'registerProperty' in CSS && CSS.supports('width', 'calc(sin(22deg) * 1px)') && CSS.supports('opacity', 'mod(1, 2)')) {
-    const cards = [...homeCarousel.querySelectorAll('li')];
-    const track = homeCarousel.querySelector('.home-carousel-cards');
-    const controls = homeCarousel.querySelector('.home-carousel-controls');
-    const status = controls.querySelector('.home-carousel-status');
-    let turn = 0;
-    let gesture;
-    cards.forEach((card, i) => card.style.setProperty('--slot', i));
 
-    function showDestination(nextIndex) {
-      turn = nextIndex;
-      const index = ((turn % cards.length) + cards.length) % cards.length;
-      track.style.setProperty('--panorama-turn', -turn);
-      status.textContent = (index + 1) + ' / ' + cards.length;
-      return cards[index];
-    }
-
-    controls.querySelectorAll('button').forEach(button => {
-      button.addEventListener('click', () => showDestination(turn + Number(button.dataset.step)));
-    });
-    homeCarousel.addEventListener('keydown', event => {
-      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-      event.preventDefault();
-      const active = showDestination(turn + (event.key === 'ArrowLeft' ? -1 : 1));
-      if (track.contains(event.target)) active.querySelector('a').focus({preventScroll: true});
-    });
-    track.addEventListener('focusin', event => {
-      const target = cards.indexOf(event.target.closest('li'));
-      if (target < 0) return;
-      const distance = ((target - turn) % cards.length + cards.length) % cards.length;
-      if (distance) showDestination(turn + (distance > cards.length / 2 ? distance - cards.length : distance));
-    });
-    track.addEventListener('touchstart', event => {
-      gesture = event.touches.length === 1 ? event.touches[0] : null;
-    }, { passive: true });
-    track.addEventListener('touchcancel', () => { gesture = null; });
-    track.addEventListener('touchend', event => {
-      if (!gesture) return;
-      const dx = event.changedTouches[0].clientX - gesture.clientX;
-      const dy = event.changedTouches[0].clientY - gesture.clientY;
-      gesture = null;
-      if (Math.abs(dx) < 45 || Math.abs(dx) <= Math.abs(dy) * 1.25) return;
-      event.preventDefault();
-      showDestination(turn + (dx > 0 ? -1 : 1));
-    }, { passive: false });
-
-    homeCarousel.classList.add('is-interactive');
-    showDestination(0);
-    controls.hidden = false;
-  }
 }
 
 // Compatibility for old bookmarks, with a strict allowlist.
@@ -514,6 +550,7 @@ initializePage(pageLifecycle.signal);
 
 const primaryRoutes = new Set(['/', '/journal/', '/ruang-belajar/', '/shop/', '/about/']);
 const loadedPages = new Map();
+const navigationCacheLifetime = 5 * 60 * 1000;
 const scrollPositions = new Map();
 const headSelectors = [
   'meta[name="description"]', 'meta[property="og:title"]',
@@ -537,7 +574,8 @@ function navigationDestination(event) {
 }
 
 function requestPage(url) {
-  if (loadedPages.has(url.href)) return loadedPages.get(url.href);
+  const cached = loadedPages.get(url.href);
+  if (cached && Date.now() < cached.expires) return cached.request;
   const request = fetch(url, { headers: { Accept: 'text/html' } })
     .then(async response => {
       if (!response.ok || response.url !== url.href) throw new Error('Unexpected navigation response');
@@ -549,11 +587,11 @@ function requestPage(url) {
       return { page, main };
     })
     .catch(error => {
-      loadedPages.delete(url.href);
+      if (loadedPages.get(url.href)?.request === request) loadedPages.delete(url.href);
       throw error;
     });
 
-  loadedPages.set(url.href, request);
+  loadedPages.set(url.href, { request, expires: Date.now() + navigationCacheLifetime });
   return request;
 }
 
@@ -586,8 +624,10 @@ function replacePage(destination, page, main, restoring) {
   }
   setMenu(false);
   initializePage(pageLifecycle.signal);
-  nextMain.tabIndex = -1;
-  nextMain.focus({ preventScroll: true });
+  const heading = nextMain.querySelector('h1') ?? nextMain;
+  heading.tabIndex = -1;
+  heading.focus({ preventScroll: true });
+  document.querySelector('#site-route-status').textContent = 'Halaman ' + (heading.textContent.trim() || document.title);
   window.scrollTo({ top: restoring ? scrollPositions.get(renderedPath) ?? 0 : 0, behavior: 'instant' });
   updateBackToTop();
 }

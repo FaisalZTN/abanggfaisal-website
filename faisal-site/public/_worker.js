@@ -74,13 +74,13 @@ function workroomDocument(content, page) {
   return `<!doctype html><html lang="id"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="/workroom-theme.js"></script><title>${page && page !== 'home' ? workroomPages[page].title + ' · ' : ''}Workroom · Faysaruworks.</title><link rel="icon" type="image/svg+xml" href="/workroom-favicon.svg"><link rel="stylesheet" href="/workroom.css"></head>
-    <body${page ? ' class="workroom-layout"' : ''}>${sidebar}
+    <body${page ? ' class="workroom-layout"' : ''}><a class="workroom-skip" href="#workroom-main">Lewati ke konten</a>${sidebar}
     ${['home', 'today', 'task'].includes(page) ? '<script type="application/workroom-module" data-src="/workroom-agenda-check.js"></script>' : ''}
     <header class="workroom-header">
       ${wordmark}
       <nav aria-label="Navigasi situs"><a href="/">Menu Utama</a><a href="/ruang-belajar/">Ruang Belajar</a></nav>
     </header>
-    <main${page ? ` data-workroom-panel="${page}"` : ''}>${content}</main>
+    <main id="workroom-main" tabindex="-1"${page ? ` data-workroom-panel="${page}"` : ''}>${content}</main>
     ${page === 'task' || page === 'note' ? '<script type="application/workroom-module" data-src="/workroom-link-options.js"></script>' : ''}
     ${page === 'task' || page === 'note' ? '<script type="application/workroom-module" data-src="/workroom-image-upload.js"></script>' : ''}
     ${page ? `<footer class="workroom-footer" aria-label="Teknologi Workroom">
@@ -101,7 +101,7 @@ function streamWorkroomPage(page, render) {
   const body = new ReadableStream({
     async start(controller) {
       controller.enqueue(encoder.encode(before + `<div class="dashboard-content workroom-loading" role="status">
-        <h1>${workroomPages[page].title}</h1><p>Memuat…</p>
+        <p>Memuat ${workroomPages[page].title}…</p>
       </div>`));
       let content;
       try {
@@ -2034,24 +2034,40 @@ function json(data, status = 200) {
   return Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
-async function ensureStudyComments(db) {
-  await db.batch([
-    db.prepare(`CREATE TABLE IF NOT EXISTS study_comments (
-      id INTEGER PRIMARY KEY, name TEXT NOT NULL, message TEXT NOT NULL
-    )`),
-    db.prepare(`CREATE TABLE IF NOT EXISTS study_comments_pending (
-      id TEXT PRIMARY KEY, name TEXT NOT NULL, message TEXT NOT NULL,
-      submitted_at INTEGER NOT NULL DEFAULT (unixepoch())
-    )`),
+const commentSchema = /* BUILD_COMMENT_SCHEMA */ [];
+
+async function withStudyCommentSchema(db, perform) {
+  try {
+    return await perform();
+  } catch (error) {
+    if (!/no such table: study_comment/.test(String(error))) throw error;
+    await db.batch(commentSchema.map(sql => db.prepare(sql)));
+    return perform();
+  }
+}
+
+const commentWindowSeconds = 600;
+const commentAttemptsPerWindow = 5;
+
+async function reserveStudyCommentAttempt(db, request) {
+  const window = Math.floor(Date.now() / 1000 / commentWindowSeconds);
+  const address = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(window + ':' + address));
+  const visitor = Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('');
+  const [, result] = await db.batch([
+    db.prepare('DELETE FROM study_comment_attempts WHERE window < ?').bind(window),
+    db.prepare(`INSERT INTO study_comment_attempts (window, visitor, attempts) VALUES (?, ?, 1)
+      ON CONFLICT(window, visitor) DO UPDATE SET attempts = attempts + 1 WHERE attempts < ?
+      RETURNING attempts`).bind(window, visitor, commentAttemptsPerWindow),
   ]);
+  return result.results.length > 0;
 }
 
 async function renderStudyModeration(db, result) {
   let comments;
   try {
-    await ensureStudyComments(db);
-    ({ results: comments } = await db.prepare(`SELECT id, name, message FROM study_comments_pending
-      ORDER BY submitted_at, id LIMIT 30`).all());
+    ({ results: comments } = await withStudyCommentSchema(db, () => db.prepare(`SELECT id, name, message FROM study_comments_pending
+      ORDER BY submitted_at, id LIMIT 30`).all()));
   } catch {
     return '<section class="collection" id="moderasi-komentar"><h2>Moderasi komentar</h2><p>Antrean belum bisa dimuat.</p></section>';
   }
@@ -2077,31 +2093,44 @@ async function moderateStudyComment(request, db) {
   if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/.test(id) || !['approve', 'reject'].includes(action)) {
     return workroomPage('<h1>Permintaan tidak valid</h1>', 400);
   }
-  await ensureStudyComments(db);
   const remove = db.prepare('DELETE FROM study_comments_pending WHERE id = ? RETURNING id').bind(id);
   const operations = action === 'approve'
     ? [db.prepare(`INSERT INTO study_comments (name, message)
         SELECT name, message FROM study_comments_pending WHERE id = ?`).bind(id), remove]
     : [remove];
-  const results = await db.batch(operations);
+  const results = await withStudyCommentSchema(db, () => db.batch(operations));
   const result = results.at(-1).results.length ? (action === 'approve' ? 'approved' : 'rejected') : 'missing';
   return new Response(null, { status: 303, headers: {
     ...privateHeaders, Location: '/workroom/settings/?comment=' + result + '#moderasi-komentar',
   } });
 }
 
-async function comments(request, db) {
-  if (!db) return json({ error: 'Database binding COMMENTS_DB is missing' }, 503);
-  await ensureStudyComments(db);
+async function verifyStudyChallenge(request, fields, secret) {
+  const token = fields.get('cf-turnstile-response');
+  if (typeof token !== 'string' || !token || token.length > 2048) return false;
+  const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST', body: new URLSearchParams({ secret, response: token }),
+  });
+  if (!response.ok) return false;
+  const verification = await response.json();
+  return verification.success === true && verification.action === 'study_comment' &&
+    verification.hostname === new URL(request.url).hostname;
+}
 
+async function comments(request, env) {
+  const { COMMENTS_DB: db, STUDY_TURNSTILE_SITE_KEY: siteKey, STUDY_TURNSTILE_SECRET: secret } = env;
+  if (Boolean(siteKey) !== Boolean(secret)) return json({ error: 'Verifikasi komentar belum tersedia.' }, 503);
+  if (!db) return json({ error: 'Database binding COMMENTS_DB is missing' }, 503);
   if (request.method === 'GET') {
-    const { results } = await db.prepare(
+    const { results } = await withStudyCommentSchema(db, () => db.prepare(
       'SELECT name, message FROM study_comments ORDER BY id DESC LIMIT 50'
-    ).all();
-    return json({ comments: results });
+    ).all());
+    return json({ comments: results, ...(siteKey ? { siteKey } : {}) });
   }
 
+  if (Number(request.headers.get('Content-Length')) > 32768) return json({ error: 'Feedback too large' }, 413);
   const fields = await request.formData();
+  if (fields.get('company_website')) return json({ published: false, pending: true }, 202);
   const name = String(fields.get('name') || '').trim();
   const message = String(fields.get('message') || '').trim();
   const email = String(fields.get('email') || '').trim();
@@ -2109,6 +2138,16 @@ async function comments(request, db) {
   if (fields.get('public_comment') !== 'yes' || !name || !message || !category ||
       name.length > 100 || message.length > 1200 || email.length > 254 || category.length > 60) {
     return json({ error: 'Invalid feedback' }, 400);
+  }
+
+  if (!await withStudyCommentSchema(db, () => reserveStudyCommentAttempt(db, request))) {
+    return Response.json({ error: 'Terlalu banyak kiriman. Coba lagi dalam beberapa menit.' }, {
+      status: 429, headers: { 'Cache-Control': 'no-store', 'Retry-After': String(commentWindowSeconds) },
+    });
+  }
+
+  if (secret && !await verifyStudyChallenge(request, fields, secret)) {
+    return json({ error: 'Selesaikan verifikasi sebelum mengirim komentar.' }, 400);
   }
 
   const submission = new URLSearchParams({
@@ -2123,8 +2162,9 @@ async function comments(request, db) {
   if (!sent.ok) return json({ error: 'Feedback could not be sent' }, 502);
 
   try {
-    await db.prepare('INSERT INTO study_comments_pending (id, name, message) VALUES (?, ?, ?)')
-      .bind(crypto.randomUUID(), name, message).run();
+    await withStudyCommentSchema(db, () => db.prepare(
+      'INSERT INTO study_comments_pending (id, name, message) VALUES (?, ?, ?)'
+    ).bind(crypto.randomUUID(), name, message).run());
   } catch {
     return json({ published: false });
   }
@@ -2149,7 +2189,7 @@ export default {
       return json({ error: 'Invalid origin' }, 403);
     }
     try {
-      return await comments(request, env.COMMENTS_DB);
+      return await comments(request, env);
     } catch {
       return json({ error: 'Could not access the comments database' }, 503);
     }

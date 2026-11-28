@@ -34,7 +34,7 @@ collections:
         editor_components: [image, code-block, table]
         hint: "Isi editor ini menggantikan tampilan paragraf lama. Biarkan kosong untuk memakai tulisan lama. Mendukung tabel, gambar lokal, kode dan daftar bertingkat. Mode Markdown tersedia untuk penyuntingan struktur. HTML mentah dan embed pihak ketiga tidak dijalankan."
       - {label: Cover tulisan, name: cover, widget: image, required: false, choose_url: false, hint: "JPG/PNG/WebP/AVIF/GIF; nama file tanpa spasi. Kompresi WebP otomatis saat build; gunakan nama tanpa spasi dan unggahan di bawah 10 MB. Disarankan rasio 3:2."}
-      - {label: Deskripsi cover, name: cover_alt, widget: string, required: false}
+      - {label: Deskripsi cover, name: cover_alt, widget: string, required: false, hint: "Jelaskan isi gambar bila informatif. Kosongkan untuk gambar dekoratif."}
       - {label: Paragraf lama (dipakai jika editor baru kosong), name: body, widget: list, required: false, field: {label: Paragraf, name: paragraph, widget: text}}
       - {label: Palet visual, name: art, widget: number, value_type: int, default: 1, min: 0, max: 6}
       - {label: Judul SEO, name: seo_title, widget: string, required: false, hint: "Kosong = judul konten; usahakan sekitar 60 karakter."}
