@@ -1585,11 +1585,14 @@ async function workroomAttachment(request, url, db, kind) {
   }
   if (!upload) {
     if (!url.searchParams.has('preview') && !url.searchParams.has('download')) {
-      const { results: files } = await db.prepare(`SELECT 'legacy' AS id, p.name, p.media_type, c.uploaded_at
+      const { results: files } = await db.prepare(`SELECT 'legacy' AS id, p.name, p.media_type, c.uploaded_at,
+          COALESCE((SELECT SUM(length(bytes)) FROM workroom_task_pdf_chunks WHERE task_id = p.task_id), length(p.bytes)) AS size
         FROM workroom_task_pdfs p LEFT JOIN workroom_task_pdf_chunks c ON c.task_id = p.task_id AND c.part = 0
         JOIN workroom_entries t ON t.id = p.task_id WHERE t.id = ? AND t.kind = ? AND t.status <> 'trashed'
         UNION ALL
-        SELECT a.id, a.name, a.media_type, a.uploaded_at FROM workroom_attachments a
+        SELECT a.id, a.name, a.media_type, a.uploaded_at,
+          (SELECT SUM(length(bytes)) FROM workroom_attachment_chunks WHERE file_id = a.id) AS size
+        FROM workroom_attachments a
         JOIN workroom_entries t ON t.id = a.entry_id WHERE t.id = ? AND t.kind = ? AND t.status <> 'trashed'
         ORDER BY uploaded_at, id`).bind(id, kind, id, kind).all();
       return reply({ files });
@@ -1657,7 +1660,7 @@ async function workroomAttachment(request, url, db, kind) {
       .bind(offset / attachmentChunkSize, bytes.slice(offset, offset + attachmentChunkSize).buffer, newId));
   }
   const [stored] = await db.batch(statements);
-  return stored.results[0] ? reply({ id: newId, name, media_type: storedType, uploaded_at: uploadedAt }, 201)
+  return stored.results[0] ? reply({ id: newId, name, media_type: storedType, uploaded_at: uploadedAt, size }, 201)
     : reply({ error: 'Lampiran penuh atau entri sudah tidak tersedia. Maksimal 3 file.' }, 409);
 }
 

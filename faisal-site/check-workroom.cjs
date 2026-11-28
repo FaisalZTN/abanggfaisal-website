@@ -677,6 +677,39 @@ module.exports = async function checkWorkroom(browser, origin) {
     const pdfInput = pdfSection.getByLabel(/Pilih file/);
     await pdfInput.setInputFiles({ name: 'rusak.pdf', mimeType: 'application/pdf', buffer: Buffer.from('bukan PDF') });
     await pdfSection.getByText(/File gagal diunggah/).waitFor();
+    await pdfSection.getByRole('button', { name: 'Tutup pesan untuk rusak.pdf' }).click();
+    const dropTransfer = await page.evaluateHandle(() => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File(['Isi hasil drop'], 'Catatan drop.txt', { type: 'text/plain' }));
+      transfer.items.add(new File(['format contoh'], 'Program.exe', { type: 'application/octet-stream' }));
+      return transfer;
+    });
+    const dropZone = pdfSection.locator('.task-pdf-picker');
+    await dropZone.dispatchEvent('dragover', { dataTransfer: dropTransfer });
+    assert.notEqual(await dropZone.getAttribute('data-drag-over'), null);
+    let releaseDrop;
+    const pendingDrop = new Promise(resolve => { releaseDrop = resolve; });
+    await page.route(url => url.searchParams.get('name') === 'Catatan drop.txt', async route => {
+      await pendingDrop;
+      await route.fallback();
+    }, { times: 1 });
+    try {
+      await dropZone.dispatchEvent('drop', { dataTransfer: dropTransfer });
+      await pdfSection.getByRole('progressbar', { name: 'Unggah Catatan drop.txt' }).waitFor();
+    } finally {
+      releaseDrop();
+    }
+    await dropTransfer.dispose();
+    await pdfSection.getByRole('link', { name: 'Unduh: Catatan drop.txt' }).waitFor();
+    await pdfSection.getByRole('alert').filter({ hasText: 'Format file belum didukung.' }).waitFor();
+    assert.equal(await dropZone.getAttribute('data-drag-over'), null);
+    await pdfSection.getByRole('button', { name: 'Tutup pesan untuk Program.exe' }).click();
+    const droppedFile = pdfSection.getByRole('listitem').filter({ hasText: 'Catatan drop.txt' });
+    assert.match(await droppedFile.textContent(), /14 B/);
+    await droppedFile.getByLabel('Hapus Catatan drop.txt').click();
+    await droppedFile.getByRole('button', { name: 'Konfirmasi hapus lampiran' }).click();
+    await droppedFile.waitFor({ state: 'detached' });
+
     const objects = [
       '<< /Type /Catalog /Pages 2 0 R >>',
       '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
