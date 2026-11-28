@@ -119,7 +119,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     const skip = page.getByRole('link', { name: 'Lewati ke konten' });
     await skip.focus();
     await skip.press('Enter');
-    assert.equal(await page.evaluate(() => document.activeElement.id), 'workroom-main');
+    await page.waitForFunction(() => document.activeElement.id === 'workroom-main');
     await page.waitForSelector('.workroom-route-status',{state:'attached'});
     const olderText = 'Pembuka '.repeat(30) + 'Kata unik di akhir catatan';
     db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('note', ?, ?, 'active', '', 'normal')")
