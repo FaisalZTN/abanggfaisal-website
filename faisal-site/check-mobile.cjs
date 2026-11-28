@@ -299,8 +299,25 @@ async function checkHeader(page, width) {
   await checkWidth(page, 'Navigasi atas', width);
   const home = header.locator('a[aria-current="page"]');
   assert.equal(await home.textContent(), 'Home');
+  const theme = page.locator('#theme');
+  async function checkThemeCenter() {
+    const offset = await theme.locator('svg:visible').evaluate(icon => {
+      const control = icon.parentElement.getBoundingClientRect();
+      const box = icon.getBoundingClientRect();
+      const glyph = icon.getBBox();
+      return Math.max(
+        Math.abs(box.left + box.width / 2 - control.left - control.width / 2),
+        Math.abs(box.top + box.height / 2 - control.top - control.height / 2),
+        Math.abs(glyph.x + glyph.width / 2 - 12),
+        Math.abs(glyph.y + glyph.height / 2 - 12),
+      );
+    });
+    assert.ok(offset <= 0.25, 'The theme icon is off-center by ' + offset + ' px');
+  }
+  await checkThemeCenter();
   const light = await home.evaluate(element => getComputedStyle(element).backgroundColor);
-  await page.locator('#theme').click();
+  await theme.click();
+  await checkThemeCenter();
   const dark = await home.evaluate(element => getComputedStyle(element).backgroundColor);
   assert.notEqual(light, 'rgba(0, 0, 0, 0)');
   assert.notEqual(dark, light);
