@@ -5,11 +5,11 @@ import { legacyContent, readBlockNote, blockNoteBody } from '/workroom-note-form
 const formatButtons = [
   ['blocks', 'Tambah blok', 'plus'], ['toggleBold', 'Tebal', 'bold'], ['toggleItalic', 'Miring', 'italic'],
   ['toggleUnderline', 'Garis bawah', 'underline'], ['toggleSuperscript', 'Superskrip', 'superscript'],
-  ['toggleSubscript', 'Subskrip', 'subscript'], ['link', 'Sisipkan atau edit tautan', 'link'],
+  ['toggleSubscript', 'Subskrip', 'subscript'], ['link', 'Sisipkan tautan', 'link'],
 ];
 const paragraphOptions = {
   alignment: ['Perataan paragraf', { left: 'Kiri', center: 'Tengah', right: 'Kanan', justify: 'Rata kiri-kanan' }],
-  leading: ['Spasi antarbaris', { '1': '1', normal: '1,25', '1.5': '1,5', '2': '2', '2.5': '2,5', '3': '3' }],
+  leading: ['Spasi antarbaris', { '1': '1', normal: '1,65 (bawaan)', compact: '1,25 (lama)', '1.15': '1,15', '1.5': '1,5', '2': '2', '2.5': '2,5', '3': '3' }],
   spacing: ['Jarak antarparagraf', { none: 'Tanpa jarak', normal: 'Normal', wide: 'Lebar' }],
 };
 
@@ -62,9 +62,14 @@ function mountDetail(tools, mountBlockEditor, signal) {
     applyUrl(href);
   };
 
-  toolbar.innerHTML = formatButtons.map(([command, label, icon]) =>
-    `<button type="button" data-task-format="${command}" aria-label="${label}" title="${label}"><svg class="ui-icon" aria-hidden="true"><use href="/gentleface-icons.svg#${icon}"/></svg></button>`).join('') +
-    `<label class="note-icon-field" title="Palet warna">
+  const basicCommands = new Set(['blocks', 'toggleBold', 'toggleItalic', 'link']);
+  const formatButton = ([command, label, icon]) =>
+    `<button type="button" data-task-format="${command}" aria-label="${label}" title="${label}"><svg class="ui-icon" aria-hidden="true"><use href="/gentleface-icons.svg#${icon}"/></svg></button>`;
+  toolbar.innerHTML = formatButtons.filter(([command]) => basicCommands.has(command)).map(formatButton).join('') +
+    `<details class="note-format-more">
+      <summary aria-label="Format lainnya" title="Format lainnya"><svg class="ui-icon" aria-hidden="true"><use href="/gentleface-icons.svg#more-horizontal"/></svg></summary>
+      <div>${formatButtons.filter(([command]) => !basicCommands.has(command)).map(formatButton).join('')}
+      <label class="note-icon-field" title="Palet warna">
               <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
                 <path d="M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1.5-3.3 1.4 1.4 0 0 1 1.1-2.3H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3Z"/>
                 <path stroke-linecap="round" stroke-width="2.8" d="M7.5 11h.01M10 7.5h.01M14 7.5h.01M17.5 10.5h.01"/>
@@ -88,7 +93,7 @@ function mountDetail(tools, mountBlockEditor, signal) {
             <label class="note-icon-field" title="Sisipkan tanggal">
               <svg class="ui-icon" aria-hidden="true"><use href="/gentleface-icons.svg#calendar-day"/></svg>
               <input type="date" data-task-date aria-label="Sisipkan tanggal">
-            </label>`;
+            </label></div></details>`;
   const legacy = field.value.replace(/!\[([^\]\r\n]*)\]\((https?:\/\/[^\s)]+)\)/g, (token, label, value) => {
     if (!URL.canParse(value)) return token;
     const url = new URL(value);
@@ -150,7 +155,10 @@ function mountDetail(tools, mountBlockEditor, signal) {
 export function mount(panel, signal) {
   const editor = panel.querySelector('.workspace-editor form');
   const attachment = panel.querySelector('[data-task-attachment]');
-  if (attachment) mountAttachment(attachment, 'task', attachment.dataset.taskAttachment, signal);
+  if (attachment) {
+    mountAttachment(attachment, 'task', attachment.dataset.taskAttachment, signal);
+    panel.querySelector('[data-task-proof-link]').hidden = false;
+  }
   let guard;
   if (editor) {
     const status = editor.querySelector('[data-task-save-status]');

@@ -234,6 +234,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     wrongKind.pathname = '/workroom/tasks/';
     assert.equal((await worker.fetch(new Request(wrongKind, { headers: attachmentHeaders }), env)).status, 404);
     assert.equal(await noteAttachment.getByRole('listitem').count(), 3);
+    await noteAttachment.getByText('3 dari 3 lampiran', { exact: true }).waitFor();
     assert.ok(await noteFile.isDisabled());
     const extra = new URL(downloadUrl);
     extra.searchParams.delete('file');
@@ -416,6 +417,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     await editor.locator('strong').click();
     await page.keyboard.press('End');
     await page.keyboard.type(' disunting');
+    await page.getByLabel('Format lainnya', { exact: true }).click();
     for (const [label, option] of [
       ['Perataan paragraf', 'Rata kiri-kanan (Justify)'],
       ['Spasi antarbaris', '1,5'],
@@ -577,10 +579,25 @@ module.exports = async function checkWorkroom(browser, origin) {
     const schedule = dashboard.locator('.workroom-study-schedule');
     const exams = dashboard.locator('.overview-exams');
     const tasks = dashboard.locator('.overview-tasks');
+    const week = calendar.getByRole('group', { name: 'Kalender mingguan' });
+    const month = calendar.getByRole('region', { name: 'Kalender bulanan' });
+    await week.waitFor();
+    assert.equal(await week.getByRole('link').count(), 7);
+    const weekDate = await week.getByRole('link').first().boundingBox();
+    assert.ok(weekDate.width >= 44 && weekDate.height >= 44);
+    assert.ok(await month.isHidden());
+    const mobileTaskJump = dashboard.locator('.overview-mobile-tasks');
+    assert.ok((await mobileTaskJump.boundingBox()).y < 740);
+    await calendar.getByRole('button', { name: 'Lihat bulan' }).click();
+    await month.waitFor();
+    await calendar.getByRole('button', { name: 'Lihat minggu' }).click();
+    assert.ok(await month.isHidden());
     const [phoneCalendar, phoneSchedule, phoneExams, phoneTasks] = await Promise.all(
       [calendar, schedule, exams, tasks].map(panel => panel.boundingBox()));
     assert.ok(phoneCalendar.y < phoneSchedule.y && phoneSchedule.y < phoneExams.y && phoneExams.y < phoneTasks.y);
     await page.setViewportSize({ width: 1280, height: 800 });
+    await month.waitFor();
+    assert.ok(await week.isHidden());
     const [desktopCalendar, desktopSchedule, desktopExams, desktopTasks] = await Promise.all(
       [calendar, schedule, exams, tasks].map(panel => panel.boundingBox()));
     assert.equal(desktopCalendar.y, desktopSchedule.y);
@@ -633,6 +650,10 @@ module.exports = async function checkWorkroom(browser, origin) {
     db.prepare("UPDATE workroom_entries SET body = ? WHERE title = 'Baca jurnal'").run('# Referensi lama');
     await page.getByRole('link', { name: 'Baca jurnal' }).click();
     await page.locator('.workspace-editor').locator('select[name=status]').waitFor();
+    await page.locator('[data-task-list-back]').click();
+    await page.getByRole('link', { name: 'Baca jurnal' }).waitFor();
+    await page.getByRole('link', { name: 'Baca jurnal' }).click();
+    await page.locator('[data-task-proof-link]').waitFor();
     const priorityColors = await page.evaluate(() => {
       const root = document.documentElement;
       const original = root.getAttribute('data-workroom-theme');

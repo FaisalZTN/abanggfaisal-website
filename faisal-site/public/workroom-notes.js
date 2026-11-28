@@ -121,6 +121,10 @@ export function mount(panel, signal) {
     ['sub', 'Subskrip', 'subscript'], ['link', 'Sisipkan tautan', 'link'],
   ];
 
+  const basicMarks = new Set(['blocks', 'bold', 'italic', 'link']);
+  const markButton = ([mark, label, icon]) =>
+    `<button type="button" data-mark="${mark}"${mark === 'link' ? ' aria-haspopup="dialog"' : ''} aria-label="${label}" title="${label}">${noteActionIcon(icon)}</button>`;
+
   const paragraphMenus = [
     ['alignment', 'Perataan paragraf', 'M3 5h18M3 10h13M3 15h18M3 20h13', 'left',
       [['left', 'Rata kiri'], ['center', 'Rata tengah'], ['right', 'Rata kanan'], ['justify', 'Rata kiri-kanan (Justify)']]],
@@ -530,8 +534,10 @@ export function mount(panel, signal) {
           <div class="note-split-mode-left"><button type="button" id="note-mode-left">Edit</button></div>
           <div class="note-title-row"><div class="note-title-field" data-title="${escape(note.title)}"><textarea id="edit-title" rows="1" placeholder="Catatan baru" aria-label="Judul catatan" maxlength="160">${escape(note.title)}</textarea></div>
           <button type="button" class="note-screen-button" data-note-fullscreen aria-label="Layar penuh" title="Layar penuh"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button></div>
-          <div class="note-toolbar" role="group" aria-label="Format catatan">${toolbar.map(([mark, label, icon]) =>
-            `<button type="button" data-mark="${mark}"${mark === 'link' ? ' aria-haspopup="dialog"' : ''} aria-label="${label}" title="${label}">${noteActionIcon(icon)}</button>`).join('')}
+          <div class="note-toolbar" role="group" aria-label="Format catatan">${toolbar.filter(([mark]) => basicMarks.has(mark)).map(markButton).join('')}
+            <details class="note-format-more">
+              <summary aria-label="Format lainnya" title="Format lainnya">${noteActionIcon('more-horizontal')}</summary>
+              <div>${toolbar.filter(([mark]) => !basicMarks.has(mark)).map(markButton).join('')}
             <label class="note-icon-field" title="Palet warna">
               <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
                 <path d="M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1.5-3.3 1.4 1.4 0 0 1 1.1-2.3H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3Z"/>
@@ -550,7 +556,7 @@ export function mount(panel, signal) {
             <label class="note-icon-field" title="Sisipkan tanggal">
               ${noteActionIcon('calendar-day')}
               <input type="date" id="insert-date" aria-label="Sisipkan tanggal">
-            </label>
+            </label></div></details>
           </div>
           <div id="edit-body" class="note-rendered"></div>
           <section id="note-attachment" class="task-pdf" hidden></section>

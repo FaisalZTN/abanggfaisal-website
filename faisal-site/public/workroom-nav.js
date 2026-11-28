@@ -115,7 +115,17 @@
       nextPanel.querySelectorAll('noscript').forEach(element => element.remove());
       const replacement = document.importNode(nextPanel, true);
       replacement.classList.add('workroom-panel-enter');
-      if (push) history.pushState(null, '', url);
+      if (push) {
+        const opensTask = panel.dataset.workroomPanel === 'task' &&
+          url.pathname === '/workroom/tasks/' && url.searchParams.has('edit') &&
+          !shownUrl.searchParams.has('edit');
+        if (opensTask) {
+          const openDates = [...panel.querySelectorAll('.daily-task-card > details[open]')]
+            .map(details => details.parentElement.id);
+          history.replaceState({ ...history.state, taskListScroll: window.scrollY, openDates }, '');
+        }
+        history.pushState(opensTask ? { fromTaskList: true } : null, '', url);
+      }
       shownUrl = url;
       markRoute(url.pathname, 'aria-current');
       lifecycle.abort();
@@ -128,7 +138,13 @@
       panel.tabIndex = -1;
       panel.focus({ preventScroll: true });
       const target = url.hash && document.getElementById(decodeURIComponent(url.hash.slice(1)));
-      if (target) target.scrollIntoView();
+      if (!push && Number.isFinite(history.state?.taskListScroll)) {
+        const openDates = new Set(history.state.openDates);
+        for (const details of panel.querySelectorAll('.daily-task-card > details')) {
+          details.open = openDates.has(details.parentElement.id);
+        }
+        window.scrollTo(0, history.state.taskListScroll);
+      } else if (target) target.scrollIntoView();
       else window.scrollTo(0, 0);
     } catch {
       if (!request.signal.aborted) {
@@ -166,7 +182,12 @@
         if (pending) clearPending();
         return;
       }
-      if (canLeave()) void navigate(url, true);
+      if (!canLeave()) return;
+      if (link.hasAttribute('data-task-list-back') && history.state?.fromTaskList) {
+        history.back();
+        return;
+      }
+      void navigate(url, true);
     });
 
     window.addEventListener('popstate', () => {
