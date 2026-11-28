@@ -628,6 +628,20 @@ module.exports = async function checkWorkroom(browser, origin) {
     await todayPanel.getByRole('checkbox', { name: completedLabel }).waitFor();
     await page.getByRole('link', { name: 'Tugas', exact: true }).first().click();
     const dailyTask = page.locator('.daily-task-card').filter({ hasText: 'Tugas Ringkasan' });
+    const misalignment = await dailyTask.evaluate(card => {
+      const center = element => {
+        const box = element.getBoundingClientRect();
+        return box.top + box.height / 2;
+      };
+      const title = new Range();
+      title.selectNodeContents(card.querySelector('.daily-task-title'));
+      const line = title.getClientRects()[0];
+      return [
+        Math.abs(center(card.querySelector('.task-checkbox')) - line.top - line.height / 2),
+        Math.abs(center(card.querySelector('summary')) - center(card.querySelector('.daily-task-add'))),
+      ];
+    });
+    assert.ok(misalignment.every(offset => offset < 1.5), 'Task controls should align: ' + misalignment);
     await dailyTask.getByRole('checkbox', { name: completedLabel }).click();
     await dailyTask.getByText('Dikerjakan', { exact: true }).waitFor();
     assert.equal(db.prepare("SELECT status FROM workroom_entries WHERE title = 'Tugas Ringkasan'").get().status, 'doing');
@@ -1044,6 +1058,14 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.setViewportSize({ width: 1280, height: 800 });
     assert.ok(await create.isHidden());
     await page.goto(overview);
+    const sidebarRowsAlign = await page.locator('.workroom-nav-group summary').evaluate(summary => {
+      const center = element => {
+        const box = element.getBoundingClientRect();
+        return box.top + box.height / 2;
+      };
+      return [...summary.children].every(child => Math.abs(center(child) - center(summary)) < 1);
+    });
+    assert.ok(sidebarRowsAlign, 'Workspace label, icon, and chevron should share one row');
     const collapse = page.getByRole('button', { name: 'Ciutkan sidebar' });
     await collapse.click();
     const nav = page.locator('.workroom-nav');

@@ -496,7 +496,7 @@ function workroomDailyTasks(tasks, projects, filter, area) {
     const collapsed = date && date < today && items.every(task => task.status === 'done');
     return `<article class="daily-task-card" id="tasks-${date || 'undated'}"${!visible.length && date !== today ? ' hidden' : ''}>
       <details${collapsed ? '' : ' open'}>
-        <summary>${workroomIcon('chevron-right', 'ui-icon daily-task-chevron')}<strong>${e(title)}</strong>${date === today ? '<span class="daily-task-today">Hari ini</span>' : ''}
+        <summary>${workroomIcon('chevron-right', 'ui-icon daily-task-chevron')}<span class="daily-task-date"><strong>${e(title)}</strong>${date === today ? '<span class="daily-task-today">Hari ini</span>' : ''}</span>
           <small class="daily-task-progress" data-completed="${completed}" data-total="${items.length}" aria-label="${completed} dari ${items.length} selesai">${completed}/${items.length}</small></summary>
         ${items.length ? `<ul>${items.map(task => {
           const done = task.status === 'done';
@@ -923,7 +923,7 @@ async function workroomToday(request, url, env, renderPage) {
       </section>
       <section class="collection"><h2>Hari ini dan lewat tenggat</h2>
         ${list(due, 'Tidak ada tugas yang jatuh tempo.')}
-        <a href="${workroomPages.task.path}?add=task&amp;due=${today}#add-task">${workroomIcon('plus')} Tambah tugas hari ini</a>
+        <a class="today-add-task" href="${workroomPages.task.path}?add=task&amp;due=${today}#add-task">${workroomIcon('plus')} Tambah tugas hari ini</a>
       </section>
       <details class="collection today-upcoming"><summary>7 hari ke depan</summary>
         ${list(upcoming, 'Tidak ada tenggat dalam 7 hari ke depan.')}
