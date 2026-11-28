@@ -1777,3 +1777,39 @@ img[data-image-selected] { opacity: 0; }
 .study-moderation-list > li { padding-block: .7rem; border-block-end: 1px solid var(--line); }
 .study-moderation-list > li:last-child { border-block-end: 0; }
 .study-moderation-list form { display: flex; flex-wrap: wrap; padding-block: 0; }
+
+
+.workroom-skip {
+  position: fixed;
+  z-index: 100;
+  inset-block-start: .5rem;
+  inset-inline-start: .5rem;
+  padding: .6rem .9rem;
+  transform: translateY(-150%);
+  border: 1px solid var(--accent);
+  border-radius: .5rem;
+  background: var(--paper);
+  color: var(--ink);
+}
+.workroom-skip:focus { transform: none; }
+:is(.overview-text-action, .overview-calendar .reset-day, .daily-task-title) {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+}
+
+
+.workroom-layout { --control-border: #75819c; }
+.workroom-layout :is(input, select, textarea) { border-color: var(--control-border); }
+.workroom-layout select[name="priority"]:has(option[value="high"]:checked) { border-color: #a71d32; }
+.workroom-layout :is(input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.workroom-layout .note-icon-field :is(input, select):focus-visible { outline: 0; }
+.workroom-layout .note-icon-field:focus-within { outline: 2px solid var(--accent); }
+:is(.recent-notes > a, .workroom-study-heading > a, .workroom-drive-group h3 > a) {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+}

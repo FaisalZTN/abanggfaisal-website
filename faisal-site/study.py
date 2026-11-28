@@ -1,4 +1,5 @@
 """Build study dashboards, teacher directories and tutorials by block."""
+import hashlib
 import json
 import re
 from collections import Counter, defaultdict
@@ -372,7 +373,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
                 f'data-start="{e(item.get("lecture_start") or "")}" data-end="{e(item.get("lecture_end") or "")}" '
                 f'data-people="{e(people)}" data-location="{e(location)}" data-hours="{e(hours)}">'
                 f'<p class="study-slot-time">{e(hours)}<span data-session-state hidden></span></p>'
-                f'<div><h4><a href="{e(session_url)}">{e(item["title"])}</a></h4>'
+                f'<div><h3 class="study-slot-title"><a href="{e(session_url)}">{e(item["title"])}</a></h3>'
                 f'<p>{e(people or "Dosen belum tercantum")}</p>{location_html}<small>{e(reference)}</small></div></li>'
             )
         days = ''.join(
@@ -388,17 +389,29 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         schedule_days = []
         for key, slots in entries.items():
             day = date.fromisoformat(key)
-            schedule_days.append(f'<h3><time datetime="{key}">{date_label(day)}</time></h3>'
+            schedule_days.append(f'<h2><time datetime="{key}">{date_label(day)}</time></h2>'
                                  f'<ul class="study-agenda-list">{"".join(slots)}</ul>')
-        full_schedule = (f'<details class="study-full-schedule" data-full-schedule><summary>Lihat jadwal lengkap '
-                         f'({sum(map(len, entries.values()))} sesi)</summary>'
-                         + ''.join(schedule_days) + '</details>' if schedule_days else '')
+        schedule_link = ''
+        if schedule_days:
+            schedule_markup = ''.join(schedule_days)
+            serialized = json.dumps({'markup': schedule_markup}, ensure_ascii=False, separators=(',', ':')).encode()
+            filename = 'study-agenda-' + hashlib.sha256(serialized).hexdigest()[:16] + '.json'
+            (output / 'generated').mkdir(exist_ok=True)
+            (output / 'generated' / filename).write_bytes(serialized)
+            page('jadwal-lengkap/', 'Jadwal lengkap · ' + block_name,
+                 'Daftar semua sesi terverifikasi dalam WITA.',
+                 f'<section class="study-section" data-full-schedule><h1>Jadwal lengkap</h1>'
+                 f'<p>{e(block_name)} · WITA · {e(schedule_source)}</p>'
+                 f'<p><a class="link-action" href="{base}#jadwal-kuliah">Kembali ke ringkasan jadwal</a></p>'
+                 + schedule_markup
+                 + '</section>')
+            schedule_link = (f'<a class="link-action" href="{base}jadwal-lengkap/" data-schedule-source="/generated/{filename}">'
+                             f'Lihat jadwal lengkap ({sum(map(len, entries.values()))} sesi)</a>')
         if archived:
             note = f'<p>{e(schedule_note)}</p>' if schedule_note else ''
             return (f'<section class="study-section study-agenda" id="jadwal-kuliah">'
                     f'<h2>Arsip Jadwal Kuliah</h2><p>WITA · {e(schedule_source)}</p>' + note
-                    + (full_schedule or '<p>Jadwal belum tersedia.</p>')
-                    + f'<div class="study-agenda-links">{calendar_link}{link("#kuliah", "Lihat katalog kuliah")}</div></section>')
+                    + f'<div class="study-agenda-links">{schedule_link}{calendar_link}{link("#kuliah", "Lihat katalog kuliah")}</div></section>')
         note = schedule_note or f'Tanggal dan jam mengikuti {schedule_source}. Lokasi mengikuti pembaruan Ruang Belajar.'
         if combined_schedule is not None:
             note = 'Jadwal gabungan blok dan mata kuliah aktif dalam WITA. ' + note
@@ -416,12 +429,13 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             <p class="study-agenda-clock" data-agenda-clock hidden><time></time> WITA</p>
           </div>
           <div class="study-agenda-grid" data-agenda-days hidden>{days}</div>
-          <noscript><p>Aktifkan JavaScript untuk melihat jadwal hari ini dan besok dalam WITA. Tanggal tiap sesi tersedia di katalog.</p></noscript>
+          <p data-schedule-error role="status" hidden>Ringkasan jadwal belum bisa dimuat. Coba buka jadwal lengkap.</p>
+          <noscript><p>Aktifkan JavaScript untuk melihat jadwal hari ini dan besok dalam WITA. Jadwal lengkap tetap bisa dibuka lewat tautan di bawah.</p></noscript>
           <div class="study-agenda-foot">
             <p>{e(note)}</p>
-            <div class="study-agenda-links">{calendar_link}{link('#kuliah', 'Lihat katalog ' + session_name)}</div>
+            <div class="study-agenda-links">{schedule_link}{calendar_link}{link('#kuliah', 'Lihat katalog ' + session_name)}</div>
           </div>
-          {full_schedule}{past_classes}
+          {past_classes}
         </section>'''
 
     def exam_section():
@@ -726,10 +740,13 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
             <input type="checkbox" name="public_comment" value="yes">
             <span>Izinkan nama dan pesan saya ditampilkan sebagai komentar publik setelah disetujui. Email tetap pribadi.</span>
           </label>
+          <div data-comment-challenge hidden></div>
+          <div hidden><label>Situs perusahaan<input name="company_website" type="text" tabindex="-1" autocomplete="off"></label></div>
           <input type="hidden" name="subject" value="Masukan Ruang Belajar">
           <div class="study-feedback-actions">
             <button class="btn" type="submit">Kirim masukan</button>
             <p data-feedback-status role="status"></p>
+            <p data-feedback-error role="alert"></p>
           </div>
           <p class="study-feedback-contact">Atau kirim lewat <a href="mailto:abanggfaisal@gmail.com">email</a>.</p>
         </form>

@@ -29,15 +29,15 @@ jobs:
           node --check public/app.js
       - name: Start local production build
         run: |
-          python3 -m http.server 8080 --directory faisal-site/dist > /tmp/site-server.log 2>&1 &
+          python3 faisal-site/check-serve.py > /tmp/site-server.log 2>&1 &
           for attempt in {1..20}; do
             if curl --fail --silent http://localhost:8080/ > /dev/null; then exit 0; fi
             sleep 1
           done
           exit 1
-      - name: Mobile study flows
+      - name: Browser flows and interactive accessibility
         run: |
-          npm install --prefix "$RUNNER_TEMP/website-qa" --no-audit --no-fund playwright@1.56.1
+          npm install --prefix "$RUNNER_TEMP/website-qa" --no-audit --no-fund playwright@1.56.1 axe-core@4.11.1
           NODE_PATH="$RUNNER_TEMP/website-qa/node_modules" node faisal-site/check-mobile.cjs
       - name: Lighthouse reports
         run: |
@@ -56,13 +56,25 @@ jobs:
       - name: Summarize reports
         run: |
           python3 - <<'PY'
-          import json, pathlib, os
+          import json, pathlib, os, re
+          from urllib.request import urlopen
           rows=['| Report | Performance | Accessibility | SEO | LCP ms | CLS |','|---|---|---|---|---|---|']
           for p in sorted(pathlib.Path('quality-reports').glob('*.json')):
               x=json.loads(p.read_text())
               if x.get('runtimeError'): raise RuntimeError(str(x['runtimeError']))
               c=x['categories']; a=x['audits']
               rows.append(f"| {p.stem} | {c['performance']['score']} | {c['accessibility']['score']} | {c['seo']['score']} | {a['largest-contentful-paint']['numericValue']:.0f} | {a['cumulative-layout-shift']['numericValue']:.3f} |")
+          rows.extend(['', '### Production HTTP headers', ''])
+          try:
+              with urlopen('https://abanggfaisal.my.id/', timeout=10) as page:
+                  for name in ('Strict-Transport-Security', 'Content-Security-Policy-Report-Only'):
+                      rows.append(f"- {name}: {page.headers.get(name, 'not present')}")
+                  css = re.search(rb'href="(/style\.[a-f0-9]+\.css)"', page.read())
+              if css:
+                  with urlopen('https://abanggfaisal.my.id' + css[1].decode(), timeout=10) as asset:
+                      rows.append(f"- Versioned stylesheet Cache-Control: {asset.headers.get('Cache-Control', 'not present')}")
+          except OSError as error:
+              rows.append(f'- Production headers unavailable ({type(error).__name__}).')
           print('\n'.join(rows))
           with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f: f.write('\n'.join(rows))
           PY

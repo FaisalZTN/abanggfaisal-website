@@ -172,6 +172,10 @@
     window.addEventListener('popstate', () => {
       const url = new URL(location.href);
       if (!routes.has(url.pathname)) return;
+      if (url.pathname === shownUrl.pathname && url.search === shownUrl.search) {
+        shownUrl = url;
+        return;
+      }
       if (!canLeave()) {
         history.pushState(null, '', shownUrl);
         clearPending();

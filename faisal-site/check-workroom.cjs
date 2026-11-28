@@ -20,8 +20,16 @@ module.exports = async function checkWorkroom(browser, origin) {
   const key = await crypto.subtle.exportKey('jwk', pair.publicKey);
   key.kid = 'test';
   const originalFetch = global.fetch;
-  global.fetch = async (url) => {
+  global.fetch = async (url, options) => {
     if (url === 'https://formspree.io/f/xrpqaorq') return Response.json({ ok: true });
+    if (url === 'https://challenges.cloudflare.com/turnstile/v0/siteverify') {
+      assert.equal(options.body.get('secret'), 'fixture-secret');
+      return Response.json({
+        success: options.body.get('response') === 'valid-fixture',
+        action: 'study_comment',
+        hostname: new URL(origin).hostname,
+      });
+    }
     assert.equal(url, issuer+'/cdn-cgi/access/certs');
     return Response.json({keys:[key]});
   };
@@ -68,6 +76,22 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal((await approveComment(db.prepare('SELECT id FROM study_comments_pending').get().id, 'reject')).status, 303);
     assert.deepEqual(await (await worker.fetch(new Request(commentsUrl), commentsEnv)).json(),
       { comments: [{ name: 'Penguji', message: 'Tinjau sebelum terbit' }] });
+    for (let attempt = 0; attempt < 3; attempt++) {
+      assert.equal((await submitComment('Uji pembatasan laju')).status, 202);
+    }
+    const limited = await submitComment('Coba lagi');
+    assert.equal(limited.status, 429);
+    assert.equal(limited.headers.get('Retry-After'), '600');
+    const challengedEnv = {
+      ...commentsEnv, STUDY_TURNSTILE_SITE_KEY: 'fixture-site-key', STUDY_TURNSTILE_SECRET: 'fixture-secret',
+    };
+    const challenged = token => worker.fetch(new Request(commentsUrl, {
+      method: 'POST', headers: { Origin: origin, 'CF-Connecting-IP': '192.0.2.2' },
+      body: new URLSearchParams({ name: 'Penguji', message: 'Periksa tantangan', category: 'Materi',
+        public_comment: 'yes', 'cf-turnstile-response': token }),
+    }), challengedEnv);
+    assert.equal((await challenged('invalid-fixture')).status, 400);
+    assert.equal((await challenged('valid-fixture')).status, 202);
     const errors = [];
     page.on('pageerror', error=>errors.push(error.message));
     await page.route('**/workroom/**', async route => {
@@ -91,6 +115,11 @@ module.exports = async function checkWorkroom(browser, origin) {
     });
     await page.goto(origin+'/workroom/review/');
     await page.waitForSelector('.workroom-review h1');
+    assert.equal(await page.locator('main h1').count(), 1);
+    const skip = page.getByRole('link', { name: 'Lewati ke konten' });
+    await skip.focus();
+    await skip.press('Enter');
+    await page.waitForFunction(() => document.activeElement.id === 'workroom-main');
     await page.waitForSelector('.workroom-route-status',{state:'attached'});
     const olderText = 'Pembuka '.repeat(30) + 'Kata unik di akhir catatan';
     db.prepare("INSERT INTO workroom_entries (kind, title, body, status, due, priority) VALUES ('note', ?, ?, 'active', '', 'normal')")
