@@ -3,9 +3,35 @@ const { chromium } = require('playwright');
 const checkWorkroom = require('./check-workroom.cjs');
 
 const base = 'http://localhost:8080';
-const widths = [320, 360, 412];
+const widths = [320, 360, 375, 390, 400, 412, 768, 867, 1024, 1440];
+
+async function checkResponsivePages(browser) {
+  const routes = ['/', '/about/', '/journal/', '/journal/awal-dari-segalanya/',
+    '/shop/', '/shop/creative-kit/', '/ruang-belajar/', '/ruang-belajar/jadwal-lengkap/',
+    '/ruang-belajar/pengajar/', '/ruang-belajar/tutorial/kusta/'];
+  for (const width of widths) {
+    const galaxy = width === 400 || width === 867;
+    const page = await browser.newPage({
+      viewport: { width, height: width === 867 ? 400 : galaxy ? 867 : 800 },
+      isMobile: width <= 867, hasTouch: width <= 867,
+      deviceScaleFactor: galaxy ? 2.7 : 1, reducedMotion: 'reduce',
+    });
+    try {
+      for (const path of routes) {
+        assert.ok((await page.goto(base + path)).ok(), path);
+        await checkWidth(page, path, width);
+      }
+      await checkHeader(page, width);
+    } finally {
+      await page.close();
+    }
+  }
+  console.log('PASS responsive public pages at all target widths and Galaxy A16 landscape');
+}
 
 async function checkWidth(page, name, width) {
+  await page.waitForFunction(expected => document.documentElement.clientWidth === expected,
+    width, { timeout: 5000 });
   const { content, viewport } = await page.evaluate(() => ({
     content: document.documentElement.scrollWidth,
     viewport: document.documentElement.clientWidth,
@@ -442,7 +468,8 @@ async function main() {
   const browser = await chromium.launch(chromiumPath ? { executablePath: chromiumPath } : { channel: 'chrome' });
   try {
     await checkPageTransition(browser);
-    for (const width of widths) {
+    await checkResponsivePages(browser);
+    for (const width of [320, 360, 412]) {
       const page = await browser.newPage({ viewport: { width, height: 800 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
       try {
         await checkHeader(page, width);

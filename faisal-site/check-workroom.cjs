@@ -935,6 +935,61 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.goto(overview + '&day=' + tomorrow);
     await emptyTasksLink.waitFor();
     assert.ok((await emptyTasksLink.boundingBox()).height >= 44);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const screens = [320, 360, 375, 390, 400, 412, 768, 867, 1024, 1440];
+    const mobile = await page.context().newCDPSession(page);
+    const editTask = origin + '/workroom/tasks/?edit=' + legacyTask;
+    const noteId = db.prepare("SELECT id FROM workroom_entries WHERE title = 'Catatan lama'").get().id;
+    const editNote = origin + '/workroom/notes/?edit=' + noteId;
+    try {
+      for (const width of screens) {
+        const galaxy = width === 400 || width === 867;
+        const height = width === 867 ? 400 : 867;
+        await mobile.send('Emulation.setTouchEmulationEnabled', { enabled: width <= 867 });
+        await mobile.send('Emulation.setDeviceMetricsOverride', {
+          width, height, mobile: width <= 867, deviceScaleFactor: galaxy ? 2.7 : 1,
+        });
+        for (const [url, ready] of [
+          [overview, '.overview-calendar'],
+          [editTask, '[data-task-detail-input] .tiptap'],
+          [editNote, '#edit-title'],
+          [drivePageUrl, '.workroom-drive'],
+        ]) {
+          assert.ok((await page.goto(url)).ok(), url);
+          await page.locator(ready).waitFor();
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, url);
+          const targets = await page.locator('.workroom-nav a[aria-label]:visible, .workroom-nav-more > summary:visible, .note-toolbar button:visible')
+            .evaluateAll(elements => elements.filter(element => element.getBoundingClientRect().width < 43.9 ||
+              element.getBoundingClientRect().height < 43.9).map(element => element.getAttribute('aria-label')));
+          assert.deepEqual(targets, [], 'Small controls at ' + width + ' px on ' + url);
+          if (width === 867 && url === editTask) {
+            const settings = page.locator('.workroom-nav > a[aria-label="Pengaturan"]');
+            await settings.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
+            const box = await settings.boundingBox();
+            assert.ok(box.y >= -1 && box.y + box.height <= height + 1, JSON.stringify(box));
+            await page.getByRole('button', { name: 'Tambah blok', exact: true }).last().click();
+            const menu = page.getByRole('listbox', { name: 'Jenis blok' });
+            const bounds = await menu.boundingBox();
+            assert.ok(bounds && bounds.y >= 0 && bounds.y + bounds.height <= height);
+            await page.keyboard.press('Escape');
+          }
+          if (url === overview) {
+            const toggle = page.getByRole('button', { name: 'Lihat bulan' });
+            if (width < 960) {
+              await toggle.click();
+              assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
+            }
+            const cell = await page.locator('.days a').first().boundingBox();
+            assert.ok(cell.width >= 44 && cell.height >= 44, 'Calendar cells at ' + width + ' px');
+          }
+        }
+      }
+    } finally {
+      await mobile.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+      await mobile.send('Emulation.clearDeviceMetricsOverride');
+      await mobile.detach();
+    }
+    console.log('PASS Workroom dashboard, calendar, editors and Drive at all target widths');
     assert.deepEqual(errors, []);
     console.log('Drive shortcuts: desktop and mobile placement, popup, shared edits, and authentication');
     console.log('Authenticated worker and Chromium: all Workroom panels, history, draft protection, mobile menu and persisted themes');
