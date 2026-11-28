@@ -1,17 +1,54 @@
 (() => {
-  const more = document.querySelector('.workroom-nav-more');
-  if (!more) return;
-  const summary = more.querySelector('summary');
-  document.addEventListener('click', event => {
-    if (more.open && (!more.contains(event.target) || event.target.closest('a[href]'))) more.open = false;
+  const sidebar = document.querySelector('.workroom-nav');
+  if (!sidebar) return;
+  const more = sidebar.querySelector('.workroom-nav-more');
+  const trigger = more.querySelector('summary');
+  const dialog = more.querySelector('dialog');
+  const mobile = matchMedia('(max-width: 600px)');
+  trigger.addEventListener('click', event => {
+    event.preventDefault();
+    more.open = true;
+    dialog.showModal();
   });
-  document.addEventListener('keydown', event => {
-    if (event.key !== 'Escape' || !more.open) return;
-    const restoreFocus = more.contains(document.activeElement);
-    more.open = false;
-    if (restoreFocus) summary.focus();
+  dialog.addEventListener('click', event => {
+    const bounds = dialog.getBoundingClientRect();
+    const backdrop = event.target === dialog && (event.clientX < bounds.left ||
+      event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom);
+    if (backdrop || event.target.closest('a[href]')) dialog.close();
   });
-  window.addEventListener('pagehide', () => { more.open = false; });
+  dialog.addEventListener('close', () => { more.open = false; });
+  mobile.addEventListener('change', () => { if (!mobile.matches && dialog.open) dialog.close(); });
+  window.addEventListener('pagehide', () => { if (dialog.open) dialog.close(); });
+
+  const wide = matchMedia('(min-width: 960px)');
+  const collapse = sidebar.querySelector('.workroom-nav-collapse');
+  const group = sidebar.querySelector('.workroom-nav-group');
+  let preference;
+  try { preference = localStorage.getItem('workroom-sidebar'); } catch {}
+  const isCollapsed = () => preference === 'rail' || (preference !== 'expanded' && !wide.matches);
+  function updateSidebar() {
+    const collapsed = isCollapsed();
+    document.body.dataset.sidebarMode = collapsed ? 'rail' : 'expanded';
+    const label = collapsed ? 'Bentangkan sidebar' : 'Ciutkan sidebar';
+    collapse.setAttribute('aria-label', label);
+    collapse.setAttribute('title', label);
+    collapse.setAttribute('aria-expanded', String(!collapsed));
+  }
+  function setCollapsed(collapsed) {
+    preference = collapsed ? 'rail' : 'expanded';
+    try { localStorage.setItem('workroom-sidebar', preference); } catch {}
+    updateSidebar();
+  }
+  collapse.hidden = false;
+  collapse.addEventListener('click', () => setCollapsed(!isCollapsed()));
+  group.querySelector('summary').addEventListener('click', event => {
+    if (!isCollapsed()) return;
+    event.preventDefault();
+    setCollapsed(false);
+    group.open = true;
+  });
+  wide.addEventListener('change', updateSidebar);
+  updateSidebar();
 })();
 
 (() => {
@@ -57,8 +94,6 @@
   }
 
   function markRoute(path, attribute) {
-    if (routes.get(path) === 'privateNotes') path = '/workroom/notes/';
-    if (routes.get(path) === 'project') path = '/workroom/tasks/';
     const more = sidebar.querySelector('.workroom-nav-more');
     const marker = attribute === 'aria-current' ? 'data-active' : 'data-pending';
     let inMore = false;
@@ -71,6 +106,10 @@
       }
     }
     more.toggleAttribute(marker, inMore);
+    if (attribute === 'aria-current') {
+      const group = sidebar.querySelector('.workroom-nav-group');
+      if (group.querySelector('[aria-current="page"]')) group.open = true;
+    }
   }
 
   const status = document.createElement('p');
