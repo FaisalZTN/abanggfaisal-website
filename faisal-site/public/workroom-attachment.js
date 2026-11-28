@@ -29,10 +29,13 @@ export function mountAttachment(section, kind, id, signal) {
   }
 
   section.innerHTML = `
-    <h3 id="workroom-attachment-heading">${kind === 'task' ? 'Bukti tugas' : 'Lampiran catatan'}</h3>
+    <div class="workroom-attachment-heading">
+      <h3 id="workroom-attachment-heading">${kind === 'task' ? 'Bukti tugas' : 'Lampiran catatan'}</h3>
+      <small data-attachment-count hidden></small>
+    </div>
     <label class="task-pdf-picker"><input class="note-sr-only" type="file" multiple disabled
       accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.odt,.rtf,.txt,.md,.csv,.tsv,.xls,.xlsx,.ods,.ppt,.pptx,.odp,.zip,.mp3,.m4a,.wav,.mp4,.mov,.heic">
-      <span>Pilih file <small>· maks. 3 file, 10 MB per file</small></span></label>
+      <span>Pilih file <small>· maks. 10 MB per file</small></span></label>
     <ul class="workroom-attachment-list" aria-label="Daftar lampiran" hidden></ul>
     <p role="status"></p>
     <dialog class="workroom-url-dialog task-pdf-preview" aria-labelledby="workroom-attachment-title">
@@ -51,6 +54,7 @@ export function mountAttachment(section, kind, id, signal) {
 
   const input = section.querySelector('input');
   const list = section.querySelector('ul');
+  const count = section.querySelector('[data-attachment-count]');
   const status = section.querySelector('[role="status"]');
   const dialog = section.querySelector('dialog');
   const frame = dialog.querySelector('iframe');
@@ -58,7 +62,10 @@ export function mountAttachment(section, kind, id, signal) {
   let files = [];
   let busy = true;
 
-  function render() {
+  function render(reveal = []) {
+    count.hidden = false;
+    count.textContent = files.length + ' dari 3 lampiran';
+    input.closest('label').hidden = files.length >= 3;
     list.hidden = !files.length;
     input.disabled = files.length >= 3 || busy;
     list.replaceChildren(...files.map(file => {
@@ -75,12 +82,11 @@ export function mountAttachment(section, kind, id, signal) {
         action.download = '';
         action.textContent = 'Unduh: ' + file.name;
       }
-      if (kind === 'task') {
-        action.setAttribute('aria-label', action.textContent);
-        action.classList.add('workroom-file-action');
-        action.innerHTML = `<svg class="ui-icon" aria-hidden="true"><use href="/gentleface-icons.svg#${file.media_type.startsWith('image/') ? 'image' : 'file-text'}"/></svg><span></span>`;
-        action.lastElementChild.textContent = file.name;
-      }
+      action.setAttribute('aria-label', action.textContent);
+      action.classList.add('workroom-file-action');
+      action.innerHTML = `<svg class="ui-icon" aria-hidden="true"><use href="/gentleface-icons.svg#${file.media_type.startsWith('image/') ? 'image' : 'file-text'}"/></svg><span></span>`;
+      action.lastElementChild.textContent = file.name;
+      row.classList.toggle('workroom-file-added', reveal.includes(file));
       const timestamp = document.createElement('small');
       timestamp.dataset.attachmentUploaded = '';
       timestamp.textContent = file.uploaded_at ? 'Diunggah ' + uploadTime.format(new Date(file.uploaded_at)) + ' WITA'
@@ -90,8 +96,7 @@ export function mountAttachment(section, kind, id, signal) {
       confirmation.querySelector('summary').setAttribute('aria-label', 'Hapus ' + file.name);
       confirmation.querySelector('button').onclick = () => remove(file);
       row.append(action, confirmation);
-      if (kind === 'task') action.lastElementChild.append(timestamp);
-      else row.append(timestamp);
+      action.lastElementChild.append(timestamp);
       return row;
     }));
   }
@@ -177,7 +182,8 @@ export function mountAttachment(section, kind, id, signal) {
     }
     if (signal.aborted || !section.isConnected) return;
     busy = false;
-    render();
+    render(added);
+    if (input.disabled) section.querySelector('.workroom-file-action')?.focus();
     status.textContent = errors.length ? 'File gagal diunggah. ' + errors.join(' ') : added.length + ' lampiran tersimpan.';
     const [file] = added;
     if (selected.length === 1 && file && !dialog.open &&

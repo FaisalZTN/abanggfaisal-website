@@ -5,6 +5,16 @@ export function mount(panel, signal) {
   const { today, google } = root.dataset;
   const configured = google === 'true';
   const grid = root.querySelector('.days');
+  const week = root.querySelector('.calendar-week');
+  const toggleMonth = root.querySelector('[data-toggle-month]');
+  const mobileTasks = root.querySelector('.overview-mobile-tasks');
+  root.classList.add('calendar-switchable');
+  week.hidden = toggleMonth.hidden = mobileTasks.hidden = false;
+  toggleMonth.addEventListener('click', () => {
+    const expanded = root.classList.toggle('calendar-show-month');
+    toggleMonth.setAttribute('aria-expanded', String(expanded));
+    toggleMonth.textContent = expanded ? 'Lihat minggu' : 'Lihat bulan';
+  }, { signal });
   const [previous, next] = root.querySelectorAll('.calendar-heading a');
   const monthHeading = root.querySelector('.calendar-heading h2');
   const taskDate = root.querySelector('[data-overview-task-date]');
@@ -18,6 +28,7 @@ export function mount(panel, signal) {
 
   const dateLabel = new Intl.DateTimeFormat('id-ID', { dateStyle: 'long', timeZone: 'UTC' });
   const monthLabel = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const weekday = new Intl.DateTimeFormat('id-ID', { weekday: 'short', timeZone: 'UTC' });
   const months = new Map();
   const pending = new Map();
   const calendarPath = location.pathname;
@@ -61,15 +72,38 @@ export function mount(panel, signal) {
     grid.append(cells);
   }
 
+  function showWeek(day) {
+    if ([...week.children].some(link => link.dataset.calendarDate === day)) return;
+    const start = toDate(day);
+    start.setUTCDate(start.getUTCDate() - start.getUTCDay());
+    const links = Array.from({ length: 7 }, (_, offset) => {
+      const date = new Date(start);
+      date.setUTCDate(start.getUTCDate() + offset);
+      const link = document.createElement('a');
+      setLink(link, iso(date));
+      const label = document.createElement('small');
+      label.textContent = weekday.format(date);
+      const number = document.createElement('strong');
+      number.textContent = date.getUTCDate();
+      link.append(label, number);
+      if (iso(date) === today) link.setAttribute('aria-current', 'date');
+      return link;
+    });
+    week.replaceChildren(...links);
+  }
+
   function updateDays(calendar) {
+    const openCount = dueList.querySelectorAll('[data-agenda-task]:not([data-agenda-completed])').length;
+    mobileTasks.querySelector('[data-mobile-due-count]').textContent =
+      openCount ? openCount + ' tugas terbuka' : 'Tidak ada tugas terbuka';
     const taskDates = new Set(tasks.filter(task => !task.hasAttribute('data-agenda-completed')).map(task => task.dataset.due));
-    for (const link of grid.querySelectorAll('a')) {
+    for (const link of root.querySelectorAll('.days a, .calendar-week a')) {
       const day = link.dataset.calendarDate;
       const hasTask = taskDates.has(day);
       const hasEvent = calendar && Object.hasOwn(calendar.days, day);
       link.classList.toggle('selected', day === selected);
       link.classList.toggle('marked', hasTask || hasEvent);
-      link.setAttribute('aria-label', day + (hasTask ? ', ada tugas' : '') + (hasEvent ? ', ada acara Google Calendar' : ''));
+      link.setAttribute('aria-label', dateLabel.format(toDate(day)) + (day === selected ? ', dipilih' : '') + (hasTask ? ', ada tugas' : '') + (hasEvent ? ', ada acara Google Calendar' : ''));
     }
   }
 
@@ -103,6 +137,7 @@ export function mount(panel, signal) {
     selected = day;
     const month = day.slice(0, 7);
     showMonth(day);
+    showWeek(day);
     dayHeading.textContent = dateLabel.format(toDate(day));
     if (taskDate) taskDate.textContent = day === today ? 'Hari ini dan lewat tenggat' : dayHeading.textContent;
     for (const task of tasks) task.querySelector('input[name="day"]').value = day;

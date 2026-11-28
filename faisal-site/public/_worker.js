@@ -164,6 +164,7 @@ function workroomForm(kind, entry, projects, standalone = false, defaultDue = ''
     <input type="hidden" name="kind" value="${kind}">
     <input type="hidden" name="id" value="${entry?.id ?? ''}">
     <label>Judul<input name="title" required maxlength="160" value="${e(entry?.title)}"></label>
+    ${taskEditor ? '<div class="task-editor-actions"><a href="#task-proof" data-task-proof-link hidden>Bukti tugas</a><p data-task-save-status role="status"></p></div>' : ''}
     ${taskEditor ? '<details class="task-detail-disclosure" open><summary>Detail</summary>' : ''}
     <label${kind === 'task' ? ' data-task-detail-source' : ''}${richTask ? ' hidden' : ''}>${kind === 'note' ? 'Isi catatan (Markdown)' : 'Detail'}<textarea name="body" rows="${standalone ? 12 : 3}" maxlength="${richTask ? 100000 : 10000}"${blockBody ? ' disabled' : ''}>${e(blockBody ? noteBodyText(entry.body) : entry?.body)}</textarea></label>
     ${blockBody ? `<p><a href="${workroomPages.note.path}?edit=${entry.id}">Edit isi di editor blok</a></p>` : ''}
@@ -185,7 +186,6 @@ function workroomForm(kind, entry, projects, standalone = false, defaultDue = ''
     ${kind === 'task' ? `<label>Area<input name="task_area" list="task-areas" maxlength="60" value="${e(entry?.task_area ?? defaultArea)}" placeholder="Contoh: Akademik"></label>` : ''}
     ${kind !== 'project' ? `<label>Proyek<select name="project_id"><option value="">Tanpa proyek</option>${projectOptions}</select></label>` : ''}
     </div>
-    ${kind === 'task' && entry ? '<p data-task-save-status role="status"></p>' : ''}
     <button name="action" value="save">${entry ? 'Simpan perubahan' : 'Tambah'}</button>
     ${entry && !taskEditor ? '<details><summary>Hapus entri</summary><button name="action" value="delete" formnovalidate>Konfirmasi hapus</button></details>' : ''}
   </form>`;
@@ -436,7 +436,8 @@ function workroomCalendar(day, tasks, today, google, fullCalendar) {
     const value = day.slice(0, 8) + String(i + 1).padStart(2, '0');
     return `<a data-calendar-date="${value}" href="${href(value)}" class="${value === day ? 'selected ' : ''}${dated.has(value) || google.has(value) ? 'marked' : ''}" aria-label="${value}${dated.has(value) ? ', ada tugas' : ''}${google.has(value) ? ', ada acara Google Calendar' : ''}"${value === today ? ' aria-current="date"' : ''}>${i + 1}</a>`;
   });
-  return `<section class="calendar"><div class="calendar-heading">
+  return `<div class="calendar-week" hidden role="group" aria-label="Kalender mingguan"></div>
+  <section class="calendar" id="overview-month" aria-label="Kalender bulanan"><div class="calendar-heading">
     ${monthLink(-1, 'Bulan sebelumnya', workroomIcon('arrow-left'))}
     <h2>${date.toLocaleDateString('id-ID', {month:'long', year:'numeric', timeZone:'UTC'})}</h2>
     ${monthLink(1, 'Bulan berikutnya', workroomIcon('arrow-right'))}
@@ -528,15 +529,21 @@ function workroomWorkspace(entries, params, areas) {
     if (area) query.set('area', area);
     return `<a href="${path}?${e(query)}#workspace"${view === key ? ' aria-current="true"' : ''}>${label}</a>`;
   }).join('');
+  const returnQuery = new URLSearchParams({ view });
+  if (filter) returnQuery.set('status', filter);
+  if (area) returnQuery.set('area', area);
+  const returnAnchor = view === 'daily' && selected && (!filter || filter === selected.status)
+    ? 'tasks-' + (validWorkroomDay(selected.due) ? selected.due : 'undated') : 'workspace';
   const editor = selected ? `<section class="collection workspace-editor"><h2 class="note-sr-only">${e(selected.title)}</h2>
+    <a class="task-list-back" data-task-list-back href="${path}?${e(returnQuery)}#${returnAnchor}">${workroomIcon('arrow-left')} Kembali ke Tugas</a>
     ${workroomForm(selected.kind, selected, entries.filter(entry => entry.kind === 'project'), true)}
-    <section class="task-pdf" data-task-attachment="${e(selected.id)}" hidden></section>
+    <section id="task-proof" tabindex="-1" class="task-pdf" data-task-attachment="${e(selected.id)}" hidden></section>
     <details class="task-delete">
       <summary aria-label="Hapus tugas" title="Hapus tugas">${workroomIcon('trash')}</summary>
       <button form="task-editor-form" name="action" value="delete" formnovalidate>Konfirmasi hapus tugas</button>
     </details>
   </section>` : '';
-  return `<div class="workspace" id="workspace">${editor}<section class="collection">
+  return `<div class="workspace"${selected ? ' data-task-editing' : ''} id="workspace">${editor}<section class="collection">
     <h2>Daftar tugas</h2><div class="workspace-tools">${views}
     <form method="get" action="${path}#workspace" data-task-filter><input type="hidden" name="area" value="${e(area)}"><input type="hidden" name="view" value="${view}">
     <select name="status" aria-label="Filter status"><option value="">Semua status</option>
@@ -1230,7 +1237,8 @@ async function renderWorkroom(db, page, url, env, renderPage, driveShortcuts = [
       <script type="application/workroom-module" data-src="/workroom-greeting.js"></script>
       <div class="overview calendar-agenda" id="agenda" data-day="${day}" data-today="${today}" data-google="${showGoogle}"${fullCalendar ? ' data-calendar-full' : ''}>
         <section class="collection overview-calendar" aria-labelledby="overview-calendar-title">
-          <h2 id="overview-calendar-title">Kalender</h2>
+          <div class="overview-card-heading"><h2 id="overview-calendar-title">Kalender</h2>
+            <button type="button" data-toggle-month aria-expanded="false" aria-controls="overview-month" hidden>Lihat bulan</button></div>
           ${workroomCalendar(day, tasks.filter(task => task.status !== 'done'), today, google.entries, fullCalendar)}
           <template id="calendar-tasks">${tasks.filter(entry => !dueIds.has(entry.id)).map(entry => workroomDueTask(entry, today, taskContext)).join('')}</template>
           <script type="application/workroom-module" data-src="/workroom-calendar.js"></script>
@@ -1241,6 +1249,7 @@ async function renderWorkroom(db, page, url, env, renderPage, driveShortcuts = [
             ${showGoogle && !fullCalendar ? `<noscript><p><a href="${WORKROOM}?day=${day}&amp;calendar=full#agenda">Muat Google Calendar</a></p></noscript>` : ''}
           </section>
         </section>
+        <a class="overview-text-action overview-mobile-tasks" href="#overview-tasks" hidden><span data-mobile-due-count></span> ${workroomIcon('chevron-right')}</a>
         <div class="overview-agenda-list">
           ${studySchedule}
           <section class="collection overview-exams" id="ujian-terdekat" aria-labelledby="workroom-exams-title"
@@ -1251,7 +1260,7 @@ async function renderWorkroom(db, page, url, env, renderPage, driveShortcuts = [
             <noscript><p><a href="${workroomOverviewUrl}&amp;exams=full#ujian-terdekat">Muat jadwal ujian</a></p></noscript>
             <script type="application/workroom-module" data-src="/workroom-review.js"></script>` : ''}
           </section>
-          <section class="collection overview-tasks agenda-tasks" aria-labelledby="overview-task-heading">
+          <section id="overview-tasks" tabindex="-1" class="collection overview-tasks agenda-tasks" aria-labelledby="overview-task-heading">
             <div class="overview-card-heading">
               <div><h2 id="overview-task-heading">Tugas</h2><p data-overview-task-date>${day === today ? 'Hari ini dan lewat tenggat' : e(reviewDateLabel(day))}</p></div>
               <a class="overview-icon-link" href="${workroomPages.task.path}?add=task#add-task" aria-label="Tambah tugas" title="Tambah tugas">${workroomIcon('plus')}</a>
