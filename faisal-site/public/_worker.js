@@ -923,7 +923,7 @@ async function workroomToday(request, url, env, renderPage) {
       </section>
       <section class="collection"><h2>Hari ini dan lewat tenggat</h2>
         ${list(due, 'Tidak ada tugas yang jatuh tempo.')}
-        <a href="${workroomPages.task.path}?add=task&amp;due=${today}#add-task">${workroomIcon('plus')} Tambah tugas hari ini</a>
+        <a class="today-add-task" href="${workroomPages.task.path}?add=task&amp;due=${today}#add-task">${workroomIcon('plus')} Tambah tugas hari ini</a>
       </section>
       <details class="collection today-upcoming"><summary>7 hari ke depan</summary>
         ${list(upcoming, 'Tidak ada tenggat dalam 7 hari ke depan.')}

@@ -383,7 +383,7 @@ main:has(.notes-desk) { max-width:100rem; }
 .category-head h2 { margin:0 0 0 8px; }
 .category-head #add-category {
   display:grid;
-  place-items:center;
+  place-content:center;
   flex:0 0 44px;
   width:44px;
   height:44px;
@@ -433,7 +433,12 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .google-agenda ul { list-style: none; margin: 0; padding: 0; }
 .google-agenda li { display: grid; grid-template-columns: 6.25rem minmax(0, 1fr); align-items: baseline; gap: .5rem; padding: .55rem .65rem; margin-block: .35rem; background: var(--selected); border-radius: .6rem; overflow-wrap: anywhere; }
 .google-agenda small { color: var(--muted); }
-.note-toolbar [data-mark] { display:inline-grid; place-items:center; }
+.note-toolbar :is([data-mark], [data-task-format]) {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 44px;
+  padding: 0;
+}
 .note-toolbar [data-mark][aria-pressed="true"] { background:var(--selected); }
 .note-toolbar #insert-date { width:auto; max-width:100%; padding-inline:.45rem; }
 .note-rendered:has(> div:only-child > br:only-child)::before,
@@ -917,7 +922,6 @@ main:has(.notes-desk) { padding-top:1.5rem; }
     place-self: center;
   }
 }
-.daily-task-add .ui-icon use { transform: translate(0, .25px); }
 .daily-task-add:hover, .daily-task-add:focus-visible { background: var(--selected); }
 .daily-task-card ul { display: grid; list-style: none; padding: 0 .7rem .45rem; margin: 0; }
 :is(.daily-task-card, .due-list) li {
@@ -1047,6 +1051,12 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .today-icon::-webkit-details-marker { display: none; }
 .today-icon:hover, .today-icon:focus-visible { background: var(--selected); }
 .today-icon svg, .note-mobile-category svg { width: 24px; height: 24px; flex: none; }
+.today-add-task {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-block-size: 44px;
+}
 .today-inbox { margin-top: .75rem; }
 .inbox-items > li { margin-block: .5rem; }
 .inbox-items p { white-space: pre-wrap; }
@@ -1060,11 +1070,13 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   .note-mobile-category { display: flex; align-items: center; gap: .4rem; margin-block: .5rem; }
   .note-mobile-category label { display: flex; flex: 1; align-items: center; gap: .4rem; min-width: 0; }
   .note-mobile-category select { min-width: 0; }
-  .note-index .note-mobile-category button { display: grid; place-items: center; width: 44px; flex: none; }
+  .note-index .note-mobile-category button { display: grid; place-items: center; width: 44px; padding: 0; flex: none; }
 }
 
 .ui-icon { width: 24px; height: 24px; flex: none; vertical-align: -.15em; }
-.note-toolbar .ui-icon { vertical-align: middle; }
+.ui-icon use[href$="#plus"] { transform: translateY(.25px); }
+.note-toolbar .ui-icon use[href$="#superscript"] { transform: translate(-.3px, 2.2px); }
+.note-toolbar .ui-icon use[href$="#subscript"] { transform: translate(-.3px, -1.8px); }
 
 .note-trash { margin-top: .75rem; }
 .note-trash summary { display: flex; align-items: center; gap: .4rem; }
@@ -1073,7 +1085,7 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .note-trash li { display: flex; align-items: center; justify-content: space-between; gap: .4rem; }
 .note-trash li span { min-width: 0; overflow-wrap: anywhere; }
 .note-index .note-trash button, #note-status button { width: auto; min-height: 44px; }
-.category-head [data-delete-category] { display: grid; place-items: center; flex: 0 0 44px; width: 44px; padding: 0; }
+.category-head [data-delete-category] { display: grid; place-content: center; flex: 0 0 44px; width: 44px; padding: 0; }
 
 .category-head h2 { margin-inline-end: auto; }
 .category-head-actions { display: flex; align-items: center; flex: none; }
@@ -1914,7 +1926,7 @@ img[data-image-selected] { opacity: 0; }
   min-block-size: 44px;
 }
 
-.calendar-week, [data-toggle-month], .overview-mobile-tasks { display: none; }
+.calendar-week, [data-toggle-month], .overview-mobile-tasks, .overview-mobile-tasks[hidden] { display: none; }
 @media (max-width: 959px) {
   .calendar-switchable:not(.calendar-show-month) #overview-month { display: none; }
   .calendar-switchable .calendar-week:not([hidden]) {

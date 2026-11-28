@@ -323,8 +323,9 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
     calendar_ids = write_calendar(output, active, teachers, base, block_id, block_name, schedule_source)
     roster = {**roster, **{key: teachers[key] for key in counts}}
 
-    def link(path, title):
-        return f'<a href="{base}{path}">{e(title)}</a>'
+    def link(path, title, *, css_class=''):
+        class_attr = f' class="{e(css_class)}"' if css_class else ''
+        return f'<a{class_attr} href="{base}{path}">{e(title)}</a>'
 
     def page(path, title, intro, body):
         write(base + path, title, intro,
@@ -486,7 +487,7 @@ def render_block(block, selector, guidelines, lectures, tutorials, teachers, ros
         </section>'''
 
     def back():
-        return '<p>' + link('', '@@arrow-left@@ Ruang Belajar') + '</p>'
+        return '<p>' + link('', '@@arrow-left@@ Ruang Belajar', css_class='link-action') + '</p>'
 
     def tutorial_topics(item):
         entries = ''.join(
