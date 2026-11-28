@@ -49,9 +49,10 @@ function workroomDriveLink(item, content) {
 
 function workroomDocument(content, page) {
   const wordmark = '<a class="workroom-wordmark" href="/">Faysaruworks.</a>';
-  const currentPage = page === 'privateNotes' ? 'note' : page === 'project' ? 'task' : page;
+  const currentPage = page;
   const secondaryPages = ['goal', 'review', 'drive', 'settings'];
-  const morePages = ['today', ...secondaryPages];
+  const childPages = ['project', 'privateNotes'];
+  const morePages = ['today', ...secondaryPages, ...childPages];
   const sidebarLink = ([key, { path, title, icon }], extra = false) => {
     const secondary = secondaryPages.includes(key);
     return `<a href="${key === 'home' ? workroomOverviewUrl : path}" aria-label="${title}"${currentPage === key ? ' aria-current="page"' : ''}${!extra && (secondary || key === 'today') ? ` class="workroom-nav-${secondary ? 'secondary' : 'mobile-secondary'}"` : ''}>
@@ -59,18 +60,34 @@ function workroomDocument(content, page) {
       <span aria-hidden="true">${!extra && key === 'home' ? '<span class="workroom-nav-full">Ringkasan</span><span class="workroom-nav-short">Ringkas</span>' : title}</span>
     </a>`;
   };
-  const sidebar = page ? `<nav class="workroom-nav" aria-label="Navigasi Workroom">
+  const sidebar = page ? `<nav id="workroom-sidebar" class="workroom-nav" aria-label="Navigasi Workroom">
     ${wordmark}
+    <button class="workroom-nav-collapse" type="button" aria-label="Ciutkan sidebar" aria-expanded="true" aria-controls="workroom-sidebar" hidden>
+      ${workroomIcon('chevron-left')}
+    </button>
     ${Object.entries(workroomPages).filter(([key]) => !['privateNotes', 'project'].includes(key)).map(entry =>
       (entry[0] === 'note' ? `<a class="workroom-nav-create" href="${workroomPages.note.path}?new=1" aria-label="Catatan baru" title="Catatan baru" data-nav-action>${workroomIcon('plus')}</a>` : '') + sidebarLink(entry)).join('')}
+    <details class="workroom-nav-group"${childPages.includes(currentPage) ? ' open' : ''}>
+      <summary aria-label="Ruang kerja">${workroomIcon('folder')}<span>Ruang kerja</span>${workroomIcon('chevron-right', 'ui-icon workroom-group-chevron')}</summary>
+      <div id="workroom-sidebar-group">
+        ${childPages.map(key => sidebarLink([key, workroomPages[key]], true)).join('')}
+      </div>
+    </details>
     <details class="workroom-nav-more"${morePages.includes(currentPage) ? ' data-active' : ''}>
       <summary aria-label="Lainnya">
         ${workroomIcon('more-horizontal')}
         <span>Lainnya</span>
       </summary>
-      <div class="workroom-nav-menu">
+      <dialog class="workroom-nav-menu" aria-label="Navigasi lainnya">
+        <div class="workroom-nav-menu-heading">
+          <h2>Lainnya</h2>
+          <form method="dialog"><button aria-label="Tutup menu"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></form>
+        </div>
         ${morePages.map(key => sidebarLink([key, workroomPages[key]], true)).join('')}
-      </div>
+      </dialog>
+      <noscript><div class="workroom-nav-menu-fallback">
+        ${morePages.map(key => sidebarLink([key, workroomPages[key]], true)).join('')}
+      </div></noscript>
     </details>
   </nav><script src="/workroom-nav.js" defer></script>` : '';
   return `<!doctype html><html lang="id"><head><meta charset="utf-8">
