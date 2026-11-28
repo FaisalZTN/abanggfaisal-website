@@ -496,7 +496,7 @@ function workroomDailyTasks(tasks, projects, filter, area) {
     const collapsed = date && date < today && items.every(task => task.status === 'done');
     return `<article class="daily-task-card" id="tasks-${date || 'undated'}"${!visible.length && date !== today ? ' hidden' : ''}>
       <details${collapsed ? '' : ' open'}>
-        <summary>${workroomIcon('chevron-right', 'ui-icon daily-task-chevron')}<strong>${e(title)}</strong>${date === today ? '<span class="daily-task-today">Hari ini</span>' : ''}
+        <summary>${workroomIcon('chevron-right', 'ui-icon daily-task-chevron')}<span class="daily-task-date"><strong>${e(title)}</strong>${date === today ? '<span class="daily-task-today">Hari ini</span>' : ''}</span>
           <small class="daily-task-progress" data-completed="${completed}" data-total="${items.length}" aria-label="${completed} dari ${items.length} selesai">${completed}/${items.length}</small></summary>
         ${items.length ? `<ul>${items.map(task => {
           const done = task.status === 'done';

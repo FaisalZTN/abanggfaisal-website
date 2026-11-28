@@ -304,7 +304,6 @@ button { justify-self: start; padding: .45rem .95rem; background: var(--green); 
 .days [aria-current="date"] { font-weight: 700; box-shadow: inset 0 0 0 2px currentColor; }
 .days .marked::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
 .due-list { padding: 0; margin: .4rem 0; list-style: none; }
-.due-list li { display: flex; align-items: center; gap: .25rem .8rem; padding-block: .4rem; border-top: 1px solid var(--line); }
 .due-list time { color: var(--muted); }
 .due-list form { padding: 0; }
 .due-list button { min-width: 44px; background: transparent; border: 1px solid var(--line); color: var(--muted); }
@@ -870,11 +869,12 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   align-items: center;
   gap: .55rem;
   min-height: 52px;
-  padding: .55rem 3.45rem .55rem .8rem;
+  padding: .3rem 3.45rem .3rem .8rem;
   cursor: pointer;
   list-style: none;
 }
-.daily-task-chevron { color: var(--muted); }
+.daily-task-chevron { flex: none; color: var(--muted); }
+.daily-task-date { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem .5rem; min-inline-size: 0; overflow-wrap: anywhere; }
 .daily-task-card details[open] .daily-task-chevron { transform: rotate(90deg); }
 .daily-task-card summary::-webkit-details-marker { display: none; }
 .daily-task-today {
@@ -883,8 +883,9 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   background: var(--accent);
   color: var(--paper);
   font-size: .8rem;
+  white-space: nowrap;
 }
-.daily-task-progress { margin-inline-start: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.daily-task-progress { flex: none; margin-inline-start: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
 .daily-task-add {
   position: absolute;
   top: 4px;
@@ -897,9 +898,29 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   text-decoration: none;
   font-size: 1.3rem;
 }
+/* The independent add link shares the summary row, including when the date wraps. */
+@supports (grid-template-rows: subgrid) and selector(::details-content) {
+  .daily-task-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 52px;
+    grid-template-rows: auto auto;
+  }
+  .daily-task-card details {
+    display: grid;
+    grid-area: 1 / 1 / span 2 / span 2;
+    grid-template-rows: subgrid;
+  }
+  .daily-task-add {
+    position: relative;
+    inset: auto;
+    grid-area: 1 / 2;
+    place-self: center;
+  }
+}
+.daily-task-add .ui-icon use { transform: translate(0, .25px); }
 .daily-task-add:hover, .daily-task-add:focus-visible { background: var(--selected); }
 .daily-task-card ul { display: grid; list-style: none; padding: 0 .7rem .45rem; margin: 0; }
-.daily-task-card li {
+:is(.daily-task-card, .due-list) li {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
   align-items: start;
@@ -907,8 +928,8 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   padding-block: .35rem;
   border-top: 1px solid var(--line);
 }
-.daily-task-card li > div { padding-top: .55rem; overflow-wrap: anywhere; }
-.daily-task-card li form { margin: 0; padding: 0; }
+:is(.daily-task-card, .due-list) li > div { overflow-wrap: anywhere; }
+:is(.daily-task-card, .due-list) li form { margin: 0; padding: 0; }
 .task-checkbox, .due-list .task-checkbox {
   display: grid;
   place-items: center;
@@ -924,7 +945,13 @@ main:has(.notes-desk) { padding-top:1.5rem; }
 .task-checkbox[aria-checked="true"] .check-empty { display: none; }
 .quick-check-feedback { color: var(--muted); }
 .quick-check-feedback:empty, .daily-task-meta:not(:has(small:not([hidden]))), [data-task-doing][hidden], [data-task-overdue][hidden] { display: none; }
-.daily-task-title { font-weight: 650; }
+.daily-task-title {
+  display: block;
+  min-block-size: 44px;
+  padding-block-start: max(0px, calc((44px - 1lh) / 2));
+  line-height: 1.4;
+  font-weight: 650;
+}
 .daily-task-card .is-done .daily-task-title { color: var(--muted); text-decoration: line-through; }
 .daily-task-meta { display: flex; flex-wrap: wrap; gap: .35rem; margin-block-start: .3rem; }
 .task-badge {
@@ -1865,7 +1892,7 @@ img[data-image-selected] { opacity: 0; }
   color: var(--ink);
 }
 .workroom-skip:focus { transform: none; }
-:is(.overview-text-action, .overview-calendar .reset-day, .daily-task-title) {
+:is(.overview-text-action, .overview-calendar .reset-day) {
   display: inline-flex;
   align-items: center;
   min-block-size: 44px;
@@ -2056,7 +2083,7 @@ img[data-image-selected] { opacity: 0; }
     text-align: start;
   }
   [data-sidebar-mode="expanded"] .workroom-nav .workroom-wordmark { display: flex; }
-  [data-sidebar-mode="expanded"] .workroom-nav-group summary { grid-template-columns: 24px minmax(0, 1fr) 1rem; }
+  [data-sidebar-mode="expanded"] .workroom-nav .workroom-nav-group summary { grid-template-columns: 24px minmax(0, 1fr) 1rem; }
   [data-sidebar-mode="expanded"] .workroom-nav-group summary .workroom-group-chevron { width: 1rem; }
   #workroom-sidebar-group { margin-inline-start: .85rem; padding-inline-start: .5rem; border-inline-start: 1px solid var(--line); }
   .workroom-layout[data-sidebar-mode="rail"] { --workroom-nav-width: 4rem; }
