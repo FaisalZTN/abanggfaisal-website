@@ -108,7 +108,7 @@ main{min-height:60vh}h1,h2,h3,p,a{overflow-wrap:anywhere}.hero{position:relative
   border-radius: .85rem;
   padding: .5rem .75rem;
 }
-.study-search h3 { margin: .35rem .25rem; font-size: 1.15rem; }
+.study-search h2 { margin: .35rem .25rem; font-size: 1.15rem; }
 .study-search ul { list-style: none; margin: 0; padding: 0; }
 .study-search li + li { border-top: 1px solid var(--line); }
 .study-search a { display: block; padding: .5rem .25rem; line-height: 1.35; }
@@ -1010,3 +1010,18 @@ details[open] > summary::after {
 /* Preserve link color and focus styling without underlines. */
 a:any-link, a:any-link:hover :is(h2, h3, strong) { text-decoration-line: none !important; }
 .reading p a:any-link, .reading li a:any-link { color: var(--accent); font-weight: 600; }
+
+
+:root { --control-border: #788376; --feedback-error: #9e2735; }
+:root.dark { --control-border: #829581; --feedback-error: #ffadb3; }
+:is(.toolbar, .study-search, .study-feedback-form) :is(input, select, textarea) {
+  border-color: var(--control-border);
+}
+.study-feedback-actions [data-state="error"] { color: var(--feedback-error); }
+.study-feedback-actions [data-state="success"] { color: var(--accent); }
+:is(.actions > .text-link, .link-action, .study-calendar-link, .study-agenda-links > a) {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-block-size: 44px;
+}

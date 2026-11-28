@@ -149,7 +149,10 @@ async function checkExamPriorities(page, width) {
 async function checkCurrentBlockArchive(page, width) {
   await page.goto(base + '/ruang-belajar/#jadwal-kuliah');
   const archive = page.locator('#arsip-kelas');
+  await archive.locator('summary').waitFor();
+  assert.equal(await archive.locator('.study-slot').count(), 0);
   await archive.locator('summary').click();
+  await archive.locator('h3 time').first().waitFor();
   assert.equal(await archive.locator('h3 time').first().getAttribute('datetime'), '2026-11-18');
   assert.ok(await archive.getByRole('link', { name: 'Radang telinga luar', exact: true }).isHidden());
 

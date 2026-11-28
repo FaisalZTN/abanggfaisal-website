@@ -83,15 +83,14 @@ function initializePage(signal) {
   const commentsEndpoint = '/api/study-comments';
   const comments = document.querySelector('[data-study-comments]');
   const commentList = comments?.querySelector('[data-new-comments]');
-  function showComment(comment, prepend = false) {
+  function showComment(comment) {
     const item = document.createElement('li');
     const name = document.createElement('strong');
     const message = document.createElement('p');
     name.textContent = comment.name;
     message.textContent = comment.message;
     item.append(name, message);
-    if (prepend) commentList.prepend(item);
-    else commentList.append(item);
+    commentList.append(item);
     commentList.hidden = false;
     comments.querySelector('[data-no-comments]')?.remove();
   }
@@ -112,6 +111,7 @@ function initializePage(signal) {
     const status = feedback.querySelector('[data-feedback-status]');
     const fields = new FormData(feedback);
     button.disabled = true;
+    status.dataset.state = 'pending';
     status.textContent = 'Mengirim masukan…';
     try {
       const publish = fields.get('public_comment') === 'yes';
@@ -122,12 +122,13 @@ function initializePage(signal) {
       });
       if (!response.ok) throw new Error('Feedback submission failed');
       const result = publish ? await response.json() : null;
-      if (result?.published) showComment(result.comment, true);
       feedback.reset();
-      status.textContent = result?.published === false
-        ? 'Masukan terkirim, tetapi komentar belum bisa ditampilkan.'
+      status.dataset.state = 'success';
+      status.textContent = result?.pending ? 'Masukan terkirim. Komentar menunggu persetujuan.'
+        : result?.published === false ? 'Masukan terkirim, tetapi komentar belum masuk antrean.'
         : 'Masukan berhasil dikirim. Terima kasih!';
     } catch {
+      status.dataset.state = 'error';
       status.textContent = 'Masukan belum bisa dikirim. Coba lagi atau hubungi alamat email di bawah.';
     } finally {
       button.disabled = false;
@@ -305,7 +306,9 @@ function initializePage(signal) {
         days.push([day, finished]);
         count += finished.length;
       }
-      if (count === shownPastCount) return;
+      pastClasses.querySelector('[data-past-count]').textContent = `· ${count} kelas`;
+      pastClasses.hidden = false;
+      if (!pastClasses.open || count === shownPastCount) return;
 
       const groups = days.reverse().map(([day, finished]) => {
         const group = document.createElement('div');
@@ -320,12 +323,12 @@ function initializePage(signal) {
         group.append(heading, list);
         return group;
       });
-      pastClasses.querySelector('[data-past-count]').textContent = `· ${count} kelas`;
       pastClasses.querySelector('[data-past-list]').replaceChildren(...groups);
       pastClasses.querySelector('[data-past-empty]').hidden = count > 0;
-      pastClasses.hidden = false;
       shownPastCount = count;
     }
+
+    pastClasses?.addEventListener('toggle', () => { if (pastClasses.open) refreshAgenda(); }, { signal });
 
     let shownDay;
     function refreshAgenda(now = new Date()) {
@@ -623,7 +626,7 @@ if (primaryRoutes.has(renderedPath) && !location.search) {
   function prefetchPrimaryPages() {
     const connection = navigator.connection;
     if (connection?.saveData || (connection?.effectiveType && connection.effectiveType !== '4g')) return;
-    const queue = ['/journal/', '/shop/', '/ruang-belajar/'].filter(path => path !== renderedPath).slice(0, 2);
+    const queue = ['/journal/', '/shop/'].filter(path => path !== renderedPath).slice(0, 2);
     const whenIdle = callback => window.requestIdleCallback
       ? window.requestIdleCallback(callback, { timeout: 1500 })
       : window.setTimeout(callback, 750);

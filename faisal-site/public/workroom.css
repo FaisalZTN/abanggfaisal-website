@@ -900,7 +900,7 @@ main:has(.notes-desk) { padding-top:1.5rem; }
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
-.task-badge-priority, .workroom-layout select[name="priority"]:has(option[value="high"]:checked) {
+.task-badge.task-badge-priority, .workroom-layout select[name="priority"]:has(option[value="high"]:checked) {
   background-color: #a71d32;
   border-color: #a71d32;
   color: #fff;
@@ -1771,3 +1771,9 @@ img[data-image-selected] { opacity: 0; }
   font-weight: 400;
 }
 [data-task-attachment] .workroom-attachment-list summary { color: var(--muted); }
+
+
+.study-moderation-list { list-style: none; padding: 0; overflow-wrap: anywhere; }
+.study-moderation-list > li { padding-block: .7rem; border-block-end: 1px solid var(--line); }
+.study-moderation-list > li:last-child { border-block-end: 0; }
+.study-moderation-list form { display: flex; flex-wrap: wrap; padding-block: 0; }

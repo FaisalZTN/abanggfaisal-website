@@ -236,21 +236,23 @@ export function mount(panel, signal) {
   }
 
   const tools = [...panel.querySelectorAll('.task-detail-tools')];
-  if (tools.length) void import('/workroom-block-editor.js').then(({ mountBlockEditor }) => {
-    if (signal.aborted) return;
+  const started = new Set();
+  function loadVisibleEditors() {
     for (const field of tools) {
-      try { mountDetail(field, mountBlockEditor, signal); }
-      catch {
+      if (started.has(field) || field.closest('details:not([open])')) continue;
+      started.add(field);
+      void import('/workroom-block-editor.js').then(({ mountBlockEditor }) => {
+        if (!signal.aborted) mountDetail(field, mountBlockEditor, signal);
+      }).catch(() => {
+        if (signal.aborted) return;
         field.hidden = false;
         field.querySelector('.task-detail-status').textContent = 'Editor detail belum bisa dimuat.';
-      }
+      });
     }
-  }).catch(() => {
-    if (signal.aborted) return;
-    for (const field of tools) {
-      field.hidden = false;
-      field.querySelector('.task-detail-status').textContent = 'Editor detail belum bisa dimuat.';
-    }
-  });
+  }
+  if (tools.length) {
+    panel.addEventListener('toggle', loadVisibleEditors, { capture: true, signal });
+    loadVisibleEditors();
+  }
   return guard;
 }

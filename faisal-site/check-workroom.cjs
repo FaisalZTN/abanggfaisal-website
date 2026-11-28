@@ -21,6 +21,7 @@ module.exports = async function checkWorkroom(browser, origin) {
   key.kid = 'test';
   const originalFetch = global.fetch;
   global.fetch = async (url) => {
+    if (url === 'https://formspree.io/f/xrpqaorq') return Response.json({ ok: true });
     assert.equal(url, issuer+'/cdn-cgi/access/certs');
     return Response.json({keys:[key]});
   };
@@ -41,6 +42,32 @@ module.exports = async function checkWorkroom(browser, origin) {
     WORKROOM_DB:{prepare:adapt,batch:async statements=>Promise.all(statements.map(statement => statement.all()))}};
   const page = await browser.newPage();
   try {
+    const commentsEnv = { ...env, COMMENTS_DB: env.WORKROOM_DB };
+    const commentsUrl = origin + '/api/study-comments';
+    const submitComment = message => worker.fetch(new Request(commentsUrl, {
+      method: 'POST', headers: { Origin: origin },
+      body: new URLSearchParams({ name: 'Penguji', message, category: 'Materi', public_comment: 'yes' }),
+    }), commentsEnv);
+    const approveComment = (id, action, signedIn = true) => worker.fetch(new Request(
+      origin + '/workroom/settings/?comments=moderate', {
+        method: 'POST',
+        headers: { Origin: origin, ...(signedIn ? { 'Cf-Access-Jwt-Assertion': token } : {}) },
+        body: new URLSearchParams({ id, action }),
+      }), commentsEnv);
+    assert.equal((await submitComment('Tinjau sebelum terbit')).status, 202);
+    const queued = db.prepare('SELECT id FROM study_comments_pending').get().id;
+    assert.deepEqual(await (await worker.fetch(new Request(commentsUrl), commentsEnv)).json(), { comments: [] });
+    assert.equal((await approveComment(queued, 'approve', false)).status, 403);
+    const settings = await worker.fetch(new Request(origin + '/workroom/settings/', {
+      headers: { 'Cf-Access-Jwt-Assertion': token },
+    }), commentsEnv);
+    assert.match(await settings.text(), /Tinjau sebelum terbit/);
+    assert.equal((await approveComment(queued, 'approve')).status, 303);
+    assert.match((await approveComment(queued, 'approve')).headers.get('Location'), /comment=missing/);
+    assert.equal((await submitComment('Jangan terbitkan')).status, 202);
+    assert.equal((await approveComment(db.prepare('SELECT id FROM study_comments_pending').get().id, 'reject')).status, 303);
+    assert.deepEqual(await (await worker.fetch(new Request(commentsUrl), commentsEnv)).json(),
+      { comments: [{ name: 'Penguji', message: 'Tinjau sebelum terbit' }] });
     const errors = [];
     page.on('pageerror', error=>errors.push(error.message));
     await page.route('**/workroom/**', async route => {
@@ -537,6 +564,8 @@ module.exports = async function checkWorkroom(browser, origin) {
     assert.equal(await page.evaluate(() => window.testDocument), true);
     const count = dashboard.locator('[data-overview-open-count]');
     const before = Number(await count.textContent());
+    const overviewPriority = dashboard.locator('.due-list .task-badge-priority').first();
+    assert.equal(await overviewPriority.evaluate(badge => getComputedStyle(badge).color), 'rgb(255, 255, 255)');
     await dashboard.getByRole('checkbox', { name: 'Tandai selesai: Tugas Ringkasan' }).click();
     await dashboard.getByText('Tugas selesai.', { exact: true }).waitFor();
     assert.equal(Number(await count.textContent()), before - 1);
