@@ -51,23 +51,25 @@ function workroomDocument(content, page) {
   const wordmark = '<a class="workroom-wordmark" href="/">Faysaruworks.</a>';
   const currentPage = page === 'privateNotes' ? 'note' : page === 'project' ? 'task' : page;
   const secondaryPages = ['goal', 'review', 'drive', 'settings'];
+  const morePages = ['today', ...secondaryPages];
   const sidebarLink = ([key, { path, title, icon }], extra = false) => {
     const secondary = secondaryPages.includes(key);
-    return `<a href="${key === 'home' ? workroomOverviewUrl : path}" aria-label="${title}"${currentPage === key ? ' aria-current="page"' : ''}${secondary && !extra ? ' class="workroom-nav-secondary"' : ''}>
+    return `<a href="${key === 'home' ? workroomOverviewUrl : path}" aria-label="${title}"${currentPage === key ? ' aria-current="page"' : ''}${!extra && (secondary || key === 'today') ? ` class="workroom-nav-${secondary ? 'secondary' : 'mobile-secondary'}"` : ''}>
       ${workroomIcon(icon)}
       <span aria-hidden="true">${!extra && key === 'home' ? '<span class="workroom-nav-full">Ringkasan</span><span class="workroom-nav-short">Ringkas</span>' : title}</span>
     </a>`;
   };
   const sidebar = page ? `<nav class="workroom-nav" aria-label="Navigasi Workroom">
     ${wordmark}
-    ${Object.entries(workroomPages).filter(([key]) => !['privateNotes', 'project'].includes(key)).map(entry => sidebarLink(entry)).join('')}
-    <details class="workroom-nav-more"${secondaryPages.includes(currentPage) ? ' data-active' : ''}>
+    ${Object.entries(workroomPages).filter(([key]) => !['privateNotes', 'project'].includes(key)).map(entry =>
+      (entry[0] === 'note' ? `<a class="workroom-nav-create" href="${workroomPages.note.path}?new=1" aria-label="Catatan baru" title="Catatan baru" data-nav-action>${workroomIcon('plus')}</a>` : '') + sidebarLink(entry)).join('')}
+    <details class="workroom-nav-more"${morePages.includes(currentPage) ? ' data-active' : ''}>
       <summary aria-label="Lainnya">
         ${workroomIcon('more-horizontal')}
         <span>Lainnya</span>
       </summary>
       <div class="workroom-nav-menu">
-        ${secondaryPages.map(key => sidebarLink([key, workroomPages[key]], true)).join('')}
+        ${morePages.map(key => sidebarLink([key, workroomPages[key]], true)).join('')}
       </div>
     </details>
   </nav><script src="/workroom-nav.js" defer></script>` : '';

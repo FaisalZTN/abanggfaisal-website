@@ -655,11 +655,7 @@ export function mount(panel, signal) {
       finally { busy = false; }
       return;
     }
-    if(button.hasAttribute('data-new-note')){
-      if(!entries.some(note=>note.id===null))entries.unshift({id:null,kind:'note',title:'',body:'',category:noteCategory==='all'?'none':noteCategory});
-      noteQuery=''; activeNote=null;noteEditing=true;render();el('edit-title').focus();
-      scheduleSave(entries.find(item => item.id === null));
-    }
+    if (button.hasAttribute('data-new-note')) scheduleSave(openNewNote());
     if (button.dataset.layoutKey && formatEditor()?.editor.isEditable) {
       button.closest('[popover]').hidePopover();
       formatEditor().editor.chain().focus().setParagraphLayout(button.dataset.layoutKey, button.dataset.layoutValue).run();
@@ -867,8 +863,23 @@ export function mount(panel, signal) {
     if (!compactNotes.matches && !blockEditor && entries.length) render();
   });
   listen(window, 'beforeunload',event=>{if(dirty.size){event.preventDefault();event.returnValue='';}});
+  function openNewNote() {
+    let draft = entries.find(note => note.id === null);
+    if (!draft) {
+      draft = { id: null, kind: 'note', title: '', body: '', category: noteCategory === 'all' ? 'none' : noteCategory };
+      entries.unshift(draft);
+    }
+    noteQuery = '';
+    activeNote = null;
+    noteEditing = true;
+    render();
+    el('edit-title').focus();
+    return draft;
+  }
+
   const bootstrap = el('workroom-notes-data');
-  const selected = new URLSearchParams(location.search).get('edit');
+  const notesUrl = new URL(location.href);
+  const selected = notesUrl.searchParams.get('edit');
   const initialNotes = bootstrap ? Promise.resolve().then(() => JSON.parse(bootstrap.textContent)) : request(null, selected ? { edit: selected } : {});
   initialNotes.then(data=>{
     bootstrap?.remove();
@@ -878,7 +889,13 @@ export function mount(panel, signal) {
     for(const {id,name} of data.categories)noteCategories[id]=name;
     const selectedId = Number(selected);
     if(entries.some(note=>note.id===selectedId)){activeNote=selectedId;noteEditing=true;}
-    render();
+    if (notesUrl.searchParams.get('new') === '1' && location.href === notesUrl.href) {
+      openNewNote();
+      notesUrl.searchParams.delete('new');
+      history.replaceState(history.state, '', notesUrl);
+    } else {
+      render();
+    }
   }).catch(error=>{el('view').textContent=error.message;}).finally(()=>el('view').removeAttribute('aria-busy'));
 
   signal.addEventListener('abort', () => { if (urlDialog.open) urlDialog.close(); if (actionDialog.open) actionDialog.close(); clearTimeout(saveTimer); clearTimeout(searchTimer); splitPreview?.destroy(); blockEditor?.destroy(); }, { once: true });

@@ -622,7 +622,8 @@ module.exports = async function checkWorkroom(browser, origin) {
     await dashboard.getByRole('checkbox', { name: completedLabel }).waitFor();
     const completedTask = dashboard.getByRole('link', { name: 'Tugas Ringkasan', exact: true });
     assert.equal(await completedTask.evaluate(element => getComputedStyle(element).textDecorationLine), 'line-through');
-    await page.getByRole('link', { name: 'Hari Ini', exact: true }).first().click();
+    await page.getByLabel('Lainnya', { exact: true }).click();
+    await page.locator('.workroom-nav-menu').getByRole('link', { name: 'Hari Ini', exact: true }).click();
     const todayPanel = page.locator('.workroom-today');
     await todayPanel.getByRole('checkbox', { name: completedLabel }).waitFor();
     await page.getByRole('link', { name: 'Tugas', exact: true }).first().click();
@@ -989,6 +990,26 @@ module.exports = async function checkWorkroom(browser, origin) {
       await mobile.send('Emulation.clearDeviceMetricsOverride');
       await mobile.detach();
     }
+    await page.setViewportSize({ width: 400, height: 867 });
+    await page.goto(overview);
+    const create = page.locator('.workroom-nav-create');
+    const dock = page.locator('.workroom-nav');
+    const buttonBox = await create.boundingBox();
+    const dockBox = await dock.boundingBox();
+    assert.ok(Math.abs(buttonBox.x + buttonBox.width / 2 - dockBox.x - dockBox.width / 2) < 1);
+    assert.ok(buttonBox.width >= 44 && buttonBox.height >= 44);
+    const notesBefore = db.prepare("SELECT count(*) AS total FROM workroom_entries WHERE kind='note'").get().total;
+    await create.click();
+    const newTitle = page.getByRole('textbox', { name: 'Judul catatan' });
+    await newTitle.waitFor();
+    assert.equal(await newTitle.inputValue(), '');
+    assert.equal(await create.getAttribute('aria-current'), null);
+    assert.equal(db.prepare("SELECT count(*) AS total FROM workroom_entries WHERE kind='note'").get().total, notesBefore);
+    await newTitle.fill('Draf dari navigasi HP');
+    await page.getByText('Tersimpan otomatis.', { exact: true }).waitFor();
+    assert.equal(db.prepare("SELECT count(*) AS total FROM workroom_entries WHERE title = 'Draf dari navigasi HP'").get().total, 1);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    assert.ok(await create.isHidden());
     console.log('PASS Workroom dashboard, calendar, editors and Drive at all target widths');
     assert.deepEqual(errors, []);
     console.log('Drive shortcuts: desktop and mobile placement, popup, shared edits, and authentication');

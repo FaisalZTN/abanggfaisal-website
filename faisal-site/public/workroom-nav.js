@@ -62,7 +62,7 @@
     const more = sidebar.querySelector('.workroom-nav-more');
     const marker = attribute === 'aria-current' ? 'data-active' : 'data-pending';
     let inMore = false;
-    for (const link of sidebar.querySelectorAll('a[aria-label]')) {
+    for (const link of sidebar.querySelectorAll('a[aria-label]:not([data-nav-action])')) {
       if (path && new URL(link.href).pathname === path) {
         link.setAttribute(attribute, attribute === 'aria-current' ? 'page' : '');
         if (link.closest('.workroom-nav-menu')) inMore = true;
