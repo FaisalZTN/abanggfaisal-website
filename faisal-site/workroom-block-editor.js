@@ -225,10 +225,7 @@ export function mountBlockEditor(root, content, onChange, onSelection, label, re
       popup.append(empty);
     }
     popup.hidden = false;
-    const caret = editor.view.coordsAtPos(selection.from);
-    popup.style.left = Math.max(8, Math.min(caret.left, window.innerWidth - popup.offsetWidth - 8)) + 'px';
-    const above = caret.bottom + popup.offsetHeight > window.innerHeight && caret.top > popup.offsetHeight;
-    popup.style.top = Math.max(8, above ? caret.top - popup.offsetHeight : caret.bottom + 4) + 'px';
+    positionPopup();
     const option = popup.children[active];
     if (option && choices.length) {
       if (option.offsetTop < popup.scrollTop) popup.scrollTop = option.offsetTop;
@@ -236,6 +233,20 @@ export function mountBlockEditor(root, content, onChange, onSelection, label, re
         popup.scrollTop = option.offsetTop + option.offsetHeight - popup.clientHeight;
       }
     }
+  }
+
+  function positionPopup() {
+    if (popup.hidden) return;
+    const caret = editor.view.coordsAtPos(editor.state.selection.from);
+    const viewport = window.visualViewport;
+    const left = viewport?.offsetLeft ?? 0;
+    const top = viewport?.offsetTop ?? 0;
+    const right = left + (viewport?.width ?? window.innerWidth);
+    const bottom = top + (viewport?.height ?? window.innerHeight);
+    const above = caret.bottom + popup.offsetHeight > bottom && caret.top - top > bottom - caret.bottom;
+    const position = above ? caret.top - popup.offsetHeight - 4 : caret.bottom + 4;
+    popup.style.left = Math.max(left + 8, Math.min(caret.left, right - popup.offsetWidth - 8)) + 'px';
+    popup.style.top = Math.max(top + 8, Math.min(position, bottom - popup.offsetHeight - 8)) + 'px';
   }
 
   let editor;
@@ -285,6 +296,7 @@ export function mountBlockEditor(root, content, onChange, onSelection, label, re
   document.body.append(popup);
   const dismiss = event => { if (!root.contains(event.target) && !popup.contains(event.target) && !event.target.closest('[data-mark="blocks"]')) close(); };
   document.addEventListener('pointerdown', dismiss);
+  window.visualViewport?.addEventListener('resize', positionPopup);
   return {
     editor,
     whatsappText() { return clipboardText(editor.getJSON().content ?? [], true); },
@@ -295,6 +307,7 @@ export function mountBlockEditor(root, content, onChange, onSelection, label, re
     },
     destroy() {
       document.removeEventListener('pointerdown', dismiss);
+      window.visualViewport?.removeEventListener('resize', positionPopup);
       editor.destroy();
       popup.remove();
     },
