@@ -620,7 +620,7 @@ body:has(:is(.study-block--ksi, .study-block--neuropsikiatri, .study-block--kms)
 @media (max-width: 740px) {
   .header-inner { flex-wrap: wrap; gap: .5rem; padding-block: .75rem; min-height: 78px; }
   .header-inner .brand { margin-right: auto; }
-  #menu { display: block; padding-inline: .75rem; font-size: .85rem; }
+  #menu { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; padding-inline: .75rem; font-size: .85rem; }
   #nav { display: none; order: 4; width: 100%; margin: 0; padding: .35rem; border-radius: 1.15rem; }
   #nav.open { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #nav a { justify-content: start; padding-inline: .75rem; border-radius: .8rem; }
@@ -967,8 +967,24 @@ a:any-link, a:any-link:hover :is(h2, h3, strong) { text-decoration-line: none !i
 
 #theme .ui-icon, #menu .ui-icon { fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
 #theme .ui-icon:last-child, .dark #theme .ui-icon:first-child { display: none; }
-.dark #theme .ui-icon:last-child { display: inline-block; }
-#menu .ui-icon { vertical-align: middle; }
+.dark #theme .ui-icon:last-child { display: block; }
+#theme {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: 44px;
+  block-size: 44px;
+  padding: 0;
+}
+.btn:has(.ui-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+}
+/* The original arrow artwork has uneven padding in its 24 px viewBox. */
+#back-to-top .ui-icon use { transform: translate(.5px, .375px); }
+.actions .ui-icon use[href$="#arrow-right"] { transform: translate(.625px, .5px); }
 #main h1[tabindex="-1"]:focus-visible, #main:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 :is(.section-head > a, .study-resource-links > a, .study-shortcuts > a) {
   display: inline-flex;
