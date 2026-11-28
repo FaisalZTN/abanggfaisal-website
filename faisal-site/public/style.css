@@ -966,9 +966,17 @@ a:any-link, a:any-link:hover :is(h2, h3, strong) { text-decoration-line: none !i
 }
 
 
-#theme .ui-icon, #menu .ui-icon { fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
-#theme .ui-icon:last-child, .dark #theme .ui-icon:first-child { display: none; }
-.dark #theme .ui-icon:last-child { display: block; }
+#menu .ui-icon { fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.theme-icon-disc, .theme-icon-rays { transform-origin: 12px 12px; }
+.theme-icon-disc { transform: scale(1.6); }
+.theme-icon-rays { transform: scale(.45); opacity: 0; }
+.dark .theme-icon-disc, .dark .theme-icon-rays { transform: scale(1); }
+.dark .theme-icon-rays { opacity: 1; }
+.dark .theme-icon-cutout { transform: translate(10px, -10px); }
+@media (prefers-reduced-motion: no-preference) {
+  .theme-icon-disc, .theme-icon-cutout { transition: transform .42s cubic-bezier(.2, .75, .25, 1); }
+  .theme-icon-rays { transition: transform .36s ease, opacity .3s ease; }
+}
 #theme {
   display: inline-grid;
   place-items: center;

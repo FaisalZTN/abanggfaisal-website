@@ -27,13 +27,23 @@ selected_symbols = ''.join(re.findall(
     r'<symbol id="(?:' + '|'.join(sorted(public_icons)) + r')"[^>]*>.*?</symbol>', icon_source, flags=re.S,
 ))
 public_icon_url = asset('site-icons.svg', ('<svg xmlns="http://www.w3.org/2000/svg">' + selected_symbols + '''
-    <symbol id="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
-    <symbol id="moon" viewBox="0 0 24 24"><path transform="translate(-.16 .16)" d="M20.8 15A9 9 0 0 1 9 3.2 9 9 0 1 0 20.8 15Z"/></symbol>
     <symbol id="menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
     </svg>''').encode())
 
 def site_icon(name):
     return f'<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="{public_icon_url}#{name}"/></svg>'
+
+theme_icon = """<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <mask id="header-theme-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+        <rect width="24" height="24" fill="white"/>
+        <circle class="theme-icon-cutout" cx="16.5" cy="7.5" r="5" fill="black"/>
+    </mask>
+    <g mask="url(#header-theme-mask)">
+        <circle class="theme-icon-disc" cx="12" cy="12" r="4.5" fill="currentColor"/>
+    </g>
+    <path class="theme-icon-rays" d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"
+        fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+</svg>"""
 
 def workroom_asset_data(name):
     return (P / 'public' / name).read_bytes().replace(b'/gentleface-icons.svg', gentleface_url.encode())
@@ -139,7 +149,7 @@ def write(path,title,desc,body,section='home',item=None):
     extra+='<meta name="twitter:card" content="summary_large_image">'
     canonical='https://abanggfaisal.my.id'+path
     nav=''.join(f'<a href="{url}"'+(' aria-current="page"' if section==key else '')+f'>{name}</a>' for key,url,name in [('home','/','Home'),('journal','/journal/','Journal'),('study','/ruang-belajar/','Ruang Belajar'),('shop','/shop/','Shop'),('about','/about/','About')])
-    page=f'''<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{e(title)} — {brand}.</title><meta name="description" content="{e(desc)}"><link rel="canonical" href="{canonical}"><meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{canonical}"><meta property="og:type" content="{'article' if section=='journal' and item else 'website'}">{extra}<meta name="theme-color" content="#f6f4ed">{theme_bootstrap}<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="{style_url}"><script src="{script_url}" defer></script>{'<meta name="robots" content="noindex,nofollow">' if noindex or path=='/404.html' else ''}</head><body><a class="skip" href="#main">Lewati ke konten</a><header><div class="container header-inner"><a class="brand" href="/">{brand}<span>.</span></a><button id="menu" aria-controls="nav" aria-expanded="false">Menu {site_icon("menu")}</button><nav id="nav" aria-label="Navigasi utama">{nav}<a href="/workroom/">Workroom</a></nav><button id="theme" aria-label="Mode gelap" aria-pressed="false">{site_icon("moon")}{site_icon("sun")}</button></div></header><div class="visually-hidden" id="site-route-status" role="status"></div><main id="main" class="container">{'<p class="notice">PRATINJAU · Termasuk konten draft untuk pemeriksaan.</p>' if preview else ''}{body}</main><footer class="container site-footer">
+    page=f'''<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{e(title)} — {brand}.</title><meta name="description" content="{e(desc)}"><link rel="canonical" href="{canonical}"><meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{canonical}"><meta property="og:type" content="{'article' if section=='journal' and item else 'website'}">{extra}<meta name="theme-color" content="#f6f4ed">{theme_bootstrap}<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="{style_url}"><script src="{script_url}" defer></script>{'<meta name="robots" content="noindex,nofollow">' if noindex or path=='/404.html' else ''}</head><body><a class="skip" href="#main">Lewati ke konten</a><header><div class="container header-inner"><a class="brand" href="/">{brand}<span>.</span></a><button id="menu" aria-controls="nav" aria-expanded="false">Menu {site_icon("menu")}</button><nav id="nav" aria-label="Navigasi utama">{nav}<a href="/workroom/">Workroom</a></nav><button id="theme" aria-label="Mode gelap" aria-pressed="false">{theme_icon}</button></div></header><div class="visually-hidden" id="site-route-status" role="status"></div><main id="main" class="container">{'<p class="notice">PRATINJAU · Termasuk konten draft untuk pemeriksaan.</p>' if preview else ''}{body}</main><footer class="container site-footer">
       <div class="site-footer-main">
         <div class="site-footer-brand">
           <a class="brand" href="/">{brand}<span>.</span></a>
