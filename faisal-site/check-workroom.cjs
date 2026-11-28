@@ -935,6 +935,7 @@ module.exports = async function checkWorkroom(browser, origin) {
     await page.goto(overview + '&day=' + tomorrow);
     await emptyTasksLink.waitFor();
     assert.ok((await emptyTasksLink.boundingBox()).height >= 44);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     const screens = [320, 360, 375, 390, 400, 412, 768, 867, 1024, 1440];
     const mobile = await page.context().newCDPSession(page);
     const editTask = origin + '/workroom/tasks/?edit=' + legacyTask;
@@ -944,6 +945,7 @@ module.exports = async function checkWorkroom(browser, origin) {
       for (const width of screens) {
         const galaxy = width === 400 || width === 867;
         const height = width === 867 ? 400 : 867;
+        await mobile.send('Emulation.setTouchEmulationEnabled', { enabled: width <= 867 });
         await mobile.send('Emulation.setDeviceMetricsOverride', {
           width, height, mobile: width <= 867, deviceScaleFactor: galaxy ? 2.7 : 1,
         });
@@ -983,6 +985,7 @@ module.exports = async function checkWorkroom(browser, origin) {
         }
       }
     } finally {
+      await mobile.send('Emulation.setTouchEmulationEnabled', { enabled: false });
       await mobile.send('Emulation.clearDeviceMetricsOverride');
       await mobile.detach();
     }
